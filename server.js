@@ -12,7 +12,7 @@ const {
   PORT = 3000
 } = process.env;
 
-// Pflicht-Variablen prüfen, damit Fehlkonfiguration sofort auffällt statt erst beim Login
+// Pflicht-Variablen prüfen
 ['CLIENT_ID', 'CLIENT_SECRET', 'BOT_TOKEN', 'REDIRECT_URI', 'SESSION_SECRET'].forEach((key) => {
   if (!process.env[key]) {
     console.warn(`[WARNUNG] Umgebungsvariable ${key} ist nicht gesetzt (siehe .env.example)`);
@@ -23,7 +23,9 @@ const DISCORD_API = 'https://discord.com/api/v10';
 const ADMINISTRATOR = 0x8n;
 
 const app = express();
-app.use(express.static(path.join(__dirname, 'public')));
+
+// Statische Dateien (index.html, dashboard.html etc.) direkt aus dem Hauptordner bereitstellen
+app.use(express.static(__dirname));
 
 app.use(
   session({
@@ -33,12 +35,16 @@ app.use(
     cookie: {
       httpOnly: true,
       sameSite: 'lax',
-      // In Produktion hinter HTTPS auf true setzen (siehe README)
       secure: process.env.NODE_ENV === 'production',
       maxAge: 1000 * 60 * 60 // 1 Stunde
     }
   })
 );
+
+// Explicit Route für die Hauptseite / Landingpage
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 // ---------- Schritt 1: "Dashboard"-Button landet hier und wird zu Discord geschickt ----------
 app.get('/auth/discord/login', (req, res) => {
@@ -58,7 +64,6 @@ app.get('/auth/discord/callback', async (req, res) => {
   if (!code) return res.redirect('/?error=missing_code');
 
   try {
-    // Code gegen Access Token tauschen (braucht CLIENT_SECRET -> darf nur hier, serverseitig, passieren)
     const tokenRes = await fetch(`${DISCORD_API}/oauth2/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -77,14 +82,12 @@ app.get('/auth/discord/callback', async (req, res) => {
     }
     const tokenData = await tokenRes.json();
 
-    // Discord-Profil des Users laden (für Name/Avatar im Dashboard)
     const userRes = await fetch(`${DISCORD_API}/users/@me`, {
       headers: { Authorization: `Bearer ${tokenData.access_token}` }
     });
     if (!userRes.ok) return res.redirect('/?error=auth_failed');
     const user = await userRes.json();
 
-    // Nur in der Server-Session speichern - NIE an den Client schicken
     req.session.accessToken = tokenData.access_token;
     req.session.user = { id: user.id, username: user.username, avatar: user.avatar };
 
@@ -106,7 +109,6 @@ function requireAuth(req, res, next) {
   next();
 }
 
-// ---------- Bot-Server-Liste cachen, damit nicht bei jedem Dashboard-Aufruf neu bei Discord angefragt wird ----------
 let botGuildsCache = { ids: new Set(), fetchedAt: 0 };
 const BOT_CACHE_TTL = 60 * 1000; // 60 Sekunden
 
@@ -118,7 +120,6 @@ async function getBotGuildIds() {
   const ids = new Set();
   let after = '0';
 
-  // Discord liefert max. 200 Server pro Seite -> bei Bedarf paginieren
   while (true) {
     const res = await fetch(`${DISCORD_API}/users/@me/guilds?limit=200&after=${after}`, {
       headers: { Authorization: `Bot ${BOT_TOKEN}` }
@@ -137,7 +138,7 @@ async function getBotGuildIds() {
   return ids;
 }
 
-// ---------- Schritt 3: Liefert dem Dashboard alle Server, auf denen der User Administrator ist ----------
+// ---------- Schritt 3: Liefert dem Dashboard alle Server ----------
 app.get('/api/guilds', requireAuth, async (req, res) => {
   try {
     const guildsRes = await fetch(`${DISCORD_API}/users/@me/guilds`, {
@@ -154,7 +155,6 @@ app.get('/api/guilds', requireAuth, async (req, res) => {
 
     const guilds = await guildsRes.json();
 
-    // Nur Server behalten, auf denen der User Administrator-Rechte hat (oder Owner ist)
     const adminGuilds = guilds.filter((g) => {
       const perms = BigInt(g.permissions ?? 0);
       return g.owner === true || (perms & ADMINISTRATOR) === ADMINISTRATOR;
@@ -182,6 +182,11 @@ app.get('/api/me', requireAuth, (req, res) => {
   res.json({ user: req.session.user });
 });
 
-app.listen(PORT, () => {
-  console.log(`Apex Dashboard läuft auf http://localhost:${PORT}`);
-});
+// WICHTIG FÜR VERCEL SERVERLESS:
+module.exports = app;
+
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`Apex Dashboard läuft auf http://localhost:${PORT}`);
+  });
+}
