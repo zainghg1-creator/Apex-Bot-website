@@ -1,78 +1,23 @@
-# Apex Dashboard – Discord-Login & Server-Verwaltung
-
-Erweitert deine Landingpage um einen echten Login-Flow:
-
-1. Klick auf **Dashboard** → Discord-Verifizierung (OAuth2)
-2. Nach der Verifizierung: Liste aller Server, auf denen du **Administrator** bist
-3. Pro Server wird geprüft, ob Apex schon drauf ist:
-   - **Ja** → Button "Verwalten"
-   - **Nein** → Button "Bot einladen" (Einladungslink direkt für diesen Server vorausgewählt)
-
-## Warum ein Server nötig ist
-
-Der Code-Tausch beim Login braucht deinen `CLIENT_SECRET`, und der Bot-Check braucht deinen `BOT_TOKEN`.
-Beide dürfen **niemals im Browser** landen, sonst kann jeder deinen Bot kapern. Deshalb übernimmt das
-ein kleiner Node.js-Server (`server.js`) – nicht die statische HTML-Datei allein.
-
-## Setup
-
-**1. Abhängigkeiten installieren**
-```bash
-npm install
-```
-
-**2. Discord Developer Portal konfigurieren**
-Gehe zu https://discord.com/developers/applications → deine App (Client-ID `1525613011262377994`):
-
-- **OAuth2 → General → Redirects**: trage `http://localhost:3000/auth/discord/callback` ein
-  (für später zusätzlich deine echte Domain, z. B. `https://deinedomain.de/auth/discord/callback`)
-- **Bot → Token**: falls noch nicht vorhanden, Token erzeugen und kopieren
-
-**3. `.env` anlegen**
-```bash
-cp .env.example .env
-```
-Trage `CLIENT_SECRET`, `BOT_TOKEN` und einen zufälligen `SESSION_SECRET` ein (Befehl dafür steht in der `.env.example`).
-
-**4. Starten**
-```bash
-npm start
-```
-Server läuft auf `http://localhost:3000`. Dashboard-Button auf der Startseite testen.
-
-## Wie der Flow technisch funktioniert
-
-```
-Startseite (Dashboard-Button)
-   → GET /auth/discord/login
-      → Redirect zu Discord (Scopes: identify, guilds)
-         → User bestätigt bei Discord
-            → Discord ruft GET /auth/discord/callback?code=... auf
-               → Server tauscht code gegen access_token (mit CLIENT_SECRET)
-               → Server speichert access_token NUR in der Session (Cookie, httpOnly)
-               → Redirect zu /dashboard.html
-                  → Browser ruft GET /api/guilds auf
-                     → Server holt User-Server via Discord-API (Bearer access_token)
-                     → Filtert auf Administrator-Rechte (Permission-Bit 0x8, oder Owner)
-                     → Server holt Bot-Server via Discord-API (Bot BOT_TOKEN)
-                     → Gleicht beide Listen ab → botIstDrauf: true/false
-                  → Dashboard zeigt pro Server "Verwalten" oder "Bot einladen"
-```
-
-## Dateien
-
-| Datei | Zweck |
-|---|---|
-| `server.js` | Express-Server: Login, Callback, Session, `/api/guilds` |
-| `public/index.html` | Deine bestehende Landingpage (Dashboard-Button angepasst) |
-| `public/dashboard.html` | Zeigt die Serverliste |
-| `public/dashboard.js` | Holt `/api/guilds` und rendert die Liste |
-| `public/dashboard/guild.html` | Platzhalter für die Verwaltungsseite eines einzelnen Servers – hier baust du als Nächstes die eigentlichen Bot-Einstellungen (Automod, Tickets, ...) ein |
-
-## Wichtige Hinweise für den Produktiv-Betrieb
-
-- **HTTPS erzwingen** und in `server.js` `cookie.secure` läuft automatisch auf `true`, sobald `NODE_ENV=production` gesetzt ist.
-- **Session-Store**: Aktuell wird der Standard-`MemoryStore` von `express-session` genutzt – der verliert Sessions bei jedem Neustart und skaliert nicht über mehrere Server-Instanzen. Für den Live-Betrieb z. B. `connect-redis` oder `connect-pg-simple` einsetzen.
-- **Rate-Limiting**: `/api/guilds` ruft bei jedem Aufruf die Discord-API auf. Bei viel Traffic lohnt sich zusätzliches Caching pro User (nicht nur der Bot-Server-Cache, der schon eingebaut ist).
-- **Scopes minimal halten**: Aktuell werden nur `identify` und `guilds` angefragt – bewusst kein `guilds.members.read` o. Ä., das nicht gebraucht wird.
-- **Permission-Check**: Es wird sowohl auf `ADMINISTRATOR` (Bit `0x8`) als auch auf `owner: true` geprüft, da der Owner eines Servers technisch nicht immer die Administrator-Rolle zugewiesen hat, aber trotzdem volle Kontrolle besitzt.
+{
+  "name": "apex-bot-website",
+  "version": "1.0.0",
+  "description": "Apex Dashboard – Discord-Login & Server-Verwaltung",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "express-session": "^1.17.3",
+    "axios": "^1.4.0",
+    "dotenv": "^16.3.1",
+    "cookie-parser": "^1.4.6"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
