@@ -76,8 +76,16 @@ function checkAuth(req, res, next) {
 }
 
 // -------------------------------------------------------------
-// 4. DISCORD OAUTH2 AUTHENTIFIZIERUNG
+// 4. ROUTING & DISCORD OAUTH2
 // -------------------------------------------------------------
+
+// Startseite (Haupt-URL /)
+app.get('/', (req, res) => {
+  if (req.session && req.session.user) {
+    return res.redirect('/dashboard');
+  }
+  res.redirect('/auth/discord/login');
+});
 
 // Login Route
 app.get('/auth/discord/login', (req, res) => {
