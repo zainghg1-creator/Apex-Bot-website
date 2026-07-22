@@ -365,22 +365,4 @@ if (NODE_ENV !== 'production') {
   }).catch(err => {
     console.error('❌ Fehler:', err);
   });
-  // === NEU: Globale Stats (Server Count) ===
-app.get('/api/stats', (req, res) => {
-  try {
-    const guildCount = botGuildsCache.ids ? botGuildsCache.ids.size : 0;
-    res.json({
-      servers: guildCount || 247,
-      uptime: "99.9",
-      responseTime: "<15ms",
-      lastUpdated: new Date().toISOString()
-    });
-  } catch (err) {
-    res.json({
-      servers: 247,
-      uptime: "99.9",
-      responseTime: "<15ms"
-    });
-  }
-);
 }
