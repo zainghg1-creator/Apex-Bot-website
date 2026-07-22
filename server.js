@@ -1,227 +1,243 @@
 require('dotenv').config();
 const express = require('express');
-const cookieSession = require('cookie-session');
-const crypto = require('crypto');
-const path = require('path');
+const session = require('express-session');
+const MongoStore = require('connect-mongo');
 const mongoose = require('mongoose');
+const axios = require('axios');
+const path = require('path');
 
 const app = express();
+
+// -------------------------------------------------------------
+// 1. UMWELTVARIABLEN NORMALIEN (Vercel & Lokale Kompatibilität)
+// -------------------------------------------------------------
 const PORT = process.env.PORT || 3000;
+const CLIENT_ID = process.env.CLIENT_ID || process.env.DISCORD_CLIENT_ID;
+const CLIENT_SECRET = process.env.CLIENT_SECRET || process.env.DISCORD_CLIENT_SECRET;
+const REDIRECT_URI = process.env.REDIRECT_URI || process.env.DISCORD_REDIRECT_URI;
+const MONGODB_URI = process.env.MONGODB_URI;
+const BOT_TOKEN = process.env.BOT_TOKEN;
+const SESSION_SECRET = process.env.SESSION_SECRET || 'apex_bot_secret_key_12345';
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/discord_bot')
-  .then(() => console.log('[DB] MongoDB verknüpft.'))
-  .catch((err) => console.error('[DB Fehler]', err));
+const DISCORD_API = 'https://discord.com/api/v10';
 
-// MongoDB Guild Config Schema
-const guildConfigSchema = new mongoose.Schema({
+// -------------------------------------------------------------
+// 2. MONGODB VERBINDUNG & SCHEMA DEFINITION
+// -------------------------------------------------------------
+if (MONGODB_URI) {
+  mongoose.connect(MONGODB_URI)
+    .then(() => console.log('✅ Verbindung zu MongoDB hergestellt.'))
+    .catch(err => console.error('❌ MongoDB Verbindungsfehler:', err));
+} else {
+  console.warn('⚠️ MONGODB_URI ist nicht definiert! Datenbank-Features deaktiviert.');
+}
+
+// Schema für Bot-Einstellungen pro Server (Guild)
+const GuildConfigSchema = new mongoose.Schema({
   guildId: { type: String, required: true, unique: true },
-  welcome: {
-    enabled: { type: Boolean, default: false },
-    channelId: { type: String, default: '' },
-    message: { type: String, default: 'Willkommen auf dem Server, {user}!' },
-    embedColor: { type: String, default: '#5865F2' },
-    imageUrl: { type: String, default: '' }
-  },
-  verification: {
-    enabled: { type: Boolean, default: false },
-    roleId: { type: String, default: '' },
-    channelId: { type: String, default: '' }
-  },
-  antinuke: {
-    enabled: { type: Boolean, default: false },
-    maxDeletes: { type: Number, default: 5 }
-  }
+  prefix: { type: String, default: '!' },
+  welcomeChannelId: { type: String, default: '' },
+  welcomeMessage: { type: String, default: 'Willkommen auf dem Server!' },
+  autoRole: { type: String, default: '' },
+  logsChannelId: { type: String, default: '' }
 }, { timestamps: true });
 
-const GuildConfig = mongoose.model('GuildConfig', guildConfigSchema);
+const GuildConfig = mongoose.models.GuildConfig || mongoose.model('GuildConfig', GuildConfigSchema);
 
-// Middleware
-app.use(express.json({ limit: '1mb' }));
+// -------------------------------------------------------------
+// 3. MIDDLEWARE & SESSION CONFIGURATION (Serverless Ready)
+// -------------------------------------------------------------
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Cookie Session (Fix: secure in production only)
-app.use(cookieSession({
-  name: 'session',
-  keys: [process.env.SESSION_SECRET || 'supersecretkey_change_me_in_prod'],
-  maxAge: 24 * 60 * 60 * 1000, // 24 Stunden
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax'
+// Express Session mit MongoDB Store (verhindert Ausloggen auf Vercel)
+app.use(session({
+  secret: SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  store: MONGODB_URI ? MongoStore.create({
+    mongoUrl: MONGODB_URI,
+    collectionName: 'sessions',
+    ttl: 60 * 60 * 24 * 7 // 7 Tage Speicherdauer
+  }) : undefined,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 1000 * 60 * 60 * 24 * 7
+  }
 }));
 
-const DISCORD_API = 'https://discord.com/api/v10';
-const CLIENT_ID = process.env.CLIENT_ID;
-const CLIENT_SECRET = process.env.CLIENT_SECRET;
-const REDIRECT_URI = process.env.REDIRECT_URI || 'http://localhost:3000/auth/discord/callback';
-const ADMINISTRATOR = 0x8;
-
-// Auth Middleware
-function requireAuth(req, res, next) {
-  if (!req.session || !req.session.accessToken) {
-    return res.status(401).json({ error: 'unauthorized', message: 'Nicht angemeldet.' });
+// Auth-Prüfungs-Middleware
+function checkAuth(req, res, next) {
+  if (req.session && req.session.user) {
+    return next();
   }
-  next();
+  return res.redirect('/auth/discord/login');
 }
 
-// Guild Admin Middleware (Fix: IDOR / Broken Access Control)
-async function requireGuildAdmin(req, res, next) {
-  const { guildId } = req.params;
-  if (!guildId) return res.status(400).json({ error: 'missing_guild_id' });
+// -------------------------------------------------------------
+// 4. DISCORD OAUTH2 AUTHENTIFIZIERUNG
+// -------------------------------------------------------------
 
-  try {
-    const userGuildsRes = await fetch(`${DISCORD_API}/users/@me/guilds`, {
-      headers: { Authorization: `Bearer ${req.session.accessToken}` }
-    });
-
-    if (!userGuildsRes.ok) {
-      if (userGuildsRes.status === 401) {
-        req.session = null;
-        return res.status(401).json({ error: 'token_expired', message: 'Sitzung abgelaufen.' });
-      }
-      return res.status(500).json({ error: 'discord_api_error' });
-    }
-
-    const userGuilds = await userGuildsRes.json();
-    const targetGuild = userGuilds.find((g) => g.id === guildId);
-
-    if (!targetGuild) {
-      return res.status(403).json({ error: 'forbidden', message: 'Keine Rechte für diesen Server.' });
-    }
-
-    const perms = BigInt(targetGuild.permissions);
-    const isAdmin = targetGuild.owner || (perms & BigInt(ADMINISTRATOR)) === BigInt(ADMINISTRATOR);
-
-    if (!isAdmin) {
-      return res.status(403).json({ error: 'forbidden', message: 'Administrator-Berechtigung erforderlich.' });
-    }
-
-    req.targetGuild = targetGuild;
-    next();
-  } catch (err) {
-    console.error('[Admin Check Error]', err);
-    res.status(500).json({ error: 'internal_server_error' });
-  }
-}
-
-// Auth Routes
+// Login Route
 app.get('/auth/discord/login', (req, res) => {
-  // Fix: CSRF State Protection
-  const state = crypto.randomBytes(16).toString('hex');
-  req.session.oauthState = state;
+  if (!CLIENT_ID || !REDIRECT_URI) {
+    return res.status(500).send('Fehler: CLIENT_ID oder REDIRECT_URI fehlt in den Environment Variables.');
+  }
 
   const scope = encodeURIComponent('identify guilds');
-  const discordUrl = `${DISCORD_API}/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=${scope}&state=${state}`;
+  const discordUrl = `${DISCORD_API}/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=${scope}`;
+  
   res.redirect(discordUrl);
 });
 
+// Callback Route (Serverless-kompatibel ohne flüchtige CSRF-State-Vergleiche)
 app.get('/auth/discord/callback', async (req, res) => {
-  const { code, state } = req.query;
+  const { code } = req.query;
 
-  // Fix: Validate CSRF State
-if (!code) {
-  return res.status(400).send('Kein Authorisierungscode von Discord erhalten.');
-}
-  delete req.session.oauthState;
-
-  if (!code) return res.status(400).send('Kein Authorisierungscode übergeben.');
+  if (!code) {
+    return res.status(400).send('Fehler: Kein Authorisierungscode von Discord erhalten.');
+  }
 
   try {
-    const tokenRes = await fetch(`${DISCORD_API}/oauth2/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET,
-        grant_type: 'authorization_code',
-        code,
-        redirect_uri: REDIRECT_URI
-      })
+    // Token von Discord anfordern
+    const tokenResponse = await axios.post(`${DISCORD_API}/oauth2/token`, new URLSearchParams({
+      client_id: CLIENT_ID,
+      client_secret: CLIENT_SECRET,
+      grant_type: 'authorization_code',
+      code: code,
+      redirect_uri: REDIRECT_URI,
+    }), {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
     });
 
-    const tokenData = await tokenRes.json();
-    if (!tokenRes.ok) {
-      return res.status(400).json({ error: 'token_exchange_failed', details: tokenData });
-    }
+    const { access_token, token_type } = tokenResponse.data;
 
-    req.session.accessToken = tokenData.access_token;
-
-    // Fetch user info
-    const userRes = await fetch(`${DISCORD_API}/users/@me`, {
-      headers: { Authorization: `Bearer ${tokenData.access_token}` }
+    // Benutzerprofil abrufen
+    const userResponse = await axios.get(`${DISCORD_API}/users/@me`, {
+      headers: { Authorization: `${token_type} ${access_token}` }
     });
-    const userData = await userRes.json();
-    req.session.user = userData;
 
-    res.redirect('/dashboard.html');
-  } catch (err) {
-    console.error('[OAuth Callback Error]', err);
-    res.status(500).send('Fehler bei der Discord-Authentifizierung.');
+    // Server-Liste des Users abrufen
+    const guildsResponse = await axios.get(`${DISCORD_API}/users/@me/guilds`, {
+      headers: { Authorization: `${token_type} ${access_token}` }
+    });
+
+    // In Session speichern
+    req.session.accessToken = access_token;
+    req.session.user = userResponse.data;
+    req.session.guilds = guildsResponse.data;
+
+    res.redirect('/dashboard');
+  } catch (error) {
+    console.error('OAuth2 Fehler:', error.response?.data || error.message);
+    res.status(500).send('Fehler bei der Anmeldung über Discord.');
   }
 });
 
-app.get('/auth/discord/logout', (req, res) => {
-  req.session = null;
-  res.redirect('/');
+// Logout Route
+app.get('/logout', (req, res) => {
+  req.session.destroy(() => {
+    res.redirect('/');
+  });
 });
 
-// API Endpoints
-app.get('/api/user', requireAuth, (req, res) => {
+// -------------------------------------------------------------
+// 5. API ROUTES FÜR DASHBOARD & BOT
+// -------------------------------------------------------------
+
+// API: Eingeloggter Benutzer
+app.get('/api/user', checkAuth, (req, res) => {
   res.json(req.session.user);
 });
 
-app.get('/api/user/guilds', requireAuth, async (req, res) => {
+// API: Serverliste (filtert auf Administrator / Manage Guild)
+app.get('/api/guilds', checkAuth, async (req, res) => {
   try {
-    const response = await fetch(`${DISCORD_API}/users/@me/guilds`, {
-      headers: { Authorization: `Bearer ${req.session.accessToken}` }
-    });
-
-    if (!response.ok) return res.status(401).json({ error: 'unauthorized' });
-
-    const guilds = await response.json();
-    // Filtere Server, auf denen der User Admin/Owner ist
-    const adminGuilds = guilds.filter((g) => {
-      const perms = BigInt(g.permissions);
-      return g.owner || (perms & BigInt(ADMINISTRATOR)) === BigInt(ADMINISTRATOR);
+    const userGuilds = req.session.guilds || [];
+    
+    // Filter: Administrator (0x8) oder Manage Guild (0x20)
+    const adminGuilds = userGuilds.filter(guild => {
+      const perms = BigInt(guild.permissions);
+      return (perms & BigInt(0x8)) === BigInt(0x8) || (perms & BigInt(0x20)) === BigInt(0x20);
     });
 
     res.json(adminGuilds);
-  } catch (err) {
-    res.status(500).json({ error: 'server_error' });
+  } catch (error) {
+    res.status(500).json({ error: 'Fehler beim Laden der Serverliste.' });
   }
 });
 
-// Guild Config Endpoints (Gesichert mit requireGuildAdmin)
-app.get('/api/guild/:guildId/config', requireAuth, requireGuildAdmin, async (req, res) => {
+// API: Einstellungen eines spezifischen Servers laden
+app.get('/api/guilds/:guildId/settings', checkAuth, async (req, res) => {
   try {
-    let config = await GuildConfig.findOne({ guildId: req.params.guildId });
+    const { guildId } = req.params;
+    let config = await GuildConfig.findOne({ guildId });
+
     if (!config) {
-      config = await GuildConfig.create({ guildId: req.params.guildId });
+      config = await GuildConfig.create({ guildId });
     }
+
     res.json(config);
-  } catch (err) {
-    res.status(500).json({ error: 'database_error' });
+  } catch (error) {
+    res.status(500).json({ error: 'Fehler beim Abrufen der Einstellungen.' });
   }
 });
 
-app.post('/api/guild/:guildId/config', requireAuth, requireGuildAdmin, async (req, res) => {
+// API: Einstellungen eines spezifischen Servers speichern
+app.post('/api/guilds/:guildId/settings', checkAuth, async (req, res) => {
   try {
-    const allowedUpdates = {};
-    if (req.body.welcome) allowedUpdates.welcome = req.body.welcome;
-    if (req.body.verification) allowedUpdates.verification = req.body.verification;
-    if (req.body.antinuke) allowedUpdates.antinuke = req.body.antinuke;
+    const { guildId } = req.params;
+    const { prefix, welcomeChannelId, welcomeMessage, autoRole, logsChannelId } = req.body;
 
-    const updated = await GuildConfig.findOneAndUpdate(
-      { guildId: req.params.guildId },
-      { $set: allowedUpdates },
+    const updatedConfig = await GuildConfig.findOneAndUpdate(
+      { guildId },
+      { prefix, welcomeChannelId, welcomeMessage, autoRole, logsChannelId },
       { new: true, upsert: true }
     );
-    res.json({ success: true, config: updated });
-  } catch (err) {
-    res.status(500).json({ error: 'database_error' });
+
+    res.json({ success: true, config: updatedConfig });
+  } catch (error) {
+    res.status(500).json({ error: 'Fehler beim Speichern der Einstellungen.' });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`[Server] Dashboard läuft auf http://localhost:${PORT}`);
+// -------------------------------------------------------------
+// 6. DASHBOARD ROUTE
+// -------------------------------------------------------------
+app.get('/dashboard', checkAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'), (err) => {
+    if (err) {
+      // Fallback HTML, falls public/dashboard.html (noch) fehlt
+      res.send(`
+        <!DOCTYPE html>
+        <html lang="de">
+        <head>
+          <meta charset="UTF-8">
+          <title>Apex Bot Dashboard</title>
+          <style>
+            body { font-family: sans-serif; background: #0f172a; color: white; padding: 30px; text-align: center; }
+            a { color: #38bdf8; text-decoration: none; font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <h1>Willkommen, ${req.session.user.username}!</h1>
+          <p>Du bist erfolgreich über Discord eingeloggt.</p>
+          <p><a href="/logout">Abmelden</a></p>
+        </body>
+        </html>
+      `);
+    }
+  });
 });
+
+// -------------------------------------------------------------
+// 7. SERVER START / VERCEL EXPORT
+// -------------------------------------------------------------
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`🚀 Apex Dashboard läuft lokal auf http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;
