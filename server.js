@@ -254,4 +254,180 @@ async function getBotGuildIds() {
 // ============================================================
 // API: GUILDS
 // ============================================================
-app.get('/api/guilds', require
+app.get('/api/guilds', requireAuth, async (req, res) => {
+  try {
+    const guildsRes = await fetch(`${DISCORD_API}/users/@me/guilds`, {
+      headers: { Authorization: `Bearer ${req.session.accessToken}` }
+    });
+    
+    if (guildsRes.status === 401) {
+      req.session = null;
+      return res.status(401).json({ error: 'session_expired' });
+    }
+    
+    if (!guildsRes.ok) {
+      return res.status(502).json({ error: 'discord_api_error' });
+    }
+    
+    const guilds = await guildsRes.json();
+    
+    // Nur Server mit Administrator-Rechten
+    const adminGuilds = guilds.filter(g => {
+      const perms = BigInt(g.permissions ?? 0);
+      return g.owner === true || (perms & ADMINISTRATOR) === ADMINISTRATOR;
+    });
+    
+    const botGuildIds = await getBotGuildIds();
+    
+    const result = adminGuilds
+      .map(g => ({
+        id: g.id,
+        name: g.name,
+        icon: g.icon ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png` : null,
+        botIstDrauf: botGuildIds.has(g.id)
+      }))
+      .sort((a, b) => Number(b.botIstDrauf) - Number(a.botIstDrauf) || a.name.localeCompare(b.name));
+    
+    res.json({
+      user: req.session.user,
+      guilds: result,
+      clientId: CLIENT_ID
+    });
+  } catch (err) {
+    console.error('API /guilds Fehler:', err);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ============================================================
+// API: GUILD DETAILS
+// ============================================================
+app.get('/api/guild/:guildId', requireAuth, async (req, res) => {
+  try {
+    const guildRes = await fetch(`${DISCORD_API}/guilds/${req.params.guildId}?with_counts=true`, {
+      headers: { Authorization: `Bot ${BOT_TOKEN}` }
+    });
+    
+    if (!guildRes.ok) {
+      return res.status(guildRes.status).json({ error: 'guild_not_found' });
+    }
+    
+    const guildData = await guildRes.json();
+    res.json({
+      members: guildData.approximate_member_count ?? 0,
+      boosts: guildData.premium_subscription_count ?? 0
+    });
+  } catch (err) {
+    console.error('API /guild/:id Fehler:', err);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ============================================================
+// API: CONFIG
+// ============================================================
+app.get('/api/guild/:guildId/config', requireAuth, async (req, res) => {
+  try {
+    const config = await getGuildConfig(req.params.guildId);
+    res.json(config);
+  } catch (err) {
+    console.error('Fehler beim Laden der Konfiguration:', err);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+app.post('/api/guild/:guildId/config/:module', requireAuth, async (req, res) => {
+  const { guildId, module } = req.params;
+  
+  if (!ALLOWED_MODULES.includes(module)) {
+    return res.status(400).json({ error: 'unknown_module' });
+  }
+  
+  try {
+    await saveModuleConfig(guildId, module, req.body);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Fehler beim Speichern der Konfiguration:', err);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ============================================================
+// API: ROLES & CHANNELS
+// ============================================================
+app.get('/api/guild/:guildId/roles', requireAuth, async (req, res) => {
+  try {
+    const rolesRes = await fetch(`${DISCORD_API}/guilds/${req.params.guildId}/roles`, {
+      headers: { Authorization: `Bot ${BOT_TOKEN}` }
+    });
+    
+    if (!rolesRes.ok) {
+      return res.status(rolesRes.status).json({ error: 'discord_api_error' });
+    }
+    
+    const roles = await rolesRes.json();
+    const result = roles
+      .filter(r => r.name !== '@everyone' && !r.managed)
+      .sort((a, b) => b.position - a.position)
+      .map(r => ({ id: r.id, name: r.name, color: r.color }));
+    
+    res.json(result);
+  } catch (err) {
+    console.error('API /roles Fehler:', err);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+app.get('/api/guild/:guildId/channels', requireAuth, async (req, res) => {
+  try {
+    const channelsRes = await fetch(`${DISCORD_API}/guilds/${req.params.guildId}/channels`, {
+      headers: { Authorization: `Bot ${BOT_TOKEN}` }
+    });
+    
+    if (!channelsRes.ok) {
+      return res.status(channelsRes.status).json({ error: 'discord_api_error' });
+    }
+    
+    const channels = await channelsRes.json();
+    const result = channels
+      .filter(c => [0, 2, 4].includes(c.type))
+      .sort((a, b) => a.position - b.position)
+      .map(c => ({
+        id: c.id,
+        name: c.name,
+        type: c.type,
+        parentId: c.parent_id || null
+      }));
+    
+    res.json(result);
+  } catch (err) {
+    console.error('API /channels Fehler:', err);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ============================================================
+// API: USER INFO
+// ============================================================
+app.get('/api/me', requireAuth, (req, res) => {
+  res.json({ user: req.session.user });
+});
+
+// ============================================================
+// START SERVER (nur in dev)
+// ============================================================
+if (NODE_ENV !== 'production') {
+  connectToDatabase()
+    .then(() => {
+      app.listen(PORT, () => {
+        console.log(`🚀 Apex Dashboard läuft auf http://localhost:${PORT}`);
+        console.log(`📊 Dashboard: http://localhost:${PORT}/dashboard.html`);
+      });
+    })
+    .catch(err => {
+      console.error('❌ Konnte keine Verbindung zu MongoDB herstellen:', err);
+      process.exit(1);
+    });
+}
+
+module.exports = app;
