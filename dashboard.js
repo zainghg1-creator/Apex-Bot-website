@@ -1,1102 +1,515 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Apex Bot – Dashboard</title>
-
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='50' fill='%23000000'/><path d='M50 18 L22 75 L38 75 L50 48 L62 75 L78 75 Z' fill='%23FFFFFF'/><path d='M15 50 C20 25, 40 12, 68 12' stroke='%23FFFFFF' stroke-width='4' stroke-linecap='round' fill='none'/><path d='M85 50 C80 75, 60 88, 32 88' stroke='%23FFFFFF' stroke-width='4' stroke-linecap='round' fill='none'/><line x1='72' y1='20' x2='28' y2='80' stroke='%23FFFFFF' stroke-width='3' stroke-linecap='round'/></svg>">
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-
-  <style>
-    :root {
-      --bg-base: #000000;
-      --bg-surface: #0a0a0a;
-      --border-subtle: rgba(255, 255, 255, 0.12);
-      --border-active: rgba(255, 255, 255, 0.4);
-      --text-primary: #ffffff;
-      --text-muted: #a1a1aa;
-      --text-dim: #71717a;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      background-color: var(--bg-base);
-      color: var(--text-primary);
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    .bg-grid {
-      position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-      background-size: 40px 40px;
-      z-index: -1;
-    }
-
-    /* Header */
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 20px 6%;
-      backdrop-filter: blur(12px);
-      background: rgba(0, 0, 0, 0.8);
-      border-bottom: 1px solid var(--border-subtle);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .brand { display: flex; align-items: center; gap: 14px; text-decoration: none; color: var(--text-primary); }
-    .brand-logo {
-      width: 34px; height: 34px; background: #000; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      border: 1px solid rgba(255, 255, 255, 0.3);
-    }
-    .brand-name { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.02em; }
-
-    .nav-center {
-      display: flex;
-      align-items: center;
-      gap: 28px;
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-    }
-    .nav-link {
-      color: var(--text-muted);
-      text-decoration: none;
-      font-size: 0.9rem;
-      font-weight: 600;
-      transition: color 0.2s ease;
-    }
-    .nav-link:hover { color: var(--text-primary); }
-
-    .user-chip {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      background: rgba(255, 255, 255, 0.05);
-      padding: 6px 8px 6px 6px;
-      border-radius: 30px;
-      border: 1px solid var(--border-subtle);
-    }
-
-    .user-chip img {
-      width: 30px;
-      height: 30px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 1px solid var(--border-subtle);
-    }
-
-    #user-name { font-size: 0.88rem; font-weight: 600; padding-right: 2px; }
-
-    .logout-btn {
-      color: var(--text-muted);
-      text-decoration: none;
-      font-size: 0.78rem;
-      font-weight: 600;
-      padding: 6px 12px;
-      border-radius: 20px;
-      background: rgba(255, 255, 255, 0.05);
-      transition: all 0.2s ease;
-    }
-
-    .logout-btn:hover {
-      color: var(--text-primary);
-      background: rgba(255, 255, 255, 0.12);
-    }
-
-    /* Buttons */
-    .btn {
-      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-      padding: 10px 18px; border-radius: 10px; font-size: 0.88rem; font-weight: 600;
-      text-decoration: none; border: 1px solid transparent; cursor: pointer;
-      transition: all 0.2s ease; white-space: nowrap; font-family: inherit;
-    }
-    .btn-primary { background: #ffffff; color: #000000; }
-    .btn-primary:hover { background: #e4e4e7; transform: translateY(-2px); }
-    .btn-secondary { background: rgba(255, 255, 255, 0.05); color: var(--text-primary); border-color: var(--border-subtle); }
-    .btn-secondary:hover { background: rgba(255, 255, 255, 0.12); border-color: var(--border-active); transform: translateY(-2px); }
-
-    /* Container / page heading */
-    .container {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 60px 24px 100px;
-      width: 100%;
-    }
-
-    .page-heading { text-align: center; margin-bottom: 48px; }
-    .page-heading h2 { font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 10px; }
-    .page-subtitle { color: var(--text-muted); font-size: 0.95rem; }
-
-    .state-box {
-      background: var(--bg-surface);
-      padding: 3rem;
-      border-radius: 16px;
-      text-align: center;
-      color: var(--text-muted);
-      border: 1px solid var(--border-subtle);
-      font-size: 0.95rem;
-    }
-
-    /* Guild Cards Grid — mehr Platz für Servernamen */
-    .guild-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 20px;
-    }
-
-    .guild-card {
-      background: var(--bg-surface);
-      padding: 1.4rem;
-      border-radius: 16px;
-      border: 1px solid var(--border-subtle);
-      display: flex;
-      flex-direction: column;
-      align-items: stretch;
-      gap: 18px;
-      transition: all 0.25s ease;
-    }
-
-    .guild-card:hover {
-      border-color: var(--border-active);
-      transform: translateY(-4px);
-    }
-
-    .guild-info {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      min-width: 0;
-      width: 100%;
-    }
-
-    .guild-icon {
-      width: 46px;
-      height: 46px;
-      border-radius: 50%;
-      object-fit: cover;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--border-subtle);
-      flex-shrink: 0;
-    }
-
-    /* Der Servername bekommt die gesamte verbleibende Breite der Karte,
-       da der Button in eine eigene Zeile darunter wandert. */
-    .guild-name {
-      flex: 1;
-      min-width: 0;
-      font-size: 1.02rem;
-      font-weight: 700;
-      line-height: 1.3;
-      color: var(--text-primary);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      white-space: normal;
-    }
-
-    /* Wrapper um den Verwalten-/Einladen-Button, den dashboard.js
-       je nach guild.botIstDrauf einfügt */
-    .guild-action {
-      width: 100%;
-    }
-
-    .guild-action .btn {
-      width: 100%;
-    }
-
-    /* Bot bereits auf dem Server -> weißer "Verwalten"-Button (btn-primary) */
-    .guild-action .btn-primary {
-      background: #ffffff;
-      color: #000000;
-    }
-
-    /* Bot noch nicht eingeladen -> gedämpfter "Bot einladen"-Button (btn-secondary) */
-    .guild-action .btn-secondary {
-      background: rgba(255, 255, 255, 0.05);
-      color: var(--text-primary);
-      border: 1px solid var(--border-subtle);
-    }
-
-    /* Overlay / Sidebar Dashboard */
-    .overlay {
-      position: fixed;
-      inset: 0;
-      background: var(--bg-base);
-      display: flex;
-      z-index: 200;
-    }
-
-    .sidebar {
-      width: 270px;
-      background: var(--bg-surface);
-      border-right: 1px solid var(--border-subtle);
-      padding: 1.75rem 1.1rem;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .sidebar-header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 2rem;
-      padding-bottom: 1.1rem;
-      border-bottom: 1px solid var(--border-subtle);
-    }
-
-    .guild-icon-small {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 1px solid var(--border-subtle);
-    }
-
-    #active-guild-name { font-weight: 700; font-size: 0.95rem; }
-
-    .sidebar-nav {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      flex: 1;
-    }
-
-    .tab-btn {
-      background: transparent;
-      border: none;
-      color: var(--text-muted);
-      padding: 11px 14px;
-      border-radius: 10px;
-      text-align: left;
-      font-size: 0.9rem;
-      font-weight: 600;
-      cursor: pointer;
-      font-family: inherit;
-      transition: all 0.2s ease;
-    }
-
-    .tab-btn:hover {
-      color: var(--text-primary);
-      background: rgba(255, 255, 255, 0.05);
-    }
-
-    .tab-btn.active {
-      background: #ffffff;
-      color: #000000;
-    }
-
-    .back-btn {
-      margin-top: auto;
-      width: 100%;
-      text-align: center;
-    }
-
-    .content-area {
-      flex: 1;
-      padding: 2.75rem;
-      overflow-y: auto;
-    }
-
-    .content-area h2 {
-      font-size: 1.6rem;
-      font-weight: 800;
-      letter-spacing: -0.01em;
-      margin-bottom: 8px;
-    }
-
-    .module-page > p {
-      color: var(--text-muted);
-      font-size: 0.92rem;
-    }
-
-    /* Cards & Forms */
-    .card {
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      border-radius: 16px;
-      padding: 1.5rem;
-    }
-
-    .card h3 {
-      font-size: 0.78rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--text-muted);
-      margin-bottom: 10px;
-    }
-
-    .card p {
-      font-size: 1.6rem;
-      font-weight: 800;
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 18px;
-      margin-top: 1.5rem;
-    }
-
-    .form-card {
-      margin-top: 1.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      max-width: 600px;
-    }
-
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .form-group label {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--text-muted);
-    }
-
-    .form-group input, .form-group textarea {
-      width: 100%;
-      background: var(--bg-base);
-      border: 1px solid var(--border-subtle);
-      border-radius: 10px;
-      padding: 11px 14px;
-      color: var(--text-primary);
-      outline: none;
-      font-family: inherit;
-      font-size: 0.9rem;
-      transition: border-color 0.2s ease;
-    }
-
-    .form-group input:focus, .form-group textarea:focus {
-      border-color: var(--border-active);
-    }
-
-    .form-group small {
-      color: var(--text-dim);
-      font-size: 0.75rem;
-    }
-
-    .form-action {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      margin-top: 4px;
-    }
-
-    .status-success {
-      color: var(--text-primary);
-      font-size: 0.85rem;
-      font-weight: 600;
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
-    .status-dot {
-      display: inline-block;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-    }
-
-    .status-dot.online {
-      background: #ffffff;
-      box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
-    }
-
-    footer {
-      text-align: center;
-      padding: 40px 24px;
-      border-top: 1px solid var(--border-subtle);
-      color: var(--text-dim);
-      font-size: 0.85rem;
-    }
-
-    .tab-emoji { display: inline-block; width: 20px; text-align: center; margin-right: 2px; }
-
-    .sidebar-nav { overflow-y: auto; padding-right: 2px; }
-    .sidebar-nav::-webkit-scrollbar { width: 5px; }
-    .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
-
-    /* Sub tabs (e.g. Willkommen: Beitritt / Verlassen) */
-    .subtabs {
-      display: flex;
-      gap: 8px;
-      margin: 1.5rem 0 0.5rem;
-      border-bottom: 1px solid var(--border-subtle);
-    }
-    .subtab-btn {
-      background: transparent;
-      border: none;
-      color: var(--text-muted);
-      padding: 10px 4px;
-      font-size: 0.9rem;
-      font-weight: 700;
-      cursor: pointer;
-      font-family: inherit;
-      border-bottom: 2px solid transparent;
-      transition: all 0.2s ease;
-    }
-    .subtab-btn:hover { color: var(--text-primary); }
-    .subtab-btn.active { color: var(--text-primary); border-bottom-color: #ffffff; }
-    .subpage.hidden { display: none; }
-
-    /* Color picker row */
-    .color-row { display: flex; align-items: center; gap: 12px; }
-    .color-row input[type="color"] {
-      width: 44px; height: 38px; padding: 0; border: 1px solid var(--border-subtle);
-      border-radius: 8px; background: var(--bg-base); cursor: pointer;
-    }
-    .color-row input[type="text"] { max-width: 140px; font-family: 'JetBrains Mono', monospace; }
-
-    /* Toggle switch */
-    .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-    .switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
-    .switch input { opacity: 0; width: 0; height: 0; }
-    .switch-slider {
-      position: absolute; inset: 0; background: rgba(255,255,255,0.12);
-      border-radius: 30px; cursor: pointer; transition: 0.2s;
-    }
-    .switch-slider::before {
-      content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px;
-      background: var(--text-muted); border-radius: 50%; transition: 0.2s;
-    }
-    .switch input:checked + .switch-slider { background: #ffffff; }
-    .switch input:checked + .switch-slider::before { background: #000000; transform: translateX(20px); }
-
-    /* Image upload */
-    .image-upload {
-      display: flex; align-items: center; gap: 16px;
-    }
-    .image-preview {
-      width: 72px; height: 72px; border-radius: 12px; object-fit: cover;
-      background: var(--bg-base); border: 1px solid var(--border-subtle);
-    }
-    .upload-btn-wrap input[type="file"] { display: none; }
-
-    /* Role / multi-select chips */
-    .chip-select {
-      display: flex; flex-wrap: wrap; gap: 8px;
-      background: var(--bg-base); border: 1px solid var(--border-subtle);
-      border-radius: 10px; padding: 10px; min-height: 46px;
-    }
-    .role-chip {
-      display: flex; align-items: center; gap: 6px;
-      background: rgba(255,255,255,0.08); border: 1px solid var(--border-subtle);
-      padding: 6px 10px; border-radius: 20px; font-size: 0.82rem; font-weight: 600;
-      cursor: pointer; user-select: none; transition: all 0.2s ease;
-    }
-    .role-chip:hover { border-color: var(--border-active); }
-    .role-chip.selected { background: #ffffff; color: #000000; border-color: #ffffff; }
-    .chip-empty { color: var(--text-dim); font-size: 0.85rem; padding: 8px 4px; }
-
-    /* Ticket category rows */
-    .option-row {
-      display: flex; gap: 10px; align-items: center;
-      background: var(--bg-base); border: 1px solid var(--border-subtle);
-      border-radius: 10px; padding: 10px 12px;
-    }
-    .option-row input, .option-row select { flex: 1; }
-    .option-remove {
-      background: transparent; border: 1px solid var(--border-subtle); color: var(--text-muted);
-      border-radius: 8px; width: 34px; height: 34px; cursor: pointer; font-size: 1rem;
-      flex-shrink: 0; transition: all 0.2s ease;
-    }
-    .option-remove:hover { color: #ff6b6b; border-color: #ff6b6b; }
-    .add-option-btn {
-      align-self: flex-start;
-      background: rgba(255,255,255,0.05); border: 1px dashed var(--border-subtle);
-      color: var(--text-muted); padding: 10px 16px; border-radius: 10px; cursor: pointer;
-      font-family: inherit; font-size: 0.85rem; font-weight: 600; transition: all 0.2s ease;
-    }
-    .add-option-btn:hover { color: var(--text-primary); border-color: var(--border-active); }
-
-    /* Embed live preview */
-    .embed-preview-wrap { max-width: 420px; }
-    .discord-embed {
-      background: #2b2d31; border-left: 4px solid #ffffff; border-radius: 6px;
-      padding: 14px 16px; font-family: 'Plus Jakarta Sans', sans-serif; color: #dbdee1;
-      display: flex; gap: 14px; justify-content: space-between;
-    }
-    .discord-embed-body { flex: 1; min-width: 0; }
-    .discord-embed-title { font-weight: 700; color: #ffffff; margin-bottom: 6px; font-size: 0.95rem; }
-    .discord-embed-desc { font-size: 0.85rem; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
-    .discord-embed-thumb {
-      width: 56px; height: 56px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
-    }
-    .discord-embed-image { width: 100%; border-radius: 6px; margin-top: 10px; max-height: 160px; object-fit: cover; }
-    .discord-embed-footer {
-      display: flex; align-items: center; gap: 8px; margin-top: 10px;
-      font-size: 0.72rem; color: #949ba4;
-    }
-    .discord-embed-footer img { width: 18px; height: 18px; border-radius: 50%; }
-
-    /* Placeholder / coming-soon module cards */
-    .soon-badge {
-      display: inline-block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em;
-      text-transform: uppercase; color: var(--text-dim); background: rgba(255,255,255,0.06);
-      border: 1px solid var(--border-subtle); padding: 3px 9px; border-radius: 20px; margin-left: 10px;
-    }
-
-    /* Toast */
-    #toast-container {
-      position: fixed; bottom: 24px; right: 24px; z-index: 999;
-      display: flex; flex-direction: column; gap: 10px;
-    }
-    .toast {
-      background: #ffffff; color: #000000; font-weight: 700; font-size: 0.88rem;
-      padding: 13px 20px; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-      display: flex; align-items: center; gap: 10px;
-      animation: toast-in 0.25s ease, toast-out 0.25s ease 2.75s forwards;
-    }
-    @keyframes toast-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes toast-out { from { opacity: 1; } to { opacity: 0; transform: translateY(-6px); } }
-
-    @media (max-width: 768px) {
-      .nav-center { display: none; }
-      .stats-grid { grid-template-columns: 1fr; }
-    }
-
-    @media (max-width: 640px) {
-      .overlay { flex-direction: column; }
-      .sidebar {
-        width: 100%;
-        flex-direction: row;
-        align-items: center;
-        padding: 12px 16px;
-        overflow-x: auto;
+const CLIENT_ID = '1525613011262377994';
+const BOT_PERMISSIONS = '8';
+
+const loadingState = document.getElementById('loading-state');
+const emptyState = document.getElementById('empty-state');
+const errorState = document.getElementById('error-state');
+const errorMessage = document.getElementById('error-message');
+const guildListEl = document.getElementById('guild-list');
+const userChip = document.getElementById('user-chip');
+const userAvatar = document.getElementById('user-avatar');
+const userName = document.getElementById('user-name');
+
+const manageOverlay = document.getElementById('manage-overlay');
+const activeGuildName = document.getElementById('active-guild-name');
+const activeGuildIcon = document.getElementById('active-guild-icon');
+
+const overviewMembers = document.getElementById('overview-members');
+const overviewBoosts = document.getElementById('overview-boosts');
+
+let activeGuildId = null;
+let guildRoles = [];     // [{id, name, color}]
+let guildChannels = [];  // [{id, name, type}] type: 0=text,2=voice,4=category
+let ticketOptionCount = 0;
+
+// ---------- Grundlegende Server-Auswahl ----------
+
+function showState(state) {
+  [loadingState, emptyState, errorState, guildListEl].forEach((el) => el?.classList.add('hidden'));
+  state?.classList.remove('hidden');
+}
+
+async function loadDashboard() {
+  showState(loadingState);
+  try {
+    const res = await fetch('/api/guilds');
+    if (!res.ok) {
+      if (res.status === 401) return (window.location.href = '/');
+      throw new Error('Fehler beim Laden');
+    }
+    const data = await res.json();
+    renderUser(data.user);
+    renderGuilds(data.guilds, data.clientId || CLIENT_ID);
+  } catch (err) {
+    if (errorMessage) errorMessage.textContent = err.message;
+    showState(errorState);
+  }
+}
+
+function renderUser(user) {
+  if (!user) return;
+  if (userName) userName.textContent = user.username;
+  if (userAvatar) {
+    userAvatar.src = user.avatar
+      ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
+      : 'https://cdn.discordapp.com/embed/avatars/0.png';
+  }
+}
+
+function renderGuilds(guilds, clientId) {
+  if (!guilds || guilds.length === 0) return showState(emptyState);
+
+  guildListEl.innerHTML = '';
+  guilds.forEach((guild) => {
+    const card = document.createElement('div');
+    card.className = 'guild-card';
+
+    const iconSrc = guild.icon || 'https://cdn.discordapp.com/embed/avatars/0.png';
+
+    card.innerHTML = `
+      <div class="guild-info">
+        <img src="${iconSrc}" class="guild-icon" alt="${guild.name}">
+        <span class="guild-name">${guild.name}</span>
+      </div>
+      <div class="guild-action">
+        ${
+          guild.botIstDrauf
+            ? `<button class="btn btn-primary" onclick="openManagement('${guild.id}', '${escapeHtml(guild.name)}', '${iconSrc}')">Verwalten</button>`
+            : `<a href="https://discord.com/api/oauth2/authorize?client_id=${clientId}&scope=bot&permissions=${BOT_PERMISSIONS}&guild_id=${guild.id}" target="_blank" class="btn btn-secondary">Bot einladen</a>`
+        }
+      </div>
+    `;
+    guildListEl.appendChild(card);
+  });
+
+  showState(guildListEl);
+}
+
+function escapeHtml(str) {
+  return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
+// ---------- Verwaltungs-Overlay öffnen ----------
+
+async function openManagement(guildId, name, iconUrl) {
+  activeGuildId = guildId;
+  if (activeGuildName) activeGuildName.textContent = name;
+  if (activeGuildIcon) activeGuildIcon.src = iconUrl;
+
+  if (overviewMembers) overviewMembers.textContent = '...';
+  if (overviewBoosts) overviewBoosts.textContent = '...';
+
+  manageOverlay?.classList.remove('hidden');
+
+  loadGuildDetails(guildId);
+  await loadRolesAndChannels(guildId);
+  await loadAllModuleSettings(guildId);
+}
+
+function closeManagement() {
+  activeGuildId = null;
+  manageOverlay?.classList.add('hidden');
+}
+
+async function loadGuildDetails(guildId) {
+  try {
+    const res = await fetch(`/api/guild/${guildId}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (overviewMembers) overviewMembers.textContent = data.members ?? '0';
+      if (overviewBoosts) overviewBoosts.textContent = data.boosts ?? '0';
+    } else {
+      if (overviewMembers) overviewMembers.textContent = 'N/A';
+      if (overviewBoosts) overviewBoosts.textContent = 'N/A';
+    }
+  } catch (err) {
+    if (overviewMembers) overviewMembers.textContent = 'N/A';
+    if (overviewBoosts) overviewBoosts.textContent = 'N/A';
+  }
+}
+
+// ---------- Rollen & Kanäle laden ----------
+
+async function loadRolesAndChannels(guildId) {
+  try {
+    const [rolesRes, channelsRes] = await Promise.all([
+      fetch(`/api/guild/${guildId}/roles`),
+      fetch(`/api/guild/${guildId}/channels`)
+    ]);
+    guildRoles = rolesRes.ok ? await rolesRes.json() : [];
+    guildChannels = channelsRes.ok ? await channelsRes.json() : [];
+  } catch (err) {
+    guildRoles = [];
+    guildChannels = [];
+  }
+
+  renderChannelSelect('join-channel', 0);
+  renderChannelSelect('leave-channel', 0);
+  renderChannelSelect('ticket-panel-channel', 0);
+  renderChannelSelect('teamliste-channel', 0);
+  renderChannelSelect('support-channel', 0);
+  renderChannelSelect('moderation-log-channel', 0);
+  renderChannelSelect('teamupdate-channel', 0);
+
+  renderRoleChips('join-roles', []);
+  renderRoleChips('teamliste-roles', []);
+  renderRoleChips('verification-roles', [], true);
+}
+
+function renderChannelSelect(selectId, filterType) {
+  const el = document.getElementById(selectId);
+  if (!el) return;
+  const relevant = guildChannels.filter((c) => c.type === filterType);
+  if (relevant.length === 0) {
+    el.innerHTML = `<option value="">Keine Textkanäle gefunden</option>`;
+    return;
+  }
+  el.innerHTML = relevant.map((c) => `<option value="${c.id}">#${escapeHtml(c.name)}</option>`).join('');
+}
+
+function renderRoleChips(containerId, selectedIds, singleSelect = false) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (guildRoles.length === 0) {
+    el.innerHTML = `<span class="chip-empty">Keine Rollen gefunden</span>`;
+    return;
+  }
+  el.innerHTML = guildRoles
+    .map((r) => {
+      const isSelected = selectedIds.includes(r.id);
+      return `<div class="role-chip ${isSelected ? 'selected' : ''}" data-role-id="${r.id}" onclick="toggleRoleChip('${containerId}', '${r.id}', ${singleSelect})">${escapeHtml(r.name)}</div>`;
+    })
+    .join('');
+}
+
+function toggleRoleChip(containerId, roleId, singleSelect) {
+  const el = document.getElementById(containerId);
+  const chip = el.querySelector(`[data-role-id="${roleId}"]`);
+  if (!chip) return;
+  if (singleSelect) {
+    el.querySelectorAll('.role-chip').forEach((c) => c.classList.remove('selected'));
+    chip.classList.add('selected');
+  } else {
+    chip.classList.toggle('selected');
+  }
+}
+
+function getSelectedRoleIds(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return [];
+  return Array.from(el.querySelectorAll('.role-chip.selected')).map((c) => c.dataset.roleId);
+}
+
+// ---------- Tabs & Subtabs ----------
+
+function switchTab(tabName) {
+  document.querySelectorAll('.tab-btn').forEach((btn) => btn.classList.remove('active'));
+  document.querySelectorAll('.module-page').forEach((page) => page.classList.add('hidden'));
+
+  const activeBtn = document.querySelector(`[data-tab="${tabName}"]`);
+  const activePage = document.getElementById(`mod-${tabName}`);
+
+  if (activeBtn) activeBtn.classList.add('active');
+  if (activePage) activePage.classList.remove('hidden');
+}
+
+function switchSubtab(moduleName, subName) {
+  const container = document.getElementById(`mod-${moduleName}`);
+  if (!container) return;
+  container.querySelectorAll('.subtab-btn').forEach((btn) => btn.classList.remove('active'));
+  container.querySelectorAll('.subpage').forEach((page) => page.classList.add('hidden'));
+
+  container.querySelector(`[data-sub="${subName}"]`)?.classList.add('active');
+  document.getElementById(`${moduleName}-${subName}-page`)?.classList.remove('hidden');
+}
+
+// ---------- Farb-Sync (Color Picker <-> Hex Input) ----------
+
+function syncColor(prefix) {
+  const color = document.getElementById(`${prefix}-color`).value;
+  document.getElementById(`${prefix}-color-hex`).value = color;
+  const preview = document.getElementById(`${prefix}-preview`);
+  if (preview) preview.style.borderLeftColor = color;
+}
+
+function syncColorHex(prefix) {
+  let hex = document.getElementById(`${prefix}-color-hex`).value.trim();
+  if (!hex.startsWith('#')) hex = `#${hex}`;
+  if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+    document.getElementById(`${prefix}-color`).value = hex;
+    const preview = document.getElementById(`${prefix}-preview`);
+    if (preview) preview.style.borderLeftColor = hex;
+  }
+}
+
+// ---------- Bild-Upload (als Base64 gespeichert) ----------
+
+function handleImageUpload(input, prefix) {
+  const file = input.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    const previewImg = document.getElementById(`${prefix}-image-preview`);
+    if (previewImg) previewImg.src = dataUrl;
+    input.dataset.value = dataUrl;
+    updateEmbedPreview(prefix);
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearImage(prefix) {
+  const input = document.getElementById(`${prefix}-image-input`);
+  if (input) {
+    input.value = '';
+    input.dataset.value = '';
+  }
+  const previewImg = document.getElementById(`${prefix}-image-preview`);
+  if (previewImg) previewImg.src = '';
+  updateEmbedPreview(prefix);
+}
+
+// ---------- Live Embed-Vorschau ----------
+
+function updateEmbedPreview(prefix) {
+  const titleEl = document.getElementById(`${prefix}-title`) || document.getElementById(`${prefix}-panel-title`);
+  const descEl = document.getElementById(`${prefix}-text`) || document.getElementById(`${prefix}-panel-desc`);
+  const previewTitle = document.getElementById(`${prefix}-preview-title`);
+  const previewDesc = document.getElementById(`${prefix}-preview-desc`);
+  const previewImage = document.getElementById(`${prefix}-preview-image`);
+  const previewThumb = document.getElementById(`${prefix}-preview-thumb`);
+  const imageInput = document.getElementById(`${prefix}-image-input`);
+  const avatarThumbToggle = document.getElementById(`${prefix}-avatar-thumb`);
+
+  if (previewTitle && titleEl) previewTitle.textContent = titleEl.value || titleEl.placeholder;
+  if (previewDesc && descEl) previewDesc.textContent = descEl.value || descEl.placeholder;
+
+  if (previewImage) {
+    const val = imageInput?.dataset.value;
+    if (val) {
+      previewImage.src = val;
+      previewImage.classList.remove('hidden');
+    } else {
+      previewImage.classList.add('hidden');
+    }
+  }
+
+  if (previewThumb) {
+    previewThumb.style.display = avatarThumbToggle && !avatarThumbToggle.checked ? 'none' : '';
+  }
+}
+
+// ---------- Ticket-Kategorien (dynamische Zeilen) ----------
+
+function addTicketOption(data = null) {
+  ticketOptionCount++;
+  const id = `ticket-opt-${ticketOptionCount}`;
+  const list = document.getElementById('ticket-options-list');
+  const row = document.createElement('div');
+  row.className = 'option-row';
+  row.id = id;
+  row.innerHTML = `
+    <input type="text" placeholder="Label, z.B. Allgemeiner Support" class="opt-label" value="${data ? escapeHtml(data.label || '') : ''}">
+    <input type="text" placeholder="Emoji (optional)" class="opt-emoji" style="max-width: 90px;" value="${data ? escapeHtml(data.emoji || '') : ''}">
+    <select class="opt-category"></select>
+    <button type="button" class="option-remove" onclick="document.getElementById('${id}').remove()">✕</button>
+  `;
+  list.appendChild(row);
+  const select = row.querySelector('.opt-category');
+  const cats = guildChannels.filter((c) => c.type === 4);
+  select.innerHTML = cats.length
+    ? cats.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')
+    : `<option value="">Keine Kategorien gefunden</option>`;
+  if (data && data.categoryId) select.value = data.categoryId;
+}
+
+function collectTicketOptions() {
+  return Array.from(document.querySelectorAll('#ticket-options-list .option-row')).map((row) => ({
+    label: row.querySelector('.opt-label').value,
+    emoji: row.querySelector('.opt-emoji').value,
+    categoryId: row.querySelector('.opt-category').value
+  }));
+}
+
+// ---------- Einstellungen laden ----------
+
+async function loadAllModuleSettings(guildId) {
+  try {
+    const res = await fetch(`/api/guild/${guildId}/config`);
+    const config = res.ok ? await res.json() : {};
+
+    applyWelcomeConfig(config.welcome || {});
+    applyTicketConfig(config.tickets || {});
+    applyTeamlisteConfig(config.teamliste || {});
+    applySimpleConfig('support', config.support || {});
+    applySimpleConfig('moderation', config.moderation || {});
+    applySimpleConfig('teamupdate', config.teamupdate || {});
+    applySimpleConfig('stats', config.stats || {});
+    applyVerificationConfig(config.verification || {});
+    applySimpleConfig('antinuke', config.antinuke || {});
+  } catch (err) {
+    console.error('Fehler beim Laden der Konfiguration:', err);
+  }
+}
+
+function applyWelcomeConfig(cfg) {
+  const j = cfg.join || {};
+  const l = cfg.leave || {};
+
+  document.getElementById('join-enabled').checked = j.enabled ?? true;
+  document.getElementById('join-mode').value = j.mode || 'embed';
+  document.getElementById('join-title').value = j.title || '';
+  document.getElementById('join-text').value = j.text || '';
+  document.getElementById('join-color').value = j.color || '#ffffff';
+  document.getElementById('join-color-hex').value = j.color || '#ffffff';
+  document.getElementById('join-avatar-thumb').checked = j.useAvatarThumbnail ?? true;
+  if (j.image) {
+    document.getElementById('join-image-preview').src = j.image;
+    document.getElementById('join-image-input').dataset.value = j.image;
+  }
+  if (j.channelId) document.getElementById('join-channel').value = j.channelId;
+  renderRoleChips('join-roles', j.roles || []);
+
+  document.getElementById('leave-enabled').checked = l.enabled ?? false;
+  document.getElementById('leave-mode').value = l.mode || 'embed';
+  document.getElementById('leave-title').value = l.title || '';
+  document.getElementById('leave-text').value = l.text || '';
+  document.getElementById('leave-color').value = l.color || '#ffffff';
+  document.getElementById('leave-color-hex').value = l.color || '#ffffff';
+  document.getElementById('leave-avatar-thumb').checked = l.useAvatarThumbnail ?? true;
+  if (l.image) {
+    document.getElementById('leave-image-preview').src = l.image;
+    document.getElementById('leave-image-input').dataset.value = l.image;
+  }
+  if (l.channelId) document.getElementById('leave-channel').value = l.channelId;
+
+  updateEmbedPreview('join');
+  updateEmbedPreview('leave');
+}
+
+function applyTicketConfig(cfg) {
+  if (cfg.panelChannelId) document.getElementById('ticket-panel-channel').value = cfg.panelChannelId;
+  document.getElementById('ticket-panel-title').value = cfg.title || '';
+  document.getElementById('ticket-panel-desc').value = cfg.description || '';
+  document.getElementById('ticket-color').value = cfg.color || '#ffffff';
+  document.getElementById('ticket-color-hex').value = cfg.color || '#ffffff';
+  document.getElementById('ticket-create-msg').value = cfg.creationMessage || '';
+  if (cfg.image) {
+    document.getElementById('ticket-image-preview').src = cfg.image;
+    document.getElementById('ticket-image-input').dataset.value = cfg.image;
+  }
+
+  document.getElementById('ticket-options-list').innerHTML = '';
+  ticketOptionCount = 0;
+  const options = cfg.options && cfg.options.length ? cfg.options : [{ label: 'Allgemeiner Support', emoji: '🎫', categoryId: '' }];
+  options.forEach((opt) => addTicketOption(opt));
+
+  updateEmbedPreview('ticket');
+}
+
+function applyTeamlisteConfig(cfg) {
+  if (cfg.channelId) document.getElementById('teamliste-channel').value = cfg.channelId;
+  renderRoleChips('teamliste-roles', cfg.roles || []);
+}
+
+function applyVerificationConfig(cfg) {
+  document.getElementById('verification-enabled').checked = cfg.enabled ?? false;
+  renderRoleChips('verification-roles', cfg.roleId ? [cfg.roleId] : [], true);
+}
+
+function applySimpleConfig(prefix, cfg) {
+  const enabledEl = document.getElementById(`${prefix}-enabled`);
+  if (enabledEl) enabledEl.checked = cfg.enabled ?? enabledEl.checked;
+  const channelEl = document.getElementById(`${prefix}-channel`) || document.getElementById(`${prefix}-log-channel`);
+  if (channelEl && cfg.channelId) channelEl.value = cfg.channelId;
+}
+
+// ---------- Einstellungen speichern ----------
+
+async function saveModuleSettings(moduleName) {
+  let payload = {};
+
+  if (moduleName === 'welcome') {
+    payload = {
+      join: {
+        enabled: document.getElementById('join-enabled').checked,
+        mode: document.getElementById('join-mode').value,
+        title: document.getElementById('join-title').value,
+        text: document.getElementById('join-text').value,
+        color: document.getElementById('join-color').value,
+        image: document.getElementById('join-image-input').dataset.value || '',
+        useAvatarThumbnail: document.getElementById('join-avatar-thumb').checked,
+        channelId: document.getElementById('join-channel').value,
+        roles: getSelectedRoleIds('join-roles')
+      },
+      leave: {
+        enabled: document.getElementById('leave-enabled').checked,
+        mode: document.getElementById('leave-mode').value,
+        title: document.getElementById('leave-title').value,
+        text: document.getElementById('leave-text').value,
+        color: document.getElementById('leave-color').value,
+        image: document.getElementById('leave-image-input').dataset.value || '',
+        useAvatarThumbnail: document.getElementById('leave-avatar-thumb').checked,
+        channelId: document.getElementById('leave-channel').value
       }
-      .sidebar-header { margin-bottom: 0; padding-bottom: 0; border-bottom: none; margin-right: 14px; }
-      .sidebar-nav { flex-direction: row; flex: none; }
-      .back-btn { margin-top: 0; margin-left: auto; width: auto; }
-      .content-area { padding: 1.5rem; }
+    };
+  } else if (moduleName === 'tickets') {
+    payload = {
+      panelChannelId: document.getElementById('ticket-panel-channel').value,
+      title: document.getElementById('ticket-panel-title').value,
+      description: document.getElementById('ticket-panel-desc').value,
+      color: document.getElementById('ticket-color').value,
+      image: document.getElementById('ticket-image-input').dataset.value || '',
+      creationMessage: document.getElementById('ticket-create-msg').value,
+      options: collectTicketOptions()
+    };
+  } else if (moduleName === 'teamliste') {
+    payload = {
+      channelId: document.getElementById('teamliste-channel').value,
+      roles: getSelectedRoleIds('teamliste-roles')
+    };
+  } else if (moduleName === 'verification') {
+    const roles = getSelectedRoleIds('verification-roles');
+    payload = {
+      enabled: document.getElementById('verification-enabled').checked,
+      roleId: roles[0] || null
+    };
+  } else {
+    const enabledEl = document.getElementById(`${moduleName}-enabled`);
+    const channelEl = document.getElementById(`${moduleName}-channel`) || document.getElementById(`${moduleName}-log-channel`);
+    payload = {
+      enabled: enabledEl ? enabledEl.checked : true,
+      channelId: channelEl ? channelEl.value : undefined
+    };
+  }
+
+  try {
+    const res = await fetch(`/api/guild/${activeGuildId}/config/${moduleName}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+      showToast('✓ Erfolgreich gespeichert!');
+    } else {
+      showToast('✕ Speichern fehlgeschlagen');
     }
-  </style>
-</head>
-<body>
+  } catch (err) {
+    showToast('✕ Verbindungsfehler beim Speichern');
+  }
+}
 
-  <div class="bg-grid"></div>
+// ---------- Toast-Benachrichtigung ----------
 
-  <!-- Top Navigation -->
-  <header>
-    <a href="/" class="brand">
-      <div class="brand-logo">
-        <svg width="18" height="18" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M50 18 L22 75 L38 75 L50 48 L62 75 L78 75 Z" fill="#FFFFFF"/>
-          <path d="M15 50 C20 25, 40 12, 68 12" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
-          <path d="M85 50 C80 75, 60 88, 32 88" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
-          <line x1="72" y1="20" x2="28" y2="80" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
-        </svg>
-      </div>
-      <span class="brand-name">APEX<span>.</span></span>
-    </a>
+function showToast(message) {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = message;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
 
-    <nav class="nav-center">
-      <a href="/" class="nav-link">Startseite</a>
-    </nav>
-
-    <div id="user-chip" class="user-chip">
-      <img id="user-avatar" src="" alt="Avatar">
-      <span id="user-name">Laden...</span>
-      <a href="/auth/logout" class="logout-btn">Abmelden</a>
-    </div>
-  </header>
-
-  <!-- Server-Auswahl Bereich -->
-  <main class="container">
-    <div class="page-heading">
-      <h2>Wähle einen Server</h2>
-      <p class="page-subtitle">Wähle einen Server aus, um Module zu konfigurieren und den Bot zu verwalten.</p>
-    </div>
-
-    <div id="loading-state" class="state-box">Lade deine Server...</div>
-    <div id="empty-state" class="state-box hidden">Keine verwalterbaren Server gefunden.</div>
-    <div id="error-state" class="state-box hidden">
-      <span id="error-message">Ein Fehler ist aufgetreten.</span>
-    </div>
-
-    <div id="guild-list" class="guild-grid hidden"></div>
-  </main>
-
-  <!-- Server Management Overlay / Modal -->
-  <div id="manage-overlay" class="overlay hidden">
-    <div class="sidebar">
-      <div class="sidebar-header">
-        <img id="active-guild-icon" src="" class="guild-icon-small">
-        <span id="active-guild-name">Server Name</span>
-      </div>
-      <nav class="sidebar-nav">
-        <button class="tab-btn active" data-tab="overview" onclick="switchTab('overview')"><span class="tab-emoji">📊</span> Übersicht</button>
-        <button class="tab-btn" data-tab="welcome" onclick="switchTab('welcome')"><span class="tab-emoji">👋</span> Willkommen</button>
-        <button class="tab-btn" data-tab="tickets" onclick="switchTab('tickets')"><span class="tab-emoji">🎫</span> Ticket System</button>
-        <button class="tab-btn" data-tab="teamliste" onclick="switchTab('teamliste')"><span class="tab-emoji">👥</span> Teamliste</button>
-        <button class="tab-btn" data-tab="support" onclick="switchTab('support')"><span class="tab-emoji">❓</span> Support &amp; FAQ</button>
-        <button class="tab-btn" data-tab="moderation" onclick="switchTab('moderation')"><span class="tab-emoji">🛡️</span> Moderation</button>
-        <button class="tab-btn" data-tab="teamupdate" onclick="switchTab('teamupdate')"><span class="tab-emoji">📝</span> Teamupdate Log</button>
-        <button class="tab-btn" data-tab="stats" onclick="switchTab('stats')"><span class="tab-emoji">📈</span> Kanal Statistiken</button>
-        <button class="tab-btn" data-tab="verification" onclick="switchTab('verification')"><span class="tab-emoji">✅</span> Verifizierungs System</button>
-        <button class="tab-btn" data-tab="antinuke" onclick="switchTab('antinuke')"><span class="tab-emoji">🔒</span> Anti Nuke Schutz</button>
-      </nav>
-      <button class="btn btn-secondary back-btn" onclick="closeManagement()">← Server wechseln</button>
-    </div>
-
-    <div class="content-area">
-
-      <!-- Übersicht Tab -->
-      <div id="mod-overview" class="module-page">
-        <h2>Übersicht</h2>
-        <p>Statistiken und allgemeiner Status des Bots auf deinem Server.</p>
-
-        <div class="stats-grid">
-          <div class="card">
-            <h3>Mitglieder</h3>
-            <p id="overview-members">N/A</p>
-          </div>
-          <div class="card">
-            <h3>Server Boosts</h3>
-            <p id="overview-boosts">N/A</p>
-          </div>
-          <div class="card">
-            <h3>Bot Status</h3>
-            <p style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1rem; font-weight: 600; display:flex; align-items:center; gap:8px;"><span class="status-dot online"></span> Online</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Willkommen Tab -->
-      <div id="mod-welcome" class="module-page hidden">
-        <h2>👋 Willkommen</h2>
-        <p>Begrüße neue Mitglieder automatisch beim Beitreten und verabschiede sie beim Verlassen.</p>
-
-        <div class="subtabs">
-          <button class="subtab-btn active" data-sub="join" onclick="switchSubtab('welcome','join')">Beitritt</button>
-          <button class="subtab-btn" data-sub="leave" onclick="switchSubtab('welcome','leave')">Verlassen</button>
-        </div>
-
-        <!-- Beitritt -->
-        <div id="welcome-join-page" class="subpage">
-          <div class="card form-card" style="max-width: 100%; display:grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items:start;">
-            <div class="form-card" style="max-width:none;">
-              <div class="form-group">
-                <div class="switch-row">
-                  <label style="margin:0;">Willkommens-Nachricht aktiv</label>
-                  <label class="switch"><input type="checkbox" id="join-enabled" checked><span class="switch-slider"></span></label>
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label>Nachrichtentyp</label>
-                <select id="join-mode" onchange="updateEmbedPreview('join')">
-                  <option value="embed">Embed</option>
-                  <option value="text">Einfache Nachricht</option>
-                </select>
-              </div>
-
-              <div class="form-group">
-                <label for="join-channel">Kanal</label>
-                <select id="join-channel"></select>
-              </div>
-
-              <div class="form-group">
-                <label for="join-title">Embed-Titel</label>
-                <input type="text" id="join-title" placeholder="Willkommen auf {server}! 🎉" oninput="updateEmbedPreview('join')">
-              </div>
-
-              <div class="form-group">
-                <label for="join-text">Nachricht / Beschreibung</label>
-                <textarea id="join-text" rows="4" placeholder="Hey {user}, schön dass du da bist! Wir sind jetzt {membercount} Mitglieder." oninput="updateEmbedPreview('join')"></textarea>
-                <small>Platzhalter: <code>{user}</code>, <code>{username}</code>, <code>{server}</code>, <code>{membercount}</code></small>
-              </div>
-
-              <div class="form-group">
-                <label>Embed-Bild</label>
-                <div class="image-upload">
-                  <img id="join-image-preview" class="image-preview" src="" alt="">
-                  <div class="upload-btn-wrap">
-                    <label class="btn btn-secondary" for="join-image-input">Bild hochladen</label>
-                    <input type="file" id="join-image-input" accept="image/*" onchange="handleImageUpload(this,'join')">
-                  </div>
-                  <button class="btn btn-secondary" onclick="clearImage('join')" type="button">Entfernen</button>
-                </div>
-              </div>
-
-              <div class="form-group">
-                <div class="switch-row">
-                  <label style="margin:0;">Thumbnail = Profilbild des Beitretenden</label>
-                  <label class="switch"><input type="checkbox" id="join-avatar-thumb" checked onchange="updateEmbedPreview('join')"><span class="switch-slider"></span></label>
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label>Embed-Farbe</label>
-                <div class="color-row">
-                  <input type="color" id="join-color" value="#ffffff" oninput="syncColor('join')">
-                  <input type="text" id="join-color-hex" value="#ffffff" oninput="syncColorHex('join')">
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label>Auto-Rolle(n) bei Beitritt</label>
-                <div id="join-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span></div>
-              </div>
-
-              <div class="form-action">
-                <button class="btn btn-primary" onclick="saveModuleSettings('welcome')">Einstellungen speichern</button>
-              </div>
-            </div>
-
-            <div class="embed-preview-wrap">
-              <label style="font-size:0.85rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:10px;">Live-Vorschau</label>
-              <div class="discord-embed" id="join-preview" style="border-left-color:#ffffff;">
-                <div class="discord-embed-body">
-                  <div class="discord-embed-title" id="join-preview-title">Willkommen auf {server}! 🎉</div>
-                  <div class="discord-embed-desc" id="join-preview-desc">Hey {user}, schön dass du da bist!</div>
-                  <img id="join-preview-image" class="discord-embed-image hidden" src="">
-                  <div class="discord-embed-footer">
-                    <img src="apex_logo.png">
-                    <span>Willkommen • Powered by Apex</span>
-                  </div>
-                </div>
-                <img id="join-preview-thumb" class="discord-embed-thumb" src="https://cdn.discordapp.com/embed/avatars/0.png">
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Verlassen -->
-        <div id="welcome-leave-page" class="subpage hidden">
-          <div class="card form-card" style="max-width: 100%; display:grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items:start;">
-            <div class="form-card" style="max-width:none;">
-              <div class="form-group">
-                <div class="switch-row">
-                  <label style="margin:0;">Verlassen-Nachricht aktiv</label>
-                  <label class="switch"><input type="checkbox" id="leave-enabled"><span class="switch-slider"></span></label>
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label>Nachrichtentyp</label>
-                <select id="leave-mode" onchange="updateEmbedPreview('leave')">
-                  <option value="embed">Embed</option>
-                  <option value="text">Einfache Nachricht</option>
-                </select>
-              </div>
-
-              <div class="form-group">
-                <label for="leave-channel">Kanal</label>
-                <select id="leave-channel"></select>
-              </div>
-
-              <div class="form-group">
-                <label for="leave-title">Embed-Titel</label>
-                <input type="text" id="leave-title" placeholder="Auf Wiedersehen 👋" oninput="updateEmbedPreview('leave')">
-              </div>
-
-              <div class="form-group">
-                <label for="leave-text">Nachricht / Beschreibung</label>
-                <textarea id="leave-text" rows="4" placeholder="{username} hat den Server verlassen. Wir sind jetzt {membercount} Mitglieder." oninput="updateEmbedPreview('leave')"></textarea>
-                <small>Platzhalter: <code>{username}</code>, <code>{server}</code>, <code>{membercount}</code></small>
-              </div>
-
-              <div class="form-group">
-                <label>Embed-Bild</label>
-                <div class="image-upload">
-                  <img id="leave-image-preview" class="image-preview" src="" alt="">
-                  <div class="upload-btn-wrap">
-                    <label class="btn btn-secondary" for="leave-image-input">Bild hochladen</label>
-                    <input type="file" id="leave-image-input" accept="image/*" onchange="handleImageUpload(this,'leave')">
-                  </div>
-                  <button class="btn btn-secondary" onclick="clearImage('leave')" type="button">Entfernen</button>
-                </div>
-              </div>
-
-              <div class="form-group">
-                <div class="switch-row">
-                  <label style="margin:0;">Thumbnail = Profilbild des Verlassenden</label>
-                  <label class="switch"><input type="checkbox" id="leave-avatar-thumb" checked onchange="updateEmbedPreview('leave')"><span class="switch-slider"></span></label>
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label>Embed-Farbe</label>
-                <div class="color-row">
-                  <input type="color" id="leave-color" value="#ffffff" oninput="syncColor('leave')">
-                  <input type="text" id="leave-color-hex" value="#ffffff" oninput="syncColorHex('leave')">
-                </div>
-              </div>
-
-              <div class="form-action">
-                <button class="btn btn-primary" onclick="saveModuleSettings('welcome')">Einstellungen speichern</button>
-              </div>
-            </div>
-
-            <div class="embed-preview-wrap">
-              <label style="font-size:0.85rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:10px;">Live-Vorschau</label>
-              <div class="discord-embed" id="leave-preview" style="border-left-color:#ffffff;">
-                <div class="discord-embed-body">
-                  <div class="discord-embed-title" id="leave-preview-title">Auf Wiedersehen 👋</div>
-                  <div class="discord-embed-desc" id="leave-preview-desc">{username} hat den Server verlassen.</div>
-                  <img id="leave-preview-image" class="discord-embed-image hidden" src="">
-                  <div class="discord-embed-footer">
-                    <img src="apex_logo.png">
-                    <span>Willkommen • Powered by Apex</span>
-                  </div>
-                </div>
-                <img id="leave-preview-thumb" class="discord-embed-thumb" src="https://cdn.discordapp.com/embed/avatars/0.png">
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Ticket System Tab -->
-      <div id="mod-tickets" class="module-page hidden">
-        <h2>🎫 Ticket System</h2>
-        <p>Erstelle ein Dropdown-Panel, über das Mitglieder Tickets in der passenden Kategorie eröffnen können.</p>
-
-        <div class="card form-card" style="max-width:100%; display:grid; grid-template-columns: 1fr 1fr; gap:28px; align-items:start;">
-          <div class="form-card" style="max-width:none;">
-            <div class="form-group">
-              <label for="ticket-panel-channel">Kanal für das Ticket-Panel (Dropdown-Embed)</label>
-              <select id="ticket-panel-channel"></select>
-            </div>
-
-            <div class="form-group">
-              <label for="ticket-panel-title">Panel Embed-Titel</label>
-              <input type="text" id="ticket-panel-title" placeholder="Support Center" oninput="updateEmbedPreview('ticket')">
-            </div>
-
-            <div class="form-group">
-              <label for="ticket-panel-desc">Panel Embed-Beschreibung</label>
-              <textarea id="ticket-panel-desc" rows="3" placeholder="Wähle unten eine Kategorie aus, um ein Ticket zu eröffnen." oninput="updateEmbedPreview('ticket')"></textarea>
-            </div>
-
-            <div class="form-group">
-              <label>Panel Embed-Bild</label>
-              <div class="image-upload">
-                <img id="ticket-image-preview" class="image-preview" src="" alt="">
-                <div class="upload-btn-wrap">
-                  <label class="btn btn-secondary" for="ticket-image-input">Bild hochladen</label>
-                  <input type="file" id="ticket-image-input" accept="image/*" onchange="handleImageUpload(this,'ticket')">
-                </div>
-                <button class="btn btn-secondary" onclick="clearImage('ticket')" type="button">Entfernen</button>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label>Embed-Farbe</label>
-              <div class="color-row">
-                <input type="color" id="ticket-color" value="#ffffff" oninput="syncColor('ticket')">
-                <input type="text" id="ticket-color-hex" value="#ffffff" oninput="syncColorHex('ticket')">
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="ticket-create-msg">Nachricht bei Ticket-Erstellung</label>
-              <textarea id="ticket-create-msg" rows="3" placeholder="Hallo {user}, ein Teammitglied kümmert sich gleich um dein Anliegen."></textarea>
-              <small>Wird als erste Nachricht im neu erstellten Ticket-Kanal gepostet.</small>
-            </div>
-
-            <div class="form-group">
-              <label>Ticket-Kategorien (Dropdown-Optionen)</label>
-              <div id="ticket-options-list" style="display:flex; flex-direction:column; gap:10px;"></div>
-              <button type="button" class="add-option-btn" onclick="addTicketOption()">+ Kategorie hinzufügen</button>
-            </div>
-
-            <div class="form-action">
-              <button class="btn btn-primary" onclick="saveModuleSettings('tickets')">Einstellungen speichern</button>
-            </div>
-          </div>
-
-          <div class="embed-preview-wrap">
-            <label style="font-size:0.85rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:10px;">Live-Vorschau</label>
-            <div class="discord-embed" id="ticket-preview" style="border-left-color:#ffffff;">
-              <div class="discord-embed-body">
-                <div class="discord-embed-title" id="ticket-preview-title">Support Center</div>
-                <div class="discord-embed-desc" id="ticket-preview-desc">Wähle unten eine Kategorie aus, um ein Ticket zu eröffnen.</div>
-                <img id="ticket-preview-image" class="discord-embed-image hidden" src="">
-                <div class="discord-embed-footer">
-                  <img src="apex_logo.png">
-                  <span>Ticket System • Powered by Apex</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Teamliste Tab -->
-      <div id="mod-teamliste" class="module-page hidden">
-        <h2>👥 Teamliste</h2>
-        <p>Generiert automatisch eine immer aktuelle Übersicht deines Teams in einem Kanal.</p>
-
-        <div class="card form-card">
-          <div class="form-group">
-            <label for="teamliste-channel">Kanal für die Teamliste</label>
-            <select id="teamliste-channel"></select>
-          </div>
-
-          <div class="form-group">
-            <label>Team-Rollen (beliebig viele, in Reihenfolge der Anzeige)</label>
-            <div id="teamliste-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span></div>
-            <small>Ausgewählte Rollen werden automatisch mit ihren Mitgliedern gruppiert angezeigt und aktualisieren sich live.</small>
-          </div>
-
-          <div class="form-action">
-            <button class="btn btn-primary" onclick="saveModuleSettings('teamliste')">Einstellungen speichern</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Support & FAQ Tab -->
-      <div id="mod-support" class="module-page hidden">
-        <h2>❓ Support &amp; FAQ<span class="soon-badge">Grundeinrichtung</span></h2>
-        <p>Automatisiere häufige Fragen mit intelligenten Auto-Antworten und einer strukturierten Hilfeseite.</p>
-        <div class="card form-card">
-          <div class="form-group">
-            <div class="switch-row">
-              <label style="margin:0;">Modul aktiv</label>
-              <label class="switch"><input type="checkbox" id="support-enabled"><span class="switch-slider"></span></label>
-            </div>
-          </div>
-          <div class="form-group">
-            <label for="support-channel">FAQ-Kanal</label>
-            <select id="support-channel"></select>
-          </div>
-          <div class="form-action">
-            <button class="btn btn-primary" onclick="saveModuleSettings('support')">Einstellungen speichern</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Moderation Tab -->
-      <div id="mod-moderation" class="module-page hidden">
-        <h2>🛡️ Moderation<span class="soon-badge">Grundeinrichtung</span></h2>
-        <p>Automod, Temp-Mutes, Warn-System und detaillierte Sanctions-Logs.</p>
-        <div class="card form-card">
-          <div class="form-group">
-            <div class="switch-row">
-              <label style="margin:0;">Automod aktiv</label>
-              <label class="switch"><input type="checkbox" id="moderation-enabled"><span class="switch-slider"></span></label>
-            </div>
-          </div>
-          <div class="form-group">
-            <label for="moderation-log-channel">Log-Kanal für Sanktionen</label>
-            <select id="moderation-log-channel"></select>
-          </div>
-          <div class="form-action">
-            <button class="btn btn-primary" onclick="saveModuleSettings('moderation')">Einstellungen speichern</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Teamupdate Log Tab -->
-      <div id="mod-teamupdate" class="module-page hidden">
-        <h2>📝 Teamupdate Log<span class="soon-badge">Grundeinrichtung</span></h2>
-        <p>Postet Beförderungen, Rang-Anpassungen und Team-Eintritte strukturiert in einem Log-Kanal.</p>
-        <div class="card form-card">
-          <div class="form-group">
-            <div class="switch-row">
-              <label style="margin:0;">Log aktiv</label>
-              <label class="switch"><input type="checkbox" id="teamupdate-enabled"><span class="switch-slider"></span></label>
-            </div>
-          </div>
-          <div class="form-group">
-            <label for="teamupdate-channel">Log-Kanal</label>
-            <select id="teamupdate-channel"></select>
-          </div>
-          <div class="form-action">
-            <button class="btn btn-primary" onclick="saveModuleSettings('teamupdate')">Einstellungen speichern</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Kanal Statistiken Tab -->
-      <div id="mod-stats" class="module-page hidden">
-        <h2>📈 Kanal Statistiken<span class="soon-badge">Grundeinrichtung</span></h2>
-        <p>Zeigt Mitgliederzahl, Boosts und Online-Status live als Sprachkanal-Namen an.</p>
-        <div class="card form-card">
-          <div class="form-group">
-            <div class="switch-row">
-              <label style="margin:0;">Live-Statistik-Kanäle aktiv</label>
-              <label class="switch"><input type="checkbox" id="stats-enabled"><span class="switch-slider"></span></label>
-            </div>
-          </div>
-          <div class="form-action">
-            <button class="btn btn-primary" onclick="saveModuleSettings('stats')">Einstellungen speichern</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Verifizierungs System Tab -->
-      <div id="mod-verification" class="module-page hidden">
-        <h2>✅ Verifizierungs System<span class="soon-badge">Grundeinrichtung</span></h2>
-        <p>Schütze deine Community vor Raid-Bots durch Button- oder Captcha-Verifizierung vor dem Serverbeitritt.</p>
-        <div class="card form-card">
-          <div class="form-group">
-            <div class="switch-row">
-              <label style="margin:0;">Verifizierung aktiv</label>
-              <label class="switch"><input type="checkbox" id="verification-enabled"><span class="switch-slider"></span></label>
-            </div>
-          </div>
-          <div class="form-group">
-            <label for="verification-role">Rolle nach Verifizierung</label>
-            <div id="verification-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span></div>
-          </div>
-          <div class="form-action">
-            <button class="btn btn-primary" onclick="saveModuleSettings('verification')">Einstellungen speichern</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Anti Nuke Schutz Tab -->
-      <div id="mod-antinuke" class="module-page hidden">
-        <h2>🔒 Anti Nuke Schutz<span class="soon-badge">Grundeinrichtung</span></h2>
-        <p>Echtzeit-Erkennung gegen Rechte-Missbrauch: Stoppt Massen-Kicks, Channel-Löschungen und Rollen-Griefing sofort.</p>
-        <div class="card form-card">
-          <div class="form-group">
-            <div class="switch-row">
-              <label style="margin:0;">Anti Nuke aktiv</label>
-              <label class="switch"><input type="checkbox" id="antinuke-enabled" checked><span class="switch-slider"></span></label>
-            </div>
-          </div>
-          <div class="form-action">
-            <button class="btn btn-primary" onclick="saveModuleSettings('antinuke')">Einstellungen speichern</button>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <div id="toast-container"></div>
-
-  <footer>
-    <p>&copy; 2026 APEX BOT SYSTEM. All rights reserved.</p>
-  </footer>
-
-  <script src="/dashboard.js"></script>
-</body>
-</html>
+document.addEventListener('DOMContentLoaded', loadDashboard);
