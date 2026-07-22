@@ -1,504 +1,102 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Apex – Dashboard</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg-base: #000000;
-    --bg-surface: #0a0a0a;
-    --bg-card: rgba(18, 18, 18, 0.7);
-    --border-subtle: rgba(255, 255, 255, 0.12);
-    --border-active: rgba(255, 255, 255, 0.4);
-    --accent-monochrome: #ffffff;
-    --text-primary: #ffffff;
-    --text-muted: #a1a1aa;
-    --text-dim: #71717a;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    background-color: var(--bg-base);
-    color: var(--text-primary);
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    min-height: 100vh;
-  }
-
-  .bg-grid {
-    position: fixed;
-    inset: 0;
-    background-image:
-      linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
-    z-index: -1;
-  }
-
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 20px 6%;
-    backdrop-filter: blur(12px);
-    background: rgba(0, 0, 0, 0.8);
-    border-bottom: 1px solid var(--border-subtle);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-
-  .brand { display: flex; align-items: center; gap: 14px; text-decoration: none; color: var(--text-primary); }
-  .brand-logo {
-    width: 34px; height: 34px; background: #000; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-  }
-  .brand-name { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.02em; }
-
-  .user-chip {
-    display: flex; align-items: center; gap: 10px;
-    font-size: 0.85rem; color: var(--text-muted);
-  }
-  .user-chip img { width: 28px; height: 28px; border-radius: 50%; }
-
-  .btn {
-    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-    padding: 9px 16px; border-radius: 10px; font-size: 0.85rem; font-weight: 600;
-    text-decoration: none; border: 1px solid transparent; cursor: pointer;
-    transition: all 0.2s ease; white-space: nowrap;
-  }
-  .btn-primary { background: #ffffff; color: #000000; }
-  .btn-primary:hover { background: #e4e4e7; transform: translateY(-1px); }
-  .btn-secondary { background: rgba(255, 255, 255, 0.05); color: var(--text-primary); border-color: var(--border-subtle); }
-  .btn-secondary:hover { background: rgba(255, 255, 255, 0.12); border-color: var(--border-active); }
-
-  main { max-width: 1000px; margin: 0 auto; padding: 48px 24px 100px; }
-
-  .page-title { font-size: 1.6rem; font-weight: 700; margin-bottom: 6px; }
-  .page-subtitle { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 36px; }
-
-  .guild-list { display: flex; flex-direction: column; gap: 12px; }
-
-  .guild-row {
-    display: flex; align-items: center; gap: 16px;
-    background: var(--bg-surface); border: 1px solid var(--border-subtle);
-    border-radius: 14px; padding: 14px 18px;
-    transition: border-color 0.2s ease;
-  }
-  .guild-row:hover { border-color: var(--border-active); }
-
-  .guild-icon {
-    width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
-    background: rgba(255, 255, 255, 0.08); object-fit: cover;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 0.9rem; color: var(--text-muted);
-  }
-
-  .guild-info { flex: 1; min-width: 0; }
-  .guild-name {
-    font-weight: 600; font-size: 0.98rem;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .guild-status {
-    font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; margin-top: 3px;
-  }
-  .status-active { color: #ffffff; }
-  .status-missing { color: var(--text-dim); }
-
-  .state-box {
-    text-align: center; padding: 80px 20px; color: var(--text-muted);
-  }
-  .state-box .spinner {
-    width: 28px; height: 28px; margin: 0 auto 20px;
-    border: 2px solid var(--border-subtle); border-top-color: var(--text-primary);
-    border-radius: 50%; animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* MANAGEMENT OVERLAY & SIDEBAR STYLES */
-  .manage-overlay {
-    position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(10px);
-    z-index: 200; display: flex; justify-content: center; align-items: center; padding: 20px;
-  }
-  .manage-window {
-    width: 100%; max-width: 1100px; height: 88vh; background: var(--bg-surface);
-    border: 1px solid var(--border-subtle); border-radius: 16px; display: flex; overflow: hidden;
-  }
-  
-  /* Linke Sidebar */
-  .sidebar {
-    width: 280px; background: rgba(255, 255, 255, 0.02);
-    border-right: 1px solid var(--border-subtle); display: flex; flex-direction: column; padding: 20px;
-    overflow-y: auto;
-  }
-  .sidebar-header {
-    display: flex; align-items: center; gap: 12px; padding-bottom: 20px;
-    margin-bottom: 16px; border-bottom: 1px solid var(--border-subtle);
-  }
-  .sidebar-header img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
-  .sidebar-header h3 { font-size: 0.95rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-  .module-menu { display: flex; flex-direction: column; gap: 4px; flex: 1; }
-  .menu-item {
-    display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 8px;
-    background: transparent; color: var(--text-muted); border: none; font-size: 0.85rem;
-    font-weight: 600; cursor: pointer; transition: all 0.2s ease; text-align: left;
-  }
-  .menu-item svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .menu-item:hover { background: rgba(255, 255, 255, 0.05); color: var(--text-primary); }
-  .menu-item.active { background: #ffffff; color: #000000; }
-  .menu-item.active svg { stroke: #000000; }
-
-  .btn-close-manage {
-    margin-top: 16px; padding: 10px; background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--border-subtle); color: var(--text-muted); border-radius: 8px; cursor: pointer;
-    font-size: 0.8rem; font-weight: 600; text-align: center;
-  }
-  .btn-close-manage:hover { color: #fff; border-color: var(--border-active); }
-
-  /* Rechter Inhalt */
-  .content-panel { flex: 1; padding: 36px; overflow-y: auto; }
-  .module-page { display: flex; flex-direction: column; gap: 16px; }
-  .module-page h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 4px; }
-  .module-page p { color: var(--text-muted); font-size: 0.9rem; }
-
-  .card {
-    background: var(--bg-card); border: 1px solid var(--border-subtle);
-    border-radius: 12px; padding: 20px; margin-top: 10px;
-  }
-
-  /* OVERVIEW SECTION STYLES */
-  .server-header-card {
-    display: flex;
-    align-items: center;
-    gap: 18px;
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid var(--border-subtle);
-    border-radius: 14px;
-    padding: 20px 24px;
-    margin-top: 8px;
-  }
-
-  .server-header-avatar {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    object-fit: cover;
-    background: rgba(255, 255, 255, 0.08);
-  }
-
-  .server-header-id {
-    font-size: 0.8rem;
-    color: var(--text-dim);
-    margin-top: 4px;
-  }
-
-  .server-header-id code {
-    font-family: 'JetBrains Mono', monospace;
-    color: var(--text-muted);
-  }
-
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-top: 12px;
-  }
-
-  .stat-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border-subtle);
-    border-radius: 12px;
-    padding: 20px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-
-  .stat-icon-wrap {
-    width: 42px;
-    height: 42px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--border-subtle);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  .stat-icon-wrap svg {
-    width: 20px;
-    height: 20px;
-    stroke: #ffffff;
-    fill: none;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-  }
-
-  .stat-info {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .stat-label {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-  }
-
-  .stat-value {
-    font-size: 1.25rem;
-    font-weight: 700;
-    font-family: 'JetBrains Mono', monospace;
-    margin-top: 2px;
-  }
-
-  .hidden { display: none !important; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apex Bot - Dashboard</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div class="bg-grid"></div>
-
-<header>
-  <a href="/" class="brand">
-    <div class="brand-logo">
-      <svg width="18" height="18" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M50 18 L22 75 L38 75 L50 48 L62 75 L78 75 Z" fill="#FFFFFF"/>
-        <path d="M15 50 C20 25, 40 12, 68 12" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
-        <path d="M85 50 C80 75, 60 88, 32 88" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
-        <line x1="72" y1="20" x2="28" y2="80" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
-      </svg>
+  <!-- Top Navigation -->
+  <header class="navbar">
+    <div class="logo">
+      <span>✦ • Apex Bot • ✦</span>
     </div>
-    <span class="brand-name">APEX<span>.</span></span>
-  </a>
+    <div id="user-chip" class="user-chip">
+      <img id="user-avatar" src="" alt="Avatar">
+      <span id="user-name">Laden...</span>
+      <a href="/auth/logout" class="logout-btn">Abmelden</a>
+    </div>
+  </header>
 
-  <div id="user-chip" class="user-chip hidden">
-    <img id="user-avatar" src="" alt="">
-    <span id="user-name"></span>
-    <a href="/auth/logout" class="btn btn-secondary" style="margin-left: 8px;">Abmelden</a>
-  </div>
-</header>
+  <!-- Server-Auswahl Bereich -->
+  <main class="container">
+    <h2>Wähle einen Server</h2>
 
-<main id="main-dashboard">
-  <h1 class="page-title">Deine Server</h1>
-  <p class="page-subtitle">Alle Discord-Server, auf denen du Administrator bist.</p>
+    <div id="loading-state" class="state-box">Lade deine Server...</div>
+    <div id="empty-state" class="state-box hidden">Keine verwalterbaren Server gefunden.</div>
+    <div id="error-state" class="state-box hidden">
+      <span id="error-message">Ein Fehler ist aufgetreten.</span>
+    </div>
 
-  <div id="loading-state" class="state-box">
-    <div class="spinner"></div>
-    <p>Server werden geladen …</p>
-  </div>
+    <div id="guild-list" class="guild-grid hidden"></div>
+  </main>
 
-  <div id="empty-state" class="state-box hidden">
-    <p>Wir haben keine Server gefunden, auf denen du Administrator bist.</p>
-  </div>
-
-  <div id="error-state" class="state-box hidden">
-    <p id="error-message">Etwas ist schiefgelaufen.</p>
-    <a href="/auth/discord/login" class="btn btn-secondary" style="margin-top: 16px;">Erneut anmelden</a>
-  </div>
-
-  <div id="guild-list" class="guild-list hidden"></div>
-</main>
-
-<!-- SERVER MANAGEMENT OVERLAY -->
-<div id="manage-overlay" class="manage-overlay hidden">
-  <div class="manage-window">
-    
-    <!-- Linke Sidebar mit SVG-Logos -->
-    <aside class="sidebar">
+  <!-- Server Management Overlay / Modal -->
+  <div id="manage-overlay" class="overlay hidden">
+    <div class="sidebar">
       <div class="sidebar-header">
-        <img id="active-guild-icon" src="" alt="">
-        <h3 id="active-guild-name">Server Name</h3>
+        <img id="active-guild-icon" src="" class="guild-icon-small">
+        <span id="active-guild-name">Server Name</span>
       </div>
-
-      <nav class="module-menu">
-        <!-- Übersicht -->
-        <button class="menu-item active" onclick="showModule('overview', this)">
-          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-          Übersicht
-        </button>
-
-        <!-- Willkommen -->
-        <button class="menu-item" onclick="showModule('welcome', this)">
-          <svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-          Willkommen
-        </button>
-
-        <!-- Tickets -->
-        <button class="menu-item" onclick="showModule('tickets', this)">
-          <svg viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><line x1="12" y1="9" x2="12" y2="15"/></svg>
-          Tickets
-        </button>
-
-        <!-- Support -->
-        <button class="menu-item" onclick="showModule('support', this)">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-          Support
-        </button>
-
-        <!-- Moderation -->
-        <button class="menu-item" onclick="showModule('moderation', this)">
-          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          Moderation
-        </button>
-
-        <!-- Teamliste -->
-        <button class="menu-item" onclick="showModule('teamlist', this)">
-          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          Teamliste
-        </button>
-
-        <!-- Teamupdate -->
-        <button class="menu-item" onclick="showModule('teamupdate', this)">
-          <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
-          Teamupdate
-        </button>
-
-        <!-- Kanal Statistiken -->
-        <button class="menu-item" onclick="showModule('stats', this)">
-          <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-          Kanal Statistiken
-        </button>
-
-        <!-- Verifizierungs System -->
-        <button class="menu-item" onclick="showModule('verification', this)">
-          <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-          Verifizierung
-        </button>
-
-        <!-- Anti Nuke -->
-        <button class="menu-item" onclick="showModule('antinuke', this)">
-          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          Anti Nuke
-        </button>
+      <nav class="sidebar-nav">
+        <button class="tab-btn active" data-tab="overview" onclick="switchTab('overview')">Übersicht</button>
+        <button class="tab-btn" data-tab="welcome" onclick="switchTab('welcome')">Willkommen</button>
       </nav>
+      <button class="btn btn-secondary back-btn" onclick="closeManagement()">← Server wechseln</button>
+    </div>
 
-      <button class="btn-close-manage" onclick="closeManagement()">← Server wechseln</button>
-    </aside>
-
-    <!-- Rechter Inhaltsbereich -->
-    <section class="content-panel">
+    <div class="content-area">
       
-      <!-- ÜBERSICHT MODUL MIT SERVER-INFOS -->
+      <!-- Übersicht Tab -->
       <div id="mod-overview" class="module-page">
         <h2>Übersicht</h2>
         <p>Statistiken und allgemeiner Status des Bots auf deinem Server.</p>
-        
-        <!-- Header-Karte für den ausgewählten Server -->
-        <div class="server-header-card">
-          <img id="overview-server-icon" src="https://cdn.discordapp.com/embed/avatars/0.png" alt="Server Icon" class="server-header-avatar">
-          <div>
-            <h3 id="overview-server-name" style="font-size: 1.1rem; font-weight: 700;">Lädt...</h3>
-            <div class="server-header-id">ID: <code id="overview-server-id">---</code></div>
-          </div>
-        </div>
 
-        <!-- Live-Statistiken Grid -->
         <div class="stats-grid">
-          
-          <!-- Mitglieder -->
-          <div class="stat-card">
-            <div class="stat-icon-wrap">
-              <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            </div>
-            <div class="stat-info">
-              <span class="stat-label">Mitglieder</span>
-              <span class="stat-value" id="overview-members">--</span>
-            </div>
+          <div class="card">
+            <h3>Mitglieder</h3>
+            <p id="overview-members">N/A</p>
           </div>
-
-          <!-- Boosts -->
-          <div class="stat-card">
-            <div class="stat-icon-wrap">
-              <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-            </div>
-            <div class="stat-info">
-              <span class="stat-label">Server Boosts</span>
-              <span class="stat-value" id="overview-boosts">--</span>
-            </div>
+          <div class="card">
+            <h3>Server Boosts</h3>
+            <p id="overview-boosts">N/A</p>
           </div>
-
-          <!-- Erstellungsdatum -->
-          <div class="stat-card">
-            <div class="stat-icon-wrap">
-              <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            </div>
-            <div class="stat-info">
-              <span class="stat-label">Erstellt am</span>
-              <span class="stat-value" id="overview-created">--</span>
-            </div>
+          <div class="card">
+            <h3>Bot Status</h3>
+            <p><span class="status-dot online"></span> Online</p>
           </div>
-
         </div>
-
-        <div class="card"><p style="color: var(--text-muted);">Bot Status: <strong style="color: #ffffff;">● Online</strong></p></div>
       </div>
 
+      <!-- Willkommen Tab -->
       <div id="mod-welcome" class="module-page hidden">
         <h2>Willkommen</h2>
-        <p>Begrüße neue Mitglieder mit automatischen Embeds und Rollen.</p>
-        <div class="card"><p style="color: var(--text-muted);">Willkommens-Kanal Konfiguration.</p></div>
+        <p>Begrüße neue Mitglieder automatisch beim Beitreten.</p>
+
+        <div class="card form-card">
+          <div class="form-group">
+            <label for="welcome-text">Willkommens-Text</label>
+            <textarea id="welcome-text" rows="4" placeholder="Willkommen {user} auf {server}!"></textarea>
+            <small>Nutze <code>{user}</code> um den User zu erwähnen und <code>{server}</code> für den Servernamen.</small>
+          </div>
+
+          <div class="form-group">
+            <label for="welcome-channel">Willkommens-Kanal (Channel ID)</label>
+            <input type="text" id="welcome-channel" placeholder="z.B. 123456789012345678">
+          </div>
+
+          <div class="form-action">
+            <button class="btn btn-primary" onclick="saveWelcomeSettings()">Einstellungen speichern</button>
+            <span id="welcome-status" class="status-success hidden">✓ Erfolgreich gespeichert!</span>
+          </div>
+        </div>
       </div>
 
-      <div id="mod-tickets" class="module-page hidden">
-        <h2>Tickets</h2>
-        <p>Erstelle Support-Panels und verwalte Ticket-Kategorien.</p>
-        <div class="card"><p style="color: var(--text-muted);">Ticket System Einstellungen.</p></div>
-      </div>
-
-      <div id="mod-support" class="module-page hidden">
-        <h2>Support System</h2>
-        <p>Richte Hilfe-Befehle und automatische FAQ-Antworten ein.</p>
-        <div class="card"><p style="color: var(--text-muted);">Support Einstellungen.</p></div>
-      </div>
-
-      <div id="mod-moderation" class="module-page hidden">
-        <h2>Moderation</h2>
-        <p>Automod, Warn-System und Mute/Ban Protokolle.</p>
-        <div class="card"><p style="color: var(--text-muted);">Moderations-Regeln anpassen.</p></div>
-      </div>
-
-      <div id="mod-teamlist" class="module-page hidden">
-        <h2>Teamliste</h2>
-        <p>Generiere eine automatische Übersicht aller Teammitglieder.</p>
-        <div class="card"><p style="color: var(--text-muted);">Team-Rollen zuweisen.</p></div>
-      </div>
-
-      <div id="mod-teamupdate" class="module-page hidden">
-        <h2>Teamupdate</h2>
-        <p>Kanal für Beförderungen, Demotionen und Teameintritte.</p>
-        <div class="card"><p style="color: var(--text-muted);">Teamupdate Logs konfigurieren.</p></div>
-      </div>
-
-      <div id="mod-stats" class="module-page hidden">
-        <h2>Kanal Statistiken</h2>
-        <p>Erstelle Sprachkanäle, die Mitgliedszahlen live anzeigen.</p>
-        <div class="card"><p style="color: var(--text-muted);">Statistik-Kanäle einrichten.</p></div>
-      </div>
-
-      <div id="mod-verification" class="module-page hidden">
-        <h2>Verifizierungs System</h2>
-        <p>Schütze deinen Server vor Bots mit einer Button- oder Captcha-Verifizierung.</p>
-        <div class="card"><p style="color: var(--text-muted);">Verifizierungs-Rolle & Kanal wählen.</p></div>
-      </div>
-
-      <div id="mod-antinuke" class="module-page hidden">
-        <h2>Anti Nuke Schutz</h2>
-        <p>Verhindere Massen-Kicks, Channel-Löschungen und Server-Griefing.</p>
-        <div class="card"><p style="color: var(--text-muted);">Anti-Nuke Limits und Rechte-Schutz.</p></div>
-      </div>
-    </section>
+    </div>
   </div>
-</div>
 
-<script src="dashboard.js"></script>
+  <script src="dashboard.js"></script>
 </body>
 </html>
