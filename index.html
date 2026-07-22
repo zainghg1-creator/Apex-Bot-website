@@ -3,7 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Apex – Next-Gen Server Operations</title>
+<title>Apex – Moderation & Community Bot</title>
+
+<!-- Favicon: Gleiches Logo wie im Header oben links -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='50' fill='%23000000'/><path d='M50 18 L22 75 L38 75 L50 48 L62 75 L78 75 Z' fill='%23FFFFFF'/><path d='M15 50 C20 25, 40 12, 68 12' stroke='%23FFFFFF' stroke-width='4' stroke-linecap='round' fill='none'/><path d='M85 50 C80 75, 60 88, 32 88' stroke='%23FFFFFF' stroke-width='4' stroke-linecap='round' fill='none'/><line x1='72' y1='20' x2='28' y2='80' stroke='%23FFFFFF' stroke-width='3' stroke-linecap='round'/></svg>">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -12,55 +16,34 @@
     --bg-base: #000000;
     --bg-surface: #0a0a0a;
     --bg-card: rgba(18, 18, 18, 0.7);
-    
     --border-subtle: rgba(255, 255, 255, 0.12);
     --border-active: rgba(255, 255, 255, 0.4);
-    
     --accent-monochrome: #ffffff;
-    --grad-primary: linear-gradient(135deg, #ffffff 0%, #a1a1aa 100%);
-    --grad-glow: radial-gradient(circle, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 50%, transparent 80%);
-    
     --text-primary: #ffffff;
     --text-muted: #a1a1aa;
     --text-dim: #71717a;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  
+
   body {
     background-color: var(--bg-base);
     color: var(--text-primary);
     font-family: 'Plus Jakarta Sans', sans-serif;
     min-height: 100vh;
     overflow-x: hidden;
-    position: relative;
   }
 
-  /* ---------- Ambient Grid & Lights ---------- */
   .bg-grid {
     position: fixed;
     inset: 0;
-    background-image: 
+    background-image:
       linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
       linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
     background-size: 40px 40px;
-    z-index: -2;
-  }
-
-  .ambient-glow {
-    position: fixed;
-    top: -20vh;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 1000px;
-    height: 600px;
-    background: var(--grad-glow);
-    filter: blur(80px);
     z-index: -1;
-    pointer-events: none;
   }
 
-  /* ---------- Header ---------- */
   header {
     display: flex;
     align-items: center;
@@ -74,459 +57,323 @@
     z-index: 100;
   }
 
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    text-decoration: none;
-  }
-
+  .brand { display: flex; align-items: center; gap: 14px; text-decoration: none; color: var(--text-primary); }
   .brand-logo {
-    width: 38px;
-    height: 38px;
-    background: #000;
-    border-radius: 50%;
+    width: 34px; height: 34px; background: #000; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+  .brand-name { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.02em; }
+
+  /* ZENTRIERTE NAVIGATION IN DER MITTE */
+  .nav-center {
     display: flex;
     align-items: center;
-    justify-content: center;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+    gap: 28px;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
   }
-
-  .brand-name {
-    font-size: 1.25rem;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    color: var(--text-primary);
-  }
-
-  .brand-name span { color: var(--accent-monochrome); }
-
-  nav ul {
-    display: flex;
-    list-style: none;
-    gap: 32px;
-  }
-
-  nav a {
-    text-decoration: none;
+  .nav-link {
     color: var(--text-muted);
+    text-decoration: none;
     font-size: 0.9rem;
-    font-weight: 500;
+    font-weight: 600;
     transition: color 0.2s ease;
   }
+  .nav-link:hover {
+    color: var(--text-primary);
+  }
 
-  nav a:hover { color: var(--text-primary); }
-
-  /* ---------- Buttons ---------- */
   .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 10px 20px;
-    border-radius: 10px;
-    font-size: 0.88rem;
-    font-weight: 600;
-    text-decoration: none;
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    cursor: pointer;
-    border: 1px solid transparent;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 10px 20px; border-radius: 10px; font-size: 0.88rem; font-weight: 600;
+    text-decoration: none; border: 1px solid transparent; cursor: pointer;
+    transition: all 0.2s ease; white-space: nowrap;
   }
+  .btn-primary { background: #ffffff; color: #000000; }
+  .btn-primary:hover { background: #e4e4e7; transform: translateY(-2px); }
+  .btn-secondary { background: rgba(255, 255, 255, 0.05); color: var(--text-primary); border-color: var(--border-subtle); }
+  .btn-secondary:hover { background: rgba(255, 255, 255, 0.12); border-color: var(--border-active); transform: translateY(-2px); }
 
-  .btn-primary {
-    background: #ffffff;
-    color: #000000;
-    box-shadow: 0 4px 20px rgba(255, 255, 255, 0.15);
+  /* HERO SECTION */
+  .hero {
+    max-width: 1100px; margin: 0 auto; padding: 100px 24px 60px; text-align: center;
   }
-
-  .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 30px rgba(255, 255, 255, 0.3);
-    background: #e4e4e7;
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px;
+    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-subtle);
+    border-radius: 20px; font-size: 0.8rem; font-family: 'JetBrains Mono', monospace;
+    color: var(--text-muted); margin-bottom: 24px;
   }
+  .hero-title { font-size: 3.2rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 20px; }
+  .hero-subtitle { font-size: 1.1rem; color: var(--text-muted); max-width: 650px; margin: 0 auto 36px; line-height: 1.6; }
+  .hero-buttons { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; }
 
-  .btn-secondary {
-    background: rgba(255, 255, 255, 0.05);
-    color: var(--text-primary);
-    border-color: var(--border-subtle);
+  /* DEMO TERMINAL */
+  .demo-section {
+    max-width: 900px; margin: 40px auto 100px; padding: 0 24px;
   }
-
-  .btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.4);
-    transform: translateY(-2px);
+  .terminal-window {
+    background: var(--bg-surface); border: 1px solid var(--border-subtle);
+    border-radius: 16px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.8);
   }
-
-  /* ---------- Hero Section ---------- */
-  .hero-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 80px 24px 60px;
-    display: grid;
-    grid-template-columns: 1.1fr 0.9fr;
-    gap: 60px;
-    align-items: center;
-  }
-
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 14px;
-    border-radius: 30px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: var(--text-primary);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.8rem;
-    font-weight: 500;
-    margin-bottom: 24px;
-  }
-
-  .badge-pulse {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: #ffffff;
-    box-shadow: 0 0 8px #ffffff;
-    animation: pulse 2s infinite;
-  }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.3; transform: scale(0.85); }
-  }
-
-  h1 {
-    font-size: 3.5rem;
-    line-height: 1.1;
-    font-weight: 800;
-    letter-spacing: -0.03em;
-    margin-bottom: 20px;
-  }
-
-  h1 .text-gradient {
-    background: var(--grad-primary);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-
-  .hero-description {
-    color: var(--text-muted);
-    font-size: 1.1rem;
-    line-height: 1.6;
-    margin-bottom: 36px;
-    max-width: 500px;
-  }
-
-  .hero-buttons {
-    display: flex;
-    gap: 16px;
-    margin-bottom: 48px;
-  }
-
-  .highlights-row {
-    display: flex;
-    gap: 32px;
-    padding-top: 24px;
-    border-top: 1px solid var(--border-subtle);
-  }
-
-  .highlight-item {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .highlight-value {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--text-primary);
-  }
-
-  .highlight-label {
-    font-size: 0.82rem;
-    color: var(--text-dim);
-    margin-top: 2px;
-  }
-
-  /* ---------- Live System Overview Card ---------- */
-  .dashboard-card {
-    background: var(--bg-card);
-    backdrop-filter: blur(20px);
-    border: 1px solid var(--border-subtle);
-    border-radius: 20px;
-    padding: 30px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
-    position: relative;
-  }
-
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
+  .terminal-header {
+    background: rgba(255, 255, 255, 0.03); padding: 12px 18px;
+    display: flex; align-items: center; justify-content: space-between;
     border-bottom: 1px solid var(--border-subtle);
   }
+  .dots { display: flex; gap: 8px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border-subtle); }
+  .terminal-title { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--text-dim); }
+  
+  .terminal-body { padding: 24px; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; min-height: 180px; }
+  .cmd-line { margin-bottom: 12px; display: flex; gap: 10px; color: var(--text-muted); }
+  .cmd-line .prefix { color: #ffffff; font-weight: bold; }
+  .cmd-output { color: var(--text-primary); background: rgba(255, 255, 255, 0.03); padding: 12px; border-radius: 8px; border-left: 2px solid var(--text-primary); margin-bottom: 16px; }
 
-  .card-title {
-    font-weight: 700;
-    font-size: 1rem;
+  .demo-controls { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 24px 24px; }
+  .demo-btn {
+    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-subtle);
+    color: var(--text-primary); padding: 6px 12px; border-radius: 6px; font-size: 0.75rem;
+    font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.2s ease;
+  }
+  .demo-btn:hover { background: #fff; color: #000; }
+
+  /* MODULE GRID */
+  .modules-section { max-width: 1100px; margin: 0 auto; padding: 0 24px 12px; }
+  .section-header { text-align: center; margin-bottom: 60px; }
+  .section-title { font-size: 2rem; font-weight: 800; margin-bottom: 12px; }
+  .section-subtitle { color: var(--text-muted); font-size: 0.95rem; }
+
+  .modules-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;
   }
 
-  .card-status {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.75rem;
-    color: var(--text-primary);
-    display: flex;
-    align-items: center;
-    gap: 6px;
+  .module-card {
+    background: var(--bg-surface); border: 1px solid var(--border-subtle);
+    border-radius: 16px; padding: 28px; transition: all 0.3s ease; display: flex;
+    flex-direction: column; gap: 16px;
+  }
+  .module-card:hover { border-color: var(--border-active); transform: translateY(-4px); }
+
+  .module-icon-wrap {
+    width: 44px; height: 44px; border-radius: 10px; background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: center;
+  }
+  .module-icon-wrap svg {
+    width: 22px; height: 22px; stroke: #ffffff; fill: none; stroke-width: 2;
+    stroke-linecap: round; stroke-linejoin: round;
   }
 
-  .info-list {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
+  .module-card h3 { font-size: 1.1rem; font-weight: 700; }
+  .module-card p { color: var(--text-muted); font-size: 0.88rem; line-height: 1.5; }
+
+  footer {
+    text-align: center; padding: 60px 24px; border-top: 1px solid var(--border-subtle);
+    color: var(--text-dim); font-size: 0.85rem; margin-top: 100px;
   }
 
-  .info-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    font-size: 0.9rem;
-    color: var(--text-muted);
-  }
-
-  .info-item svg {
-    color: var(--text-primary);
-    flex-shrink: 0;
-    margin-top: 2px;
-  }
-
-  /* ---------- Features Grid Section ---------- */
-  .features-section {
-    max-width: 1200px;
-    margin: 40px auto 100px;
-    padding: 0 24px;
-  }
-
-  .section-title {
-    font-size: 1.8rem;
-    font-weight: 700;
-    margin-bottom: 32px;
-    text-align: center;
-  }
-
-  .features-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
-  }
-
-  .feature-card {
-    background: var(--bg-surface);
-    border: 1px solid var(--border-subtle);
-    border-radius: 16px;
-    padding: 24px;
-    transition: transform 0.25s ease, border-color 0.25s ease;
-  }
-
-  .feature-card:hover {
-    transform: translateY(-4px);
-    border-color: var(--border-active);
-  }
-
-  .feature-icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--text-primary);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 18px;
-  }
-
-  .feature-title {
-    font-size: 1.1rem;
-    font-weight: 700;
-    margin-bottom: 8px;
-  }
-
-  .feature-desc {
-    font-size: 0.88rem;
-    color: var(--text-muted);
-    line-height: 1.5;
-  }
-
-  @media (max-width: 968px) {
-    .hero-container { grid-template-columns: 1fr; text-align: center; }
-    .hero-description { margin: 0 auto 36px; }
-    .hero-buttons { justify-content: center; }
-    .highlights-row { justify-content: center; }
-    .features-grid { grid-template-columns: 1fr; }
-    nav { display: none; }
+  @media (max-width: 768px) {
+    .nav-center { display: none; }
   }
 </style>
 </head>
 <body>
 
-  <div class="bg-grid"></div>
-  <div class="ambient-glow"></div>
+<div class="bg-grid"></div>
 
-  <!-- Header -->
-  <header>
-    <a href="/" class="brand">
-      <div class="brand-logo">
-        <svg width="22" height="22" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M50 18 L22 75 L38 75 L50 48 L62 75 L78 75 Z" fill="#FFFFFF"/>
-          <path d="M15 50 C20 25, 40 12, 68 12" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
-          <path d="M85 50 C80 75, 60 88, 32 88" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
-          <line x1="72" y1="20" x2="28" y2="80" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
-        </svg>
-      </div>
-      <span class="brand-name">APEX<span>.</span></span>
-    </a>
-
-    <nav>
-      <ul>
-        <li><a href="#features">Funktionen</a></li>
-        <li><a href="#about">Über Apex</a></li>
-      </ul>
-    </nav>
-
-    <!-- Dashboard Button leitet zur Discord-Verifizierung weiter -->
-    <div>
-      <a href="/auth/discord/login" class="btn btn-secondary">Dashboard</a>
+<header>
+  <!-- BRAND LOGO -->
+  <a href="/" class="brand">
+    <div class="brand-logo">
+      <svg width="18" height="18" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M50 18 L22 75 L38 75 L50 48 L62 75 L78 75 Z" fill="#FFFFFF"/>
+        <path d="M15 50 C20 25, 40 12, 68 12" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+        <path d="M85 50 C80 75, 60 88, 32 88" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+        <line x1="72" y1="20" x2="28" y2="80" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
+      </svg>
     </div>
-  </header>
+    <span class="brand-name">APEX<span>.</span></span>
+  </a>
 
-  <!-- Hero Section -->
-  <main class="hero-container">
-    <div class="hero-content">
-      <div class="badge">
-        <span class="badge-pulse"></span>
-        APEX SYSTEM ONLINE
-      </div>
+  <!-- NAVIGATION IN DER MITTE -->
+  <nav class="nav-center">
+    <a href="/" class="nav-link">Home</a>
+    <a href="#modules" class="nav-link">Funktionen</a>
+    <a href="https://discord.gg/mVQmkEvPdm" target="_blank" rel="noopener noreferrer" class="nav-link">Support</a>
+  </nav>
 
-      <h1>Perfekte Kontrolle für deinen <span class="text-gradient">Discord Server.</span></h1>
+  <!-- DASHBOARD LOGIN -->
+  <a href="/auth/discord/login" class="btn btn-primary">Dashboard Login</a>
+</header>
 
-      <p class="hero-description">
-        Automatisierung, High-Speed Moderation und erweiterte Utility-Systeme. Entwickelt für Communitys, die professionelle Performance verlangen.
-      </p>
-
-      <div class="hero-buttons">
-        <a href="https://discord.com/api/oauth2/authorize?client_id=1525613011262377994&scope=bot%20applications.commands&permissions=8" 
-           target="_blank" 
-           rel="noopener noreferrer" 
-           class="btn btn-primary">
-          Apex Hinzufügen
-        </a>
-        <a href="#features" class="btn btn-secondary">Funktionen entdecken</a>
-      </div>
-
-      <div class="highlights-row">
-        <div class="highlight-item">
-          <span class="highlight-value">24/7 Online</span>
-          <span class="highlight-label">Hosting Uptime</span>
-        </div>
-        <div class="highlight-item">
-          <span class="highlight-value">Slash Commands</span>
-          <span class="highlight-label">Moderne Steuerung</span>
-        </div>
-        <div class="highlight-item">
-          <span class="highlight-value">Low Latency</span>
-          <span class="highlight-label">Schnelle Antworten</span>
-        </div>
-      </div>
+<main>
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-badge">● APEX SYSTEM v2.4 ONLINE</div>
+    <h1 class="hero-title">Maximale Kontrolle.<br>Minimaler Aufwand.</h1>
+    <p class="hero-subtitle">Die modulare All-in-One Lösung für deinen Discord-Server. Von hochmodernen Ticketsystemen bis hin zu lückenlosem Anti-Nuke Schutz.</p>
+    <div class="hero-buttons">
+      <a href="https://discord.com/api/oauth2/authorize?client_id=1525613011262377994&scope=bot%20applications.commands&permissions=8" target="_blank" class="btn btn-primary">Bot einladen</a>
+      <a href="#modules" class="btn btn-secondary">Module erkunden</a>
     </div>
+  </section>
 
-    <!-- Info-Card rechts -->
-    <div class="dashboard-card" id="about">
-      <div class="card-header">
-        <span class="card-title">System & Infrastruktur</span>
-        <span class="card-status">
-          <span class="badge-pulse"></span> ONLINE
-        </span>
+  <!-- INTERAKTIVES TERMINAL -->
+  <section class="demo-section">
+    <div class="terminal-window">
+      <div class="terminal-header">
+        <div class="dots">
+          <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        </div>
+        <div class="terminal-title">APEX_INTERACTIVE_SIMULATOR.EXE</div>
       </div>
-
-      <div class="info-list">
-        <div class="info-item">
-          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"></path></svg>
-          <span><strong>High-Speed Core:</strong> Läuft dauerhaft auf dedizierter Performance-Infrastruktur.</span>
-        </div>
-        <div class="info-item">
-          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"></path></svg>
-          <span><strong>Discord Integration:</strong> Vollständige Unterstützung aller Interaktions- und Bot-Features.</span>
-        </div>
-        <div class="info-item">
-          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"></path></svg>
-          <span><strong>Echtzeit-Synchronisierung:</strong> Änderungen an Einstellungen greifen ohne Verzögerung.</span>
-        </div>
+      <div class="terminal-body" id="terminal-body">
+        <div class="cmd-line"><span class="prefix">User:</span> /antinuke status</div>
+        <div class="cmd-output">🛡️ [Anti-Nuke] Aktiviert. Max Channel Löschungen: 2/Min. Auto-Ban: AN.</div>
       </div>
-    </div>
-  </main>
-
-  <!-- Features Grid -->
-  <section class="features-section" id="features">
-    <h2 class="section-title">Hauptfunktionen</h2>
-
-    <div class="features-grid">
-      <div class="feature-card">
-        <div class="feature-icon">
-          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-        </div>
-        <h3 class="feature-title">Smart Automod</h3>
-        <p class="feature-desc">Schützt deinen Server vor Spam, unerwünschten Links und sorgt automatisch für einen sauberen Chat.</p>
-      </div>
-
-      <div class="feature-card">
-        <div class="feature-icon">
-          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2H5z"></path></svg>
-        </div>
-        <h3 class="feature-title">Ticket & Support</h3>
-        <p class="feature-desc">Nutzerfreundliche Support-Tickets mit übersichtlichen Kanälen und schnellem Moderations-Zugriff.</p>
-      </div>
-
-      <div class="feature-card">
-        <div class="feature-icon">
-          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-        </div>
-        <h3 class="feature-title">Hohe Performance</h3>
-        <p class="feature-desc">Optimierte Bot-Logik sorgt für ultraschnelle Antworten auf jeden Sprach- und Textbefehl.</p>
+      <div class="demo-controls">
+        <button class="demo-btn" onclick="runDemo('antinuke')">/antinuke status</button>
+        <button class="demo-btn" onclick="runDemo('ticket')">/ticket panel create</button>
+        <button class="demo-btn" onclick="runDemo('verify')">/verify send</button>
+        <button class="demo-btn" onclick="runDemo('stats')">/stats create-voice</button>
       </div>
     </div>
   </section>
 
-  <script>
-    // Zeigt eine kurze Meldung, falls /auth/discord/callback mit ?error=... zurückleitet
-    (function () {
-      const params = new URLSearchParams(window.location.search);
-      const error = params.get('error');
-      if (!error) return;
+  <!-- HAUPTFUNKTIONEN / MODULE -->
+  <section id="modules" class="modules-section">
+    <div class="section-header">
+      <h2 class="section-title">Hauptfunktionen & Module</h2>
+      <p class="section-subtitle">Passe Apex exakt an die Bedürfnisse deines Servers an.</p>
+    </div>
 
-      const messages = {
-        missing_code: 'Discord-Login wurde abgebrochen. Bitte versuch es erneut.',
-        auth_failed: 'Verifizierung fehlgeschlagen. Bitte versuch es erneut.'
-      };
+    <div class="modules-grid">
+      
+      <!-- 1. Übersicht -->
+      <div class="module-card">
+        <div class="module-icon-wrap">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        </div>
+        <h3>Zentrale Übersicht</h3>
+        <p>Echtzeit-Analyse deines Bot-Status, Aktivitäts-Logs und Performance-Werte direkt auf einem Blick im Dashboard.</p>
+      </div>
 
-      const banner = document.createElement('div');
-      banner.textContent = messages[error] || 'Es ist ein Fehler aufgetreten. Bitte versuch es erneut.';
-      banner.style.cssText = `
-        max-width: 1200px; margin: 20px auto 0; padding: 12px 20px;
-        background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle);
-        border-radius: 10px; color: var(--text-primary); font-size: 0.88rem; text-align: center;
+      <!-- 2. Willkommen -->
+      <div class="module-card">
+        <div class="module-icon-wrap">
+          <svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+        </div>
+        <h3>Willkommens-System</h3>
+        <p>Begrüße neue User mit angepassten Embeds, Auto-Rollen und automatischen Direktnachrichten.</p>
+      </div>
+
+      <!-- 3. Tickets -->
+      <div class="module-card">
+        <div class="module-icon-wrap">
+          <svg viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><line x1="12" y1="9" x2="12" y2="15"/></svg>
+        </div>
+        <h3>Ticket System</h3>
+        <p>Erstelle professionelle Dropdown- oder Button-Panels mit automatischer Rollenzuweisung und Transkript-Export.</p>
+      </div>
+
+      <!-- 4. Support -->
+      <div class="module-card">
+        <div class="module-icon-wrap">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <h3>Support & FAQ</h3>
+        <p>Automatisiere häufige Fragen mit intelligenten Auto-Antworten und strukturieren Hilfeseiten.</p>
+      </div>
+
+      <!-- 5. Moderation -->
+      <div class="module-card">
+        <div class="module-icon-wrap">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h3>Moderation</h3>
+        <p>Leistungsstarke Tools wie Automod, Temp-Mutes, Warn-Systeme und detaillierte Sanctions-Logs.</p>
+      </div>
+
+      <!-- 6. Teamliste -->
+      <div class="module-card">
+        <div class="module-icon-wrap">
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <h3>Teamliste</h3>
+        <p>Generiert vollautomatisch eine saubere, immer aktuelle Übersicht aller Moderatoren und Supporter.</p>
+      </div>
+
+      <!-- 7. Teamupdate -->
+      <div class="module-card">
+        <div class="module-icon-wrap">
+          <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+        </div>
+        <h3>Teamupdate Log</h3>
+        <p>Poste Beförderungen, Ränge-Anpassungen und Teameintritte strukturiert in dafür vorgesehene Kanäle.</p>
+      </div>
+
+      <!-- 8. Kanal Statistiken -->
+      <div class="module-card">
+        <div class="module-icon-wrap">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        </div>
+        <h3>Kanal Statistiken</h3>
+        <p>Zeige Server-Mitglieder, Booster-Zahlen und Online-Status live als Sprachkanal-Namen an.</p>
+      </div>
+
+      <!-- 9. Verifizierungs System -->
+      <div class="module-card">
+        <div class="module-icon-wrap">
+          <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
+        <h3>Verifizierungs System</h3>
+        <p>Schütze deine Community vor Raid-Bots durch Button- oder Captcha-Verifizierung vor dem Serverbeitritt.</p>
+      </div>
+
+      <!-- 10. Anti Nuke -->
+      <div class="module-card">
+        <div class="module-icon-wrap">
+          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <h3>Anti Nuke Schutz</h3>
+        <p>Echtzeit-Erkennung gegen Rechte-Missbrauch: Stoppt Massen-Kicks, Channel-Löschungen und Rollen-Griefing sofort.</p>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p>&copy; 2026 APEX BOT SYSTEM. All rights reserved.</p>
+</footer>
+
+<script>
+  function runDemo(type) {
+    const body = document.getElementById('terminal-body');
+    if(type === 'antinuke') {
+      body.innerHTML = `
+        <div class="cmd-line"><span class="prefix">User:</span> /antinuke status</div>
+        <div class="cmd-output">🛡️ [Anti-Nuke Protection]<br>• Status: Aktiviert<br>• Limit Channel-Delete: 2/Min<br>• Action: Quarantäne & Auto-Ban</div>
       `;
-      document.querySelector('header').insertAdjacentElement('afterend', banner);
-
-      // Fehler-Query aus der URL entfernen
-      window.history.replaceState({}, '', window.location.pathname);
-    })();
-  </script>
-
+    } else if(type === 'ticket') {
+      body.innerHTML = `
+        <div class="cmd-line"><span class="prefix">User:</span> /ticket panel create name:Support</div>
+        <div class="cmd-output">🎫 [Ticket System]<br>Panel "Support" erfolgreich in #support-tickets gesendet. Buttons: [📩 Ticket Öffnen]</div>
+      `;
+    } else if(type === 'verify') {
+      body.innerHTML = `
+        <div class="cmd-line"><span class="prefix">User:</span> /verify send channel:#regelwerk</div>
+        <div class="cmd-output">✅ [Verifizierung]<br>Verifizierungs-Embed versendet. Neue User müssen erst klicken um Freischaltung zu erhalten.</div>
+      `;
+    } else if(type === 'stats') {
+      body.innerHTML = `
+        <div class="cmd-line"><span class="prefix">User:</span> /stats create-voice type:members</div>
+        <div class="cmd-output">📊 [Kanal Statistiken]<br>Sprachkanal "👥 Mitglieder: 1.420" erfolgreich erstellt und wird automatisch aktualisiert.</div>
+      `;
+    }
+  }
+</script>
 </body>
 </html>
