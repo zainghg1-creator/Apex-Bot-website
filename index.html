@@ -16,8 +16,8 @@
       <div class="brand-name">APEX <span>BOT</span></div>
     </div>
     <nav class="nav-center">
-      <a href="#" class="nav-link">Funktionen</a>
-      <a href="#" class="nav-link">Dashboard</a>
+      <a href="#features" class="nav-link">Funktionen</a>
+      <a href="/dashboard.html" class="nav-link">Dashboard</a>
       <a href="#" class="nav-link">Support</a>
     </nav>
     <a href="/dashboard.html" class="btn btn-secondary">Zum Dashboard</a>
@@ -28,40 +28,36 @@
       <div class="status-badge">● APEX SYSTEM v2.4 ONLINE</div>
       
       <h1 class="hero-title">Maximale Kontrolle.<br>Minimaler Aufwand.</h1>
-      <p class="hero-subtitle">Der modulare All-in-One Discord Bot mit starkem Anti-Nuke, professionellen Tickets und übersichtlichem Web-Dashboard.</p>
+      <p class="hero-subtitle">Die modulare All-in-One Lösung für deinen Discord-Server. Von hochmodernen Ticketsystemen bis hin zu lückenlosem Anti-Nuke Schutz.</p>
 
       <div class="hero-cta">
-        <a href="https://discord.com/api/oauth2/authorize?client_id=1525613011262377994&scope=bot%20applications.commands&permissions=8" class="btn btn-primary large">Bot jetzt einladen</a>
+        <a href="https://discord.com/api/oauth2/authorize?client_id=1525613011262377994&scope=bot%20applications.commands&permissions=8" 
+           class="btn btn-primary large">Bot jetzt einladen</a>
         <a href="/dashboard.html" class="btn btn-secondary large">Dashboard öffnen</a>
       </div>
 
-      <div class="stats-bar">
+      <div class="stats-bar" id="stats-bar">
         <div class="stat">
-          <span class="stat-number" id="server-count">247</span>
+          <span class="stat-number" id="server-count">–––</span>
           <span class="stat-label">Server</span>
         </div>
         <div class="stat">
-          <span class="stat-number">99.9</span>
+          <span class="stat-number" id="uptime">99.9</span>
           <span class="stat-label">% Uptime</span>
         </div>
         <div class="stat">
-          <span class="stat-number">&lt;15</span>
-          <span class="stat-label">ms Response</span>
+          <span class="stat-number" id="response">&lt;15</span>
+          <span class="stat-label">ms</span>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="features container">
-    <h2>Hauptfunktionen</h2>
+  <!-- Features Sektion (verkürzt – erweitere bei Bedarf) -->
+  <section id="features" class="features container">
+    <h2>Hauptfunktionen & Module</h2>
     <div class="modules-grid">
-      <!-- Cards hier – ich habe sie moderner gemacht -->
-      <div class="module-card">
-        <div class="icon">🛡️</div>
-        <h3>Anti-Nuke & Moderation</h3>
-        <p>Schutz vor Raids, Massen-Kicks und Griefing in Echtzeit.</p>
-      </div>
-      <!-- Weitere Cards analog... (Platz sparen) -->
+      <!-- Deine bestehenden Feature-Cards hier einfügen oder erweitern -->
     </div>
   </section>
 
@@ -70,25 +66,49 @@
   </footer>
 
   <script>
-    // Einfacher animierter Server-Counter (später durch echte API ersetzen)
-    function animateCounter(id, target, duration = 2000) {
-      let start = 0;
-      const step = Math.ceil(target / (duration / 16));
-      const el = document.getElementById(id);
-      
-      const timer = setInterval(() => {
-        start += step;
-        if (start >= target) {
-          start = target;
-          clearInterval(timer);
-        }
-        el.textContent = start.toLocaleString('de-DE');
-      }, 16);
+    // === Dynamischer Server Count ===
+    async function loadLiveStats() {
+      try {
+        const res = await fetch('/api/stats');
+        if (!res.ok) throw new Error('API Error');
+        
+        const data = await res.json();
+        
+        animateCounter('server-count', data.servers || 247);
+        document.getElementById('uptime').textContent = data.uptime || '99.9';
+        document.getElementById('response').textContent = data.responseTime || '<15';
+      } catch (e) {
+        console.warn('Stats konnten nicht geladen werden');
+        animateCounter('server-count', 247); // Fallback
+      }
     }
 
-    window.onload = () => {
-      animateCounter('server-count', 1247); // Beispielwert – später dynamisch laden
-    };
+    function animateCounter(id, target, duration = 1800) {
+      const el = document.getElementById(id);
+      let start = parseInt(el.textContent.replace(/[^0-9]/g, '')) || 0;
+      const range = target - start;
+      const startTime = performance.now();
+
+      function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const value = Math.floor(start + range * progress);
+        el.textContent = value.toLocaleString('de-DE');
+        
+        if (progress < 1) {
+          requestAnimationFrame(update);
+        } else {
+          el.textContent = target.toLocaleString('de-DE');
+        }
+      }
+      requestAnimationFrame(update);
+    }
+
+    // Auto-Load + Refresh
+    document.addEventListener('DOMContentLoaded', () => {
+      loadLiveStats();
+      setInterval(loadLiveStats, 30000); // alle 30 Sekunden
+    });
   </script>
 </body>
 </html>
