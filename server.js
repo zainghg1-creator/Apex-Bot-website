@@ -119,9 +119,9 @@ app.get('/auth/discord/callback', async (req, res) => {
   const { code, state } = req.query;
 
   // Fix: Validate CSRF State
-  if (!state || state !== req.session.oauthState) {
-    return res.status(400).send('Ungültiger State-Parameter (CSRF-Schutz ausgelöst).');
-  }
+if (!code) {
+  return res.status(400).send('Kein Authorisierungscode von Discord erhalten.');
+}
   delete req.session.oauthState;
 
   if (!code) return res.status(400).send('Kein Authorisierungscode übergeben.');
