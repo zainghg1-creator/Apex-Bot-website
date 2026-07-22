@@ -164,7 +164,7 @@ function renderChannelSelect(selectId, filterType) {
     el.innerHTML = `<option value="">Keine Textkanäle gefunden</option>`;
     return;
   }
-  el.innerHTML = relevant.map((c) => `<option value="${c.id}">#${escapeHtml(c.name)}</option>`).join('');
+  el.innerHTML = relevant.map((c) => `<option value="${c.id}"># ${escapeHtml(c.name)}</option>`).join('');
 }
 
 function renderRoleChips(containerId, selectedIds, singleSelect = false) {
@@ -177,7 +177,7 @@ function renderRoleChips(containerId, selectedIds, singleSelect = false) {
   el.innerHTML = guildRoles
     .map((r) => {
       const isSelected = selectedIds.includes(r.id);
-      return `<div class="role-chip ${isSelected ? 'selected' : ''}" data-role-id="${r.id}" onclick="toggleRoleChip('${containerId}', '${r.id}', ${singleSelect})">${escapeHtml(r.name)}</div>`;
+      return `<div class="role-chip ${isSelected ? 'selected' : ''}" data-role-id="${r.id}" onclick="toggleRoleChip('${containerId}', '${r.id}', ${singleSelect})"><span class="chip-icon">@</span><span class="chip-label">${escapeHtml(r.name)}</span></div>`;
     })
     .join('');
 }
