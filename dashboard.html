@@ -120,45 +120,49 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* ---------------- STYLES FÜR MANAGEMENT VIEW / MODAL ---------------- */
+  /* MANAGEMENT OVERLAY & SIDEBAR STYLES */
   .manage-overlay {
     position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(10px);
     z-index: 200; display: flex; justify-content: center; align-items: center; padding: 20px;
   }
   .manage-window {
-    width: 100%; max-width: 1100px; height: 85vh; background: var(--bg-surface);
+    width: 100%; max-width: 1100px; height: 88vh; background: var(--bg-surface);
     border: 1px solid var(--border-subtle); border-radius: 16px; display: flex; overflow: hidden;
   }
   
-  /* Linke Sidebar für Module */
+  /* Linke Sidebar */
   .sidebar {
-    width: 260px; background: rgba(255, 255, 255, 0.02);
+    width: 280px; background: rgba(255, 255, 255, 0.02);
     border-right: 1px solid var(--border-subtle); display: flex; flex-direction: column; padding: 20px;
+    overflow-y: auto;
   }
   .sidebar-header {
     display: flex; align-items: center; gap: 12px; padding-bottom: 20px;
-    margin-bottom: 20px; border-bottom: 1px solid var(--border-subtle);
+    margin-bottom: 16px; border-bottom: 1px solid var(--border-subtle);
   }
   .sidebar-header img { width: 36px; height: 36px; border-radius: 50%; }
   .sidebar-header h3 { font-size: 0.95rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-  .module-menu { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .module-menu { display: flex; flex-direction: column; gap: 4px; flex: 1; }
   .menu-item {
-    display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px;
+    display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 8px;
     background: transparent; color: var(--text-muted); border: none; font-size: 0.85rem;
     font-weight: 600; cursor: pointer; transition: all 0.2s ease; text-align: left;
   }
+  .menu-item svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .menu-item:hover { background: rgba(255, 255, 255, 0.05); color: var(--text-primary); }
   .menu-item.active { background: #ffffff; color: #000000; }
+  .menu-item.active svg { stroke: #000000; }
 
   .btn-close-manage {
-    margin-top: auto; padding: 10px; background: rgba(255, 255, 255, 0.05);
+    margin-top: 16px; padding: 10px; background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--border-subtle); color: var(--text-muted); border-radius: 8px; cursor: pointer;
+    font-size: 0.8rem; font-weight: 600; text-align: center;
   }
   .btn-close-manage:hover { color: #fff; border-color: var(--border-active); }
 
-  /* Rechter Inhaltsbereich für Modul-Einstellungen */
-  .content-panel { flex: 1; padding: 32px; overflow-y: auto; }
+  /* Rechter Inhalt */
+  .content-panel { flex: 1; padding: 36px; overflow-y: auto; }
   .module-page { display: flex; flex-direction: column; gap: 16px; }
   .module-page h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 4px; }
   .module-page p { color: var(--text-muted); font-size: 0.9rem; }
@@ -216,11 +220,11 @@
   <div id="guild-list" class="guild-list hidden"></div>
 </main>
 
-<!-- ---------------- DYNAMISCHES SERVER-VERWALTUNGS PANELS ---------------- -->
+<!-- SERVER MANAGEMENT OVERLAY -->
 <div id="manage-overlay" class="manage-overlay hidden">
   <div class="manage-window">
     
-    <!-- Linke Modul-Sidebar -->
+    <!-- Linke Sidebar mit SVG-Logos -->
     <aside class="sidebar">
       <div class="sidebar-header">
         <img id="active-guild-icon" src="" alt="">
@@ -228,184 +232,135 @@
       </div>
 
       <nav class="module-menu">
-        <button class="menu-item active" onclick="showModule('overview')">📊 Übersicht</button>
-        <button class="menu-item" onclick="showModule('welcome')">👋 Willkommen</button>
-        <button class="menu-item" onclick="showModule('moderation')">🛡️ Moderation</button>
-        <button class="menu-item" onclick="showModule('tickets')">🎫 Tickets</button>
-        <button class="menu-item" onclick="showModule('economy')">💰 Bank System</button>
+        <!-- Übersicht -->
+        <button class="menu-item active" onclick="showModule('overview', this)">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Übersicht
+        </button>
+
+        <!-- Willkommen -->
+        <button class="menu-item" onclick="showModule('welcome', this)">
+          <svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+          Willkommen
+        </button>
+
+        <!-- Tickets -->
+        <button class="menu-item" onclick="showModule('tickets', this)">
+          <svg viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><line x1="12" y1="9" x2="12" y2="15"/></svg>
+          Tickets
+        </button>
+
+        <!-- Support -->
+        <button class="menu-item" onclick="showModule('support', this)">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Support
+        </button>
+
+        <!-- Moderation -->
+        <button class="menu-item" onclick="showModule('moderation', this)">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Moderation
+        </button>
+
+        <!-- Teamliste -->
+        <button class="menu-item" onclick="showModule('teamlist', this)">
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Teamliste
+        </button>
+
+        <!-- Teamupdate -->
+        <button class="menu-item" onclick="showModule('teamupdate', this)">
+          <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+          Teamupdate
+        </button>
+
+        <!-- Kanal Statistiken -->
+        <button class="menu-item" onclick="showModule('stats', this)">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          Kanal Statistiken
+        </button>
+
+        <!-- Verifizierungs System -->
+        <button class="menu-item" onclick="showModule('verification', this)">
+          <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Verifizierung
+        </button>
+
+        <!-- Anti Nuke -->
+        <button class="menu-item" onclick="showModule('antinuke', this)">
+          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Anti Nuke
+        </button>
       </nav>
 
       <button class="btn-close-manage" onclick="closeManagement()">← Server wechseln</button>
     </aside>
 
-    <!-- Rechter Inhalt für das ausgewählte Modul -->
+    <!-- Rechter Inhaltsbereich -->
     <section class="content-panel">
-      
-      <!-- Modul: Übersicht -->
       <div id="mod-overview" class="module-page">
-        <h2>Server Übersicht</h2>
-        <p>Statistiken und allgemeine Einstellungen für diesen Server.</p>
-        <div class="card">
-          <p style="color: var(--text-muted);">Apex Bot ist auf diesem Server aktiv und bereit.</p>
-        </div>
+        <h2>Übersicht</h2>
+        <p>Statistiken und allgemeiner Status des Bots auf deinem Server.</p>
+        <div class="card"><p style="color: var(--text-muted);">Bot Status: Online</p></div>
       </div>
 
-      <!-- Modul: Willkommen -->
       <div id="mod-welcome" class="module-page hidden">
-        <h2>Willkommens-Nachrichten</h2>
-        <p>Begrüße neue Mitglieder automatisch auf deinem Server.</p>
-        <div class="card">
-          <p style="color: var(--text-muted);">Modul-Einstellungen für Willkommenskanäle folgen hier.</p>
-        </div>
+        <h2>Willkommen</h2>
+        <p>Begrüße neue Mitglieder mit automatischen Embeds und Rollen.</p>
+        <div class="card"><p style="color: var(--text-muted);">Willkommens-Kanal Konfiguration.</p></div>
       </div>
 
-      <!-- Modul: Moderation -->
-      <div id="mod-moderation" class="module-page hidden">
-        <h2>Moderation & Schutz</h2>
-        <p>Verwalte Automod, Warns und Logs.</p>
-        <div class="card">
-          <p style="color: var(--text-muted);">Schutzfilter und Log-Kanal Konfiguration.</p>
-        </div>
-      </div>
-
-      <!-- Modul: Tickets -->
       <div id="mod-tickets" class="module-page hidden">
-        <h2>Ticket System</h2>
-        <p>Erstelle Support-Panels und Kategorien.</p>
-        <div class="card">
-          <p style="color: var(--text-muted);">Ticket-Panel Erstellung und Rechteverwaltung.</p>
-        </div>
+        <h2>Tickets</h2>
+        <p>Erstelle Support-Panels und verwalte Ticket-Kategorien.</p>
+        <div class="card"><p style="color: var(--text-muted);">Ticket System Einstellungen.</p></div>
       </div>
 
-      <!-- Modul: Economy -->
-      <div id="mod-economy" class="module-page hidden">
-        <h2>Bank & Economy System</h2>
-        <p>Verwalte Währung, Shop und Konten.</p>
-        <div class="card">
-          <p style="color: var(--text-muted);">Startkapital, Bank-Überweisungen und Job-System.</p>
-        </div>
+      <div id="mod-support" class="module-page hidden">
+        <h2>Support System</h2>
+        <p>Richte Hilfe-Befehle und automatische FAQ-Antworten ein.</p>
+        <div class="card"><p style="color: var(--text-muted);">Support Einstellungen.</p></div>
       </div>
 
+      <div id="mod-moderation" class="module-page hidden">
+        <h2>Moderation</h2>
+        <p>Automod, Warn-System und Mute/Ban Protokolle.</p>
+        <div class="card"><p style="color: var(--text-muted);">Moderations-Regeln anpassen.</p></div>
+      </div>
+
+      <div id="mod-teamlist" class="module-page hidden">
+        <h2>Teamliste</h2>
+        <p>Generiere eine automatische Übersicht aller Teammitglieder.</p>
+        <div class="card"><p style="color: var(--text-muted);">Team-Rollen zuweisen.</p></div>
+      </div>
+
+      <div id="mod-teamupdate" class="module-page hidden">
+        <h2>Teamupdate</h2>
+        <p>Kanal für Beförderungen, Demotionen und Teameintritte.</p>
+        <div class="card"><p style="color: var(--text-muted);">Teamupdate Logs konfigurieren.</p></div>
+      </div>
+
+      <div id="mod-stats" class="module-page hidden">
+        <h2>Kanal Statistiken</h2>
+        <p>Erstelle Sprachkanäle, die Mitgliedszahlen live anzeigen.</p>
+        <div class="card"><p style="color: var(--text-muted);">Statistik-Kanäle einrichten.</p></div>
+      </div>
+
+      <div id="mod-verification" class="module-page hidden">
+        <h2>Verifizierungs System</h2>
+        <p>Schütze deinen Server vor Bots mit einer Button- oder Captcha-Verifizierung.</p>
+        <div class="card"><p style="color: var(--text-muted);">Verifizierungs-Rolle & Kanal wählen.</p></div>
+      </div>
+
+      <div id="mod-antinuke" class="module-page hidden">
+        <h2>Anti Nuke Schutz</h2>
+        <p>Verhindere Massen-Kicks, Channel-Löschungen und Server-Griefing.</p>
+        <div class="card"><p style="color: var(--text-muted);">Anti-Nuke Limits und Rechte-Schutz.</p></div>
+      </div>
     </section>
   </div>
 </div>
 
-<!-- ---------------- JAVASCRIPT SYSTEM ---------------- -->
-<script>
-let currentBotClientId = '';
-
-// Data-Fetch beim Laden der Seite
-document.addEventListener('DOMContentLoaded', async () => {
-  try {
-    const res = await fetch('/api/guilds');
-    if (res.status === 401) {
-      showError('Sitzung abgelaufen. Bitte melde dich erneut an.');
-      return;
-    }
-    if (!res.ok) throw new Error();
-
-    const data = await res.json();
-    currentBotClientId = data.clientId;
-
-    // User-Chip rendern
-    if (data.user) {
-      document.getElementById('user-avatar').src = data.user.avatar 
-        ? `https://cdn.discordapp.com/avatars/${data.user.id}/${data.user.avatar}.png`
-        : 'https://cdn.discordapp.com/embed/avatars/0.png';
-      document.getElementById('user-name').textContent = data.user.username;
-      document.getElementById('user-chip').classList.remove('hidden');
-    }
-
-    // Server-Liste rendern
-    document.getElementById('loading-state').classList.add('hidden');
-    if (!data.guilds || data.guilds.length === 0) {
-      document.getElementById('empty-state').classList.remove('hidden');
-    } else {
-      renderGuilds(data.guilds);
-    }
-  } catch (err) {
-    showError('Server konnten nicht geladen werden.');
-  }
-});
-
-function renderGuilds(guilds) {
-  const container = document.getElementById('guild-list');
-  container.innerHTML = '';
-
-  guilds.forEach(g => {
-    const icon = g.icon ? `<img src="${g.icon}" class="guild-icon">` : `<div class="guild-icon">${g.name.substring(0, 2)}</div>`;
-    const statusClass = g.botIstDrauf ? 'status-active' : 'status-missing';
-    const statusText = g.botIstDrauf ? 'Aktiv' : 'Bot fehlt';
-
-    let actionBtn = '';
-    if (g.botIstDrauf) {
-      actionBtn = `<button class="btn btn-primary" onclick="openManagement('${g.id}', '${escapeHtml(g.name)}', '${g.icon || ''}')">Verwalten</button>`;
-    } else {
-      const inviteUrl = `https://discord.com/api/oauth2/authorize?client_id=${currentBotClientId}&guild_id=${g.id}&scope=bot&permissions=8`;
-      actionBtn = `<a href="${inviteUrl}" target="_blank" class="btn btn-secondary">Bot einladen</a>`;
-    }
-
-    const row = document.createElement('div');
-    row.className = 'guild-row';
-    row.innerHTML = `
-      ${icon}
-      <div class="guild-info">
-        <div class="guild-name">${escapeHtml(g.name)}</div>
-        <div class="guild-status ${statusClass}">● ${statusText}</div>
-      </div>
-      ${actionBtn}
-    `;
-    container.appendChild(row);
-  });
-
-  container.classList.remove('hidden');
-}
-
-// Öffnet die Modul-Verwaltungsansicht
-function openManagement(guildId, name, iconUrl) {
-  document.getElementById('active-guild-name').textContent = name;
-  const iconImg = document.getElementById('active-guild-icon');
-  
-  if (iconUrl) {
-    iconImg.src = iconUrl;
-    iconImg.classList.remove('hidden');
-  } else {
-    iconImg.classList.add('hidden');
-  }
-
-  showModule('overview');
-  document.getElementById('manage-overlay').classList.remove('hidden');
-}
-
-// Schließt das Modul-Panel
-function closeManagement() {
-  document.getElementById('manage-overlay').classList.add('hidden');
-}
-
-// Umschalten der Module in der linken Sidebar
-function showModule(modName) {
-  // Alle Unterseiten verstecken
-  document.querySelectorAll('.module-page').forEach(page => page.classList.add('hidden'));
-  // Alle Menu-Highlights entfernen
-  document.querySelectorAll('.menu-item').forEach(btn => btn.classList.remove('active'));
-
-  // Ziel-Seite einblenden
-  const targetPage = document.getElementById(`mod-${modName}`);
-  if (targetPage) targetPage.classList.remove('hidden');
-
-  // Aktivierten Button hervorheben
-  event.currentTarget?.classList?.add('active');
-}
-
-function showError(msg) {
-  document.getElementById('loading-state').classList.add('hidden');
-  document.getElementById('error-message').textContent = msg;
-  document.getElementById('error-state').classList.remove('hidden');
-}
-
-function escapeHtml(str) {
-  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-}
-</script>
+<script src="dashboard.js"></script>
 </body>
 </html>
