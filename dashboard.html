@@ -643,3 +643,41 @@
           </div>
         </div>
       </div>
+
+      <!-- ==========================================================
+      TAB: ANTI NUKE
+      ========================================================== -->
+      <div id="mod-antinuke" class="module-page hidden">
+        <h2>🔒 Anti Nuke System</h2>
+        <p>Schütze deinen Server vor Angriffen.</p>
+
+        <div class="card form-card">
+          <div class="form-group">
+            <div class="switch-row">
+              <label for="antinuke-enabled" style="margin:0;cursor:pointer;">Anti Nuke aktiv</label>
+              <label class="switch">
+                <input type="checkbox" id="antinuke-enabled">
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-action">
+            <button class="btn btn-primary" onclick="saveModuleSettings('antinuke')">Anti Nuke speichern</button>
+            <span id="antinuke-save-status" class="status-success hidden">✓ Gespeichert</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================
+  TOAST CONTAINER
+  ============================================================ -->
+  <div id="toast-container" role="status" aria-live="polite"></div>
+
+  <!-- JavaScript -->
+  <script src="dashboard.js"></script>
+</body>
+</html>
