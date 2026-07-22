@@ -7,15 +7,15 @@
   
   <style>
     :root {
-      --bg-dark: #0a0a0a;
-      --bg-card: #121212;
-      --bg-hover: #1e1e1e;
+      --bg-dark: #000000;
+      --bg-card: #0a0a0a;
+      --bg-hover: #171717;
       --accent: #ffffff;
       --accent-text: #000000;
       --text-main: #ffffff;
-      --text-muted: #a1a1aa;
-      --border: #27272a;
-      --radius: 10px;
+      --text-muted: #888888;
+      --border: #222222;
+      --radius: 8px;
     }
 
     * {
@@ -39,7 +39,7 @@
       justify-content: space-between;
       align-items: center;
       padding: 1.2rem 2rem;
-      background-color: var(--bg-card);
+      background-color: var(--bg-dark);
       border-bottom: 1px solid var(--border);
     }
 
@@ -48,14 +48,13 @@
       font-size: 1.1rem;
       letter-spacing: 1px;
       color: var(--text-main);
-      text-transform: uppercase;
     }
 
     .user-chip {
       display: flex;
       align-items: center;
       gap: 12px;
-      background: var(--bg-hover);
+      background: var(--bg-card);
       padding: 6px 14px;
       border-radius: 20px;
       border: 1px solid var(--border);
@@ -92,7 +91,6 @@
       margin-bottom: 1.5rem;
       font-weight: 600;
       font-size: 1.4rem;
-      letter-spacing: -0.5px;
     }
 
     .state-box {
@@ -123,8 +121,7 @@
     }
 
     .guild-card:hover {
-      border-color: #52525b;
-      transform: translateY(-2px);
+      border-color: #444444;
     }
 
     .guild-info {
@@ -144,7 +141,7 @@
     /* Buttons */
     .btn {
       padding: 9px 18px;
-      border-radius: 8px;
+      border-radius: 6px;
       border: none;
       font-weight: 600;
       cursor: pointer;
@@ -160,7 +157,7 @@
     }
 
     .btn-primary:hover {
-      background: #e4e4e7;
+      background: #dddddd;
     }
 
     .btn-secondary {
@@ -170,7 +167,7 @@
     }
 
     .btn-secondary:hover {
-      background: #27272a;
+      background: #222222;
     }
 
     /* Overlay / Sidebar Dashboard */
@@ -288,7 +285,7 @@
       width: 100%;
       background: var(--bg-dark);
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: 6px;
       padding: 10px 12px;
       color: var(--text-main);
       outline: none;
@@ -365,7 +362,7 @@
   <div id="manage-overlay" class="overlay hidden">
     <div class="sidebar">
       <div class="sidebar-header">
-        <img id="active-guild-icon" src="" class="guild-icon-small" alt="Icon">
+        <img id="active-guild-icon" src="" class="guild-icon-small">
         <span id="active-guild-name">Server Name</span>
       </div>
       <nav class="sidebar-nav">
@@ -380,22 +377,20 @@
       <!-- Übersicht Tab -->
       <div id="mod-overview" class="module-page">
         <h2>Übersicht</h2>
-        <p style="color: var(--text-muted);">Statistiken und allgemeiner Status des Bots auf deinem Server.</p>
+        <p>Statistiken und allgemeiner Status des Bots auf deinem Server.</p>
 
         <div class="stats-grid">
           <div class="card">
-            <h3 style="font-size: 0.9rem; color: var(--text-muted); font-weight: 500;">Mitglieder</h3>
-            <p id="overview-members" style="font-size: 1.6rem; font-weight: 700; margin-top: 8px;">N/A</p>
+            <h3>Mitglieder</h3>
+            <p id="overview-members">N/A</p>
           </div>
           <div class="card">
-            <h3 style="font-size: 0.9rem; color: var(--text-muted); font-weight: 500;">Server Boosts</h3>
-            <p id="overview-boosts" style="font-size: 1.6rem; font-weight: 700; margin-top: 8px;">N/A</p>
+            <h3>Server Boosts</h3>
+            <p id="overview-boosts">N/A</p>
           </div>
           <div class="card">
-            <h3 style="font-size: 0.9rem; color: var(--text-muted); font-weight: 500;">Bot Status</h3>
-            <p style="font-size: 1.2rem; font-weight: 600; margin-top: 8px; display: flex; align-items: center; gap: 8px;">
-              <span class="status-dot online"></span> Online
-            </p>
+            <h3>Bot Status</h3>
+            <p><span class="status-dot online"></span> Online</p>
           </div>
         </div>
       </div>
@@ -403,7 +398,7 @@
       <!-- Willkommen Tab -->
       <div id="mod-welcome" class="module-page hidden">
         <h2>Willkommen</h2>
-        <p style="color: var(--text-muted);">Begrüße neue Mitglieder automatisch beim Beitreten.</p>
+        <p>Begrüße neue Mitglieder automatisch beim Beitreten.</p>
 
         <div class="card form-card">
           <div class="form-group">
