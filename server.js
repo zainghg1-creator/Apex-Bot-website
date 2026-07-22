@@ -190,3 +190,17 @@ if (process.env.NODE_ENV !== 'production') {
     console.log(`Apex Dashboard läuft auf http://localhost:${PORT}`);
   });
 }
+// Statt require('express-session'):
+const cookieSession = require('cookie-session');
+
+// Express Middleware anpassen:
+app.use(
+  cookieSession({
+    name: 'session',
+    keys: [SESSION_SECRET || 'bitte-in-der-.env-aendern'],
+    maxAge: 24 * 60 * 60 * 1000, // 24 Stunden
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    httpOnly: true
+  })
+);
