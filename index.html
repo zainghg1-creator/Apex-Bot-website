@@ -1,114 +1,395 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Apex – Moderation & Community Bot</title>
-  <link rel="stylesheet" href="style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apex – Moderation & Community Bot</title>
+
+<!-- Favicon -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='50' fill='%23000000'/><path d='M50 18 L22 75 L38 75 L50 48 L62 75 L78 75 Z' fill='%23FFFFFF'/><path d='M15 50 C20 25, 40 12, 68 12' stroke='%23FFFFFF' stroke-width='4' stroke-linecap='round' fill='none'/><path d='M85 50 C80 75, 60 88, 32 88' stroke='%23FFFFFF' stroke-width='4' stroke-linecap='round' fill='none'/><line x1='72' y1='20' x2='28' y2='80' stroke='%23FFFFFF' stroke-width='3' stroke-linecap='round'/></svg>">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style> 
+  :root {
+    --bg-base: #000000;
+    --bg-surface: #0a0a0a;
+    --bg-card: rgba(18, 18, 18, 0.7);
+    --border-subtle: rgba(255, 255, 255, 0.12);
+    --border-active: rgba(255, 255, 255, 0.4);
+    --accent-monochrome: #ffffff;
+    --text-primary: #ffffff;
+    --text-muted: #a1a1aa;
+    --text-dim: #71717a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .bg-grid {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    z-index: -1;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 6%;
+    backdrop-filter: blur(12px);
+    background: rgba(0, 0, 0, 0.8);
+    border-bottom: 1px solid var(--border-subtle);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .brand { display: flex; align-items: center; gap: 14px; text-decoration: none; color: var(--text-primary); }
+  .brand-logo {
+    width: 34px; height: 34px; background: #000; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+  .brand-name { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.02em; }
+
+  /* ZENTRIERTE NAVIGATION IN DER MITTE */
+  .nav-center {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .nav-link {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: color 0.2s ease;
+  }
+  .nav-link:hover { color: var(--text-primary); }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 10px 20px; border-radius: 10px; font-size: 0.88rem; font-weight: 600;
+    text-decoration: none; border: 1px solid transparent; cursor: pointer;
+    transition: all 0.2s ease; white-space: nowrap;
+  }
+  .btn-primary { background: #ffffff; color: #000000; }
+  .btn-primary:hover { background: #e4e4e7; transform: translateY(-2px); }
+  .btn-secondary { background: rgba(255, 255, 255, 0.05); color: var(--text-primary); border-color: var(--border-subtle); }
+  .btn-secondary:hover { background: rgba(255, 255, 255, 0.12); border-color: var(--border-active); transform: translateY(-2px); }
+
+  /* HERO SECTION */
+  .hero {
+    max-width: 1100px; margin: 0 auto; padding: 90px 24px 50px; text-align: center;
+  }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px;
+    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-subtle);
+    border-radius: 20px; font-size: 0.8rem; font-family: 'JetBrains Mono', monospace;
+    color: var(--text-muted); margin-bottom: 24px;
+  }
+  .hero-title { font-size: 3.2rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 20px; }
+  .hero-subtitle { font-size: 1.1rem; color: var(--text-muted); max-width: 650px; margin: 0 auto 36px; line-height: 1.6; }
+  .hero-buttons { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; }
+
+  /* NEUES MITTEL-ELEMENT: STATS & HIGHLIGHT CARD */
+  .showcase-section {
+    max-width: 950px; margin: 20px auto 90px; padding: 0 24px;
+  }
+  .showcase-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 20px;
+    padding: 36px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  }
+  .showcase-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: 28px;
+  }
+  .stat-item { text-align: center; }
+  .stat-value { font-size: 1.8rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; }
+  .stat-label { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }
+
+  .showcase-highlights {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 24px;
+  }
+  .highlight-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .highlight-icon {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-subtle);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .highlight-icon svg { width: 18px; height: 18px; stroke: #fff; fill: none; stroke-width: 2; }
+  .highlight-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 4px; }
+  .highlight-desc { font-size: 0.82rem; color: var(--text-muted); line-height: 1.4; }
+
+  /* MODULE GRID */
+  .modules-section { max-width: 1100px; margin: 0 auto; padding: 0 24px 12px; }
+  .section-header { text-align: center; margin-bottom: 60px; }
+  .section-title { font-size: 2rem; font-weight: 800; margin-bottom: 12px; }
+  .section-subtitle { color: var(--text-muted); font-size: 0.95rem; }
+
+  .modules-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;
+  }
+
+  .module-card {
+    background: var(--bg-surface); border: 1px solid var(--border-subtle);
+    border-radius: 16px; padding: 28px; transition: all 0.3s ease; display: flex;
+    flex-direction: column; gap: 16px;
+  }
+  .module-card:hover { border-color: var(--border-active); transform: translateY(-4px); }
+
+  .module-icon-wrap {
+    width: 44px; height: 44px; border-radius: 10px; background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: center;
+  }
+  .module-icon-wrap svg {
+    width: 22px; height: 22px; stroke: #ffffff; fill: none; stroke-width: 2;
+    stroke-linecap: round; stroke-linejoin: round;
+  }
+
+  .module-card h3 { font-size: 1.1rem; font-weight: 700; }
+  .module-card p { color: var(--text-muted); font-size: 0.88rem; line-height: 1.5; }
+
+  footer {
+    text-align: center; padding: 60px 24px; border-top: 1px solid var(--border-subtle);
+    color: var(--text-dim); font-size: 0.85rem; margin-top: 100px;
+  }
+
+  @media (max-width: 768px) {
+    .nav-center { display: none; }
+  }
+</style>
 </head>
 <body>
-  <div class="bg-grid"></div>
 
-  <header>
-    <div class="brand">
-      <div class="brand-logo">A</div>
-      <div class="brand-name">APEX <span>BOT</span></div>
+<div class="bg-grid"></div>
+
+<header>
+  <!-- BRAND LOGO -->
+  <a href="/" class="brand">
+    <div class="brand-logo">
+      <svg width="18" height="18" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M50 18 L22 75 L38 75 L50 48 L62 75 L78 75 Z" fill="#FFFFFF"/>
+        <path d="M15 50 C20 25, 40 12, 68 12" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+        <path d="M85 50 C80 75, 60 88, 32 88" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+        <line x1="72" y1="20" x2="28" y2="80" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
+      </svg>
     </div>
-    <nav class="nav-center">
-      <a href="#features" class="nav-link">Funktionen</a>
-      <a href="/dashboard.html" class="nav-link">Dashboard</a>
-      <a href="#" class="nav-link">Support</a>
-    </nav>
-    <a href="/dashboard.html" class="btn btn-secondary">Zum Dashboard</a>
-  </header>
+    <span class="brand-name">APEX<span>.</span></span>
+  </a>
 
-  <section class="hero container">
-    <div class="hero-content">
-      <div class="status-badge">● APEX SYSTEM v2.4 ONLINE</div>
-      
-      <h1 class="hero-title">Maximale Kontrolle.<br>Minimaler Aufwand.</h1>
-      <p class="hero-subtitle">Die modulare All-in-One Lösung für deinen Discord-Server. Von hochmodernen Ticketsystemen bis hin zu lückenlosem Anti-Nuke Schutz.</p>
+  <!-- NAVIGATION IN DER MITTE -->
+  <nav class="nav-center">
+    <a href="/" class="nav-link">Home</a>
+    <a href="#modules" class="nav-link">Funktionen</a>
+    <a href="https://discord.gg/mVQmkEvPdm" target="_blank" rel="noopener noreferrer" class="nav-link">Support</a>
+  </nav>
 
-      <div class="hero-cta">
-        <a href="https://discord.com/api/oauth2/authorize?client_id=1525613011262377994&scope=bot%20applications.commands&permissions=8" 
-           class="btn btn-primary large">Bot jetzt einladen</a>
-        <a href="/dashboard.html" class="btn btn-secondary large">Dashboard öffnen</a>
+  <!-- DASHBOARD LOGIN -->
+  <a href="/auth/discord/login" class="btn btn-primary">Dashboard Login</a>
+</header>
+
+<main>
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-badge">● APEX SYSTEM v2.4 ONLINE</div>
+    <h1 class="hero-title">Maximale Kontrolle.<br>Minimaler Aufwand.</h1>
+    <p class="hero-subtitle">Die modulare All-in-One Lösung für deinen Discord-Server. Von hochmodernen Ticketsystemen bis hin zu lückenlosem Anti-Nuke Schutz.</p>
+    <div class="hero-buttons">
+      <a href="https://discord.com/api/oauth2/authorize?client_id=1525613011262377994&scope=bot%20applications.commands&permissions=8" target="_blank" class="btn btn-primary">Bot einladen</a>
+      <a href="#modules" class="btn btn-secondary">Module erkunden</a>
+    </div>
+  </section>
+
+  <!-- NEUE SHOWCASE CARD STATT TERMINAL -->
+  <section class="showcase-section">
+    <div class="showcase-card">
+      <div class="showcase-stats">
+        <div class="stat-item">
+          <div class="stat-value">99.9%</div>
+          <div class="stat-label">Uptime Garantie</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">&lt; 15ms</div>
+          <div class="stat-label">Reaktionszeit</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">10+</div>
+          <div class="stat-label">Integrierte Module</div>
+        </div>
       </div>
 
-      <div class="stats-bar" id="stats-bar">
-        <div class="stat">
-          <span class="stat-number" id="server-count">–––</span>
-          <span class="stat-label">Server</span>
+      <div class="showcase-highlights">
+        <div class="highlight-box">
+          <div class="highlight-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <div>
+            <div class="highlight-title">Anti-Nuke & Moderation</div>
+            <div class="highlight-desc">Automatischer Schutz vor Raids, Spam und unbefugtem Rechte-Missbrauch.</div>
+          </div>
         </div>
-        <div class="stat">
-          <span class="stat-number" id="uptime">99.9</span>
-          <span class="stat-label">% Uptime</span>
+
+        <div class="highlight-box">
+          <div class="highlight-icon">
+            <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </div>
+          <div>
+            <div class="highlight-title">Blitzschnell & Modular</div>
+            <div class="highlight-desc">Aktiviere nur die Module, die dein Server auch wirklich benötigt.</div>
+          </div>
         </div>
-        <div class="stat">
-          <span class="stat-number" id="response">&lt;15</span>
-          <span class="stat-label">ms</span>
+
+        <div class="highlight-box">
+          <div class="highlight-icon">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </div>
+          <div>
+            <div class="highlight-title">Einfache Konfiguration</div>
+            <div class="highlight-desc">Verwalte alle Einstellungen direkt über ein übersichtliches Web-Dashboard.</div>
+          </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Features Sektion (verkürzt – erweitere bei Bedarf) -->
-  <section id="features" class="features container">
-    <h2>Hauptfunktionen & Module</h2>
+  <!-- HAUPTFUNKTIONEN / MODULE -->
+  <section id="modules" class="modules-section">
+    <div class="section-header">
+      <h2 class="section-title">Hauptfunktionen & Module</h2>
+      <p class="section-subtitle">Passe Apex exakt an die Bedürfnisse deines Servers an.</p>
+    </div>
+
     <div class="modules-grid">
-      <!-- Deine bestehenden Feature-Cards hier einfügen oder erweitern -->
+      
+      <!-- 1. Übersicht -->
+      <div class="module-card">
+        <div class="module-icon-wrap">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        </div>
+        <h3>Zentrale Übersicht</h3>
+        <p>Echtzeit-Analyse deines Bot-Status, Aktivitäts-Logs und Performance-Werte direkt auf einem Blick im Dashboard.</p>
+      </div>
+
+      <!-- 2. Willkommen -->
+      <div class="module-card">
+        <div class="module-icon-wrap">
+          <svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+        </div>
+        <h3>Willkommens-System</h3>
+        <p>Begrüße neue User mit angepassten Embeds, Auto-Rollen und automatischen Direktnachrichten.</p>
+      </div>
+
+      <!-- 3. Tickets -->
+      <div class="module-card">
+        <div class="module-icon-wrap">
+          <svg viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><line x1="12" y1="9" x2="12" y2="15"/></svg>
+        </div>
+        <h3>Ticket System</h3>
+        <p>Erstelle professionelle Dropdown- oder Button-Panels mit automatischer Rollenzuweisung und Transkript-Export.</p>
+      </div>
+
+      <!-- 4. Support -->
+      <div class="module-card">
+        <div class="module-icon-wrap">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <h3>Support & FAQ</h3>
+        <p>Automatisiere häufige Fragen mit intelligenten Auto-Antworten und strukturieren Hilfeseiten.</p>
+      </div>
+
+      <!-- 5. Moderation -->
+      <div class="module-card">
+        <div class="module-icon-wrap">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h3>Moderation</h3>
+        <p>Leistungsstarke Tools wie Automod, Temp-Mutes, Warn-Systeme und detaillierte Sanctions-Logs.</p>
+      </div>
+
+      <!-- 6. Teamliste -->
+      <div class="module-card">
+        <div class="module-icon-wrap">
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <h3>Teamliste</h3>
+        <p>Generiert vollautomatisch eine saubere, immer aktuelle Übersicht aller Moderatoren und Supporter.</p>
+      </div>
+
+      <!-- 7. Teamupdate -->
+      <div class="module-card">
+        <div class="module-icon-wrap">
+          <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+        </div>
+        <h3>Teamupdate Log</h3>
+        <p>Poste Beförderungen, Ränge-Anpassungen und Teameintritte strukturiert in dafür vorgesehene Kanäle.</p>
+      </div>
+
+      <!-- 8. Kanal Statistiken -->
+      <div class="module-card">
+        <div class="module-icon-wrap">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        </div>
+        <h3>Kanal Statistiken</h3>
+        <p>Zeige Server-Mitglieder, Booster-Zahlen und Online-Status live als Sprachkanal-Namen an.</p>
+      </div>
+
+      <!-- 9. Verifizierungs System -->
+      <div class="module-card">
+        <div class="module-icon-wrap">
+          <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
+        <h3>Verifizierungs System</h3>
+        <p>Schütze deine Community vor Raid-Bots durch Button- oder Captcha-Verifizierung vor dem Serverbeitritt.</p>
+      </div>
+
+      <!-- 10. Anti Nuke -->
+      <div class="module-card">
+        <div class="module-icon-wrap">
+          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <h3>Anti Nuke Schutz</h3>
+        <p>Echtzeit-Erkennung gegen Rechte-Missbrauch: Stoppt Massen-Kicks, Channel-Löschungen und Rollen-Griefing sofort.</p>
+      </div>
+
     </div>
   </section>
+</main>
 
-  <footer>
-    <p>© 2026 APEX BOT SYSTEM. All rights reserved.</p>
-  </footer>
+<footer>
+  <p>&copy; 2026 APEX BOT SYSTEM. All rights reserved.</p>
+</footer>
 
-  <script>
-    // === Dynamischer Server Count ===
-    async function loadLiveStats() {
-      try {
-        const res = await fetch('/api/stats');
-        if (!res.ok) throw new Error('API Error');
-        
-        const data = await res.json();
-        
-        animateCounter('server-count', data.servers || 247);
-        document.getElementById('uptime').textContent = data.uptime || '99.9';
-        document.getElementById('response').textContent = data.responseTime || '<15';
-      } catch (e) {
-        console.warn('Stats konnten nicht geladen werden');
-        animateCounter('server-count', 247); // Fallback
-      }
-    }
-
-    function animateCounter(id, target, duration = 1800) {
-      const el = document.getElementById(id);
-      let start = parseInt(el.textContent.replace(/[^0-9]/g, '')) || 0;
-      const range = target - start;
-      const startTime = performance.now();
-
-      function update(currentTime) {
-        const elapsed = currentTime - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        const value = Math.floor(start + range * progress);
-        el.textContent = value.toLocaleString('de-DE');
-        
-        if (progress < 1) {
-          requestAnimationFrame(update);
-        } else {
-          el.textContent = target.toLocaleString('de-DE');
-        }
-      }
-      requestAnimationFrame(update);
-    }
-
-    // Auto-Load + Refresh
-    document.addEventListener('DOMContentLoaded', () => {
-      loadLiveStats();
-      setInterval(loadLiveStats, 30000); // alle 30 Sekunden
-    });
-  </script>
 </body>
 </html>
