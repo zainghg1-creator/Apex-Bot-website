@@ -8,9 +8,11 @@
     "dev": "nodemon server.js"
   },
   "dependencies": {
-    "cookie-session": "^2.1.0",
+    "axios": "^1.6.8",
+    "connect-mongo": "^5.1.0",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "express-session": "^1.18.0",
     "mongoose": "^8.3.1"
   },
   "devDependencies": {
