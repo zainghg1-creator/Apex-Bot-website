@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cookieSession = require('cookie-session');
 const path = require('path');
+const fs = require('fs');
 
 const {
   CLIENT_ID,
@@ -21,34 +22,45 @@ const {
 
 const DISCORD_API = 'https://discord.com/api/v10';
 const ADMINISTRATOR = 0x8n;
+const CONFIG_FILE = path.join(__dirname, 'guild_configs.json');
 
 const app = express();
 
-// WICHTIG FÜR VERCEL: Express vertraut dem Vercel-Proxy,
-// damit HTTPS-Cookies vom Browser akzeptiert werden!
 app.set('trust proxy', 1);
-
-// Statische Dateien (index.html, dashboard.html etc.) bereitstellen
 app.use(express.static(__dirname));
+app.use(express.json());
 
-// Stateless Session via Browser-Cookies (ideal für Vercel Serverless)
 app.use(
   cookieSession({
     name: 'apex_session',
     keys: [SESSION_SECRET || 'bitte-in-der-.env-aendern'],
-    maxAge: 24 * 60 * 60 * 1000, // 24 Stunden Gültigkeit
-    secure: true, // Muss für Vercel (HTTPS) dauerhaft auf true stehen
+    maxAge: 24 * 60 * 60 * 1000,
+    secure: true,
     sameSite: 'lax',
     httpOnly: true
   })
 );
 
-// Hauptseite / Landingpage
+// Hilfsfunktionen für Config-Datenbank
+function getConfigs() {
+  if (!fs.existsSync(CONFIG_FILE)) return {};
+  try {
+    return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveConfigs(data) {
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify(data, null, 2), 'utf-8');
+}
+
+// Landingpage
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// ---------- Schritt 1: Login-Start (Weiterleitung zu Discord) ----------
+// OAuth2 Login
 app.get('/auth/discord/login', (req, res) => {
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
@@ -60,7 +72,7 @@ app.get('/auth/discord/login', (req, res) => {
   res.redirect(`https://discord.com/api/oauth2/authorize?${params.toString()}`);
 });
 
-// ---------- Schritt 2: Discord OAuth2 Callback ----------
+// OAuth2 Callback
 app.get('/auth/discord/callback', async (req, res) => {
   const { code } = req.query;
   if (!code) return res.redirect('/?error=missing_code');
@@ -78,10 +90,7 @@ app.get('/auth/discord/callback', async (req, res) => {
       })
     });
 
-    if (!tokenRes.ok) {
-      console.error('Token-Tausch fehlgeschlagen:', tokenRes.status, await tokenRes.text());
-      return res.redirect('/?error=auth_failed');
-    }
+    if (!tokenRes.ok) return res.redirect('/?error=auth_failed');
     const tokenData = await tokenRes.json();
 
     const userRes = await fetch(`${DISCORD_API}/users/@me`, {
@@ -90,7 +99,6 @@ app.get('/auth/discord/callback', async (req, res) => {
     if (!userRes.ok) return res.redirect('/?error=auth_failed');
     const user = await userRes.json();
 
-    // Session-Daten direkt im Browser-Cookie ablegen
     req.session.accessToken = tokenData.access_token;
     req.session.user = { id: user.id, username: user.username, avatar: user.avatar };
 
@@ -101,13 +109,13 @@ app.get('/auth/discord/callback', async (req, res) => {
   }
 });
 
-// ---------- Logout-Route ----------
+// Logout
 app.get('/auth/logout', (req, res) => {
   req.session = null;
   res.redirect('/');
 });
 
-// Middleware zur Authentifizierungsprüfung
+// Middleware
 function requireAuth(req, res, next) {
   if (!req.session || !req.session.accessToken) {
     return res.status(401).json({ error: 'not_authenticated' });
@@ -115,9 +123,9 @@ function requireAuth(req, res, next) {
   next();
 }
 
-// Bot-Gilden-Cache für performante Berechtigungsabfragen
+// Bot Guild Cache
 let botGuildsCache = { ids: new Set(), fetchedAt: 0 };
-const BOT_CACHE_TTL = 60 * 1000; // Cache für 60 Sekunden
+const BOT_CACHE_TTL = 60 * 1000;
 
 async function getBotGuildIds() {
   if (Date.now() - botGuildsCache.fetchedAt < BOT_CACHE_TTL) {
@@ -131,10 +139,7 @@ async function getBotGuildIds() {
     const res = await fetch(`${DISCORD_API}/users/@me/guilds?limit=200&after=${after}`, {
       headers: { Authorization: `Bot ${BOT_TOKEN}` }
     });
-    if (!res.ok) {
-      console.error('Bot-Server-Liste konnte nicht geladen werden:', res.status);
-      break;
-    }
+    if (!res.ok) break;
     const page = await res.json();
     page.forEach((g) => ids.add(g.id));
     if (page.length < 200) break;
@@ -145,7 +150,7 @@ async function getBotGuildIds() {
   return ids;
 }
 
-// ---------- Schritt 3: API-Endpunkt für Server-Liste ----------
+// API: Server-Liste
 app.get('/api/guilds', requireAuth, async (req, res) => {
   try {
     const guildsRes = await fetch(`${DISCORD_API}/users/@me/guilds`, {
@@ -156,13 +161,9 @@ app.get('/api/guilds', requireAuth, async (req, res) => {
       req.session = null;
       return res.status(401).json({ error: 'session_expired' });
     }
-    if (!guildsRes.ok) {
-      return res.status(502).json({ error: 'discord_api_error' });
-    }
+    if (!guildsRes.ok) return res.status(502).json({ error: 'discord_api_error' });
 
     const guilds = await guildsRes.json();
-
-    // Nur Server filtern, auf denen der User Admin oder Owner ist
     const adminGuilds = guilds.filter((g) => {
       const perms = BigInt(g.permissions ?? 0);
       return g.owner === true || (perms & ADMINISTRATOR) === ADMINISTRATOR;
@@ -181,25 +182,19 @@ app.get('/api/guilds', requireAuth, async (req, res) => {
 
     res.json({ user: req.session.user, guilds: result, clientId: CLIENT_ID });
   } catch (err) {
-    console.error('Fehler bei /api/guilds:', err);
     res.status(500).json({ error: 'server_error' });
   }
 });
 
-// ---------- Einzelne Server-Details (Mitglieder & Boosts) ----------
+// API: Einzelner Server Details
 app.get('/api/guild/:guildId', requireAuth, async (req, res) => {
   const { guildId } = req.params;
-
   try {
-    // Discord API Anfrage für den spezifischen Server mit Bot-Token
     const guildRes = await fetch(`${DISCORD_API}/guilds/${guildId}?with_counts=true`, {
       headers: { Authorization: `Bot ${BOT_TOKEN}` }
     });
 
-    if (!guildRes.ok) {
-      return res.status(guildRes.status).json({ error: 'guild_not_found' });
-    }
-
+    if (!guildRes.ok) return res.status(guildRes.status).json({ error: 'guild_not_found' });
     const guildData = await guildRes.json();
 
     res.json({
@@ -207,20 +202,38 @@ app.get('/api/guild/:guildId', requireAuth, async (req, res) => {
       boosts: guildData.premium_subscription_count ?? 0
     });
   } catch (err) {
-    console.error(`Fehler bei /api/guild/${guildId}:`, err);
     res.status(500).json({ error: 'server_error' });
   }
 });
 
-// User-Informationen abrufen
+// API: Willkommens-Einstellungen abrufen
+app.get('/api/guild/:guildId/welcome', requireAuth, (req, res) => {
+  const configs = getConfigs();
+  res.json(configs[req.params.guildId]?.welcome || { text: '', channelId: '' });
+});
+
+// API: Willkommens-Einstellungen speichern
+app.post('/api/guild/:guildId/welcome', requireAuth, (req, res) => {
+  const { text, channelId } = req.body;
+  const configs = getConfigs();
+
+  if (!configs[req.params.guildId]) {
+    configs[req.params.guildId] = {};
+  }
+
+  configs[req.params.guildId].welcome = { text, channelId };
+  saveConfigs(configs);
+
+  res.json({ success: true });
+});
+
+// API: User Info
 app.get('/api/me', requireAuth, (req, res) => {
   res.json({ user: req.session.user });
 });
 
-// Exporthook für Vercel Serverless
 module.exports = app;
 
-// Lokaler Serverstart für die Entwicklung
 if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
     console.log(`Apex Dashboard läuft auf http://localhost:${PORT}`);
