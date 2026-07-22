@@ -186,6 +186,32 @@ app.get('/api/guilds', requireAuth, async (req, res) => {
   }
 });
 
+// ---------- Einzelne Server-Details (Mitglieder & Boosts) ----------
+app.get('/api/guild/:guildId', requireAuth, async (req, res) => {
+  const { guildId } = req.params;
+
+  try {
+    // Discord API Anfrage für den spezifischen Server mit Bot-Token
+    const guildRes = await fetch(`${DISCORD_API}/guilds/${guildId}?with_counts=true`, {
+      headers: { Authorization: `Bot ${BOT_TOKEN}` }
+    });
+
+    if (!guildRes.ok) {
+      return res.status(guildRes.status).json({ error: 'guild_not_found' });
+    }
+
+    const guildData = await guildRes.json();
+
+    res.json({
+      members: guildData.approximate_member_count ?? 0,
+      boosts: guildData.premium_subscription_count ?? 0
+    });
+  } catch (err) {
+    console.error(`Fehler bei /api/guild/${guildId}:`, err);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
 // User-Informationen abrufen
 app.get('/api/me', requireAuth, (req, res) => {
   res.json({ user: req.session.user });
