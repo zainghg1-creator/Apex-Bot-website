@@ -24,6 +24,10 @@ const ADMINISTRATOR = 0x8n;
 
 const app = express();
 
+// WICHTIG FÜR VERCEL: Express vertraut dem Vercel-Proxy,
+// damit HTTPS-Cookies vom Browser akzeptiert werden!
+app.set('trust proxy', 1);
+
 // Statische Dateien (index.html, dashboard.html etc.) bereitstellen
 app.use(express.static(__dirname));
 
@@ -33,7 +37,7 @@ app.use(
     name: 'apex_session',
     keys: [SESSION_SECRET || 'bitte-in-der-.env-aendern'],
     maxAge: 24 * 60 * 60 * 1000, // 24 Stunden Gültigkeit
-    secure: process.env.NODE_ENV === 'production',
+    secure: true, // Muss für Vercel (HTTPS) dauerhaft auf true stehen
     sameSite: 'lax',
     httpOnly: true
   })
