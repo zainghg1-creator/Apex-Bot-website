@@ -1,388 +1,670 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Apex – Next-Gen Server Operations</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg-base: #000000;
-    --bg-surface: #0a0a0a;
-    --bg-card: rgba(18, 18, 18, 0.7);
-    
-    --border-subtle: rgba(255, 255, 255, 0.12);
-    --border-active: rgba(255, 255, 255, 0.4);
-    
-    --accent-monochrome: #ffffff;
-    --grad-primary: linear-gradient(135deg, #ffffff 0%, #a1a1aa 100%);
-    --grad-glow: radial-gradient(circle, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 50%, transparent 80%);
-    
-    --text-primary: #ffffff;
-    --text-muted: #a1a1aa;
-    --text-dim: #71717a;
-  }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apex Bot – Dashboard</title>
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  
-  body {
-    background-color: var(--bg-base);
-    color: var(--text-primary);
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    min-height: 100vh;
-    overflow-x: hidden;
-    position: relative;
-  }
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='50' fill='%23000000'/><path d='M50 18 L22 75 L38 75 L50 48 L62 75 L78 75 Z' fill='%23FFFFFF'/><path d='M15 50 C20 25, 40 12, 68 12' stroke='%23FFFFFF' stroke-width='4' stroke-linecap='round' fill='none'/><path d='M85 50 C80 75, 60 88, 32 88' stroke='%23FFFFFF' stroke-width='4' stroke-linecap='round' fill='none'/><line x1='72' y1='20' x2='28' y2='80' stroke='%23FFFFFF' stroke-width='3' stroke-linecap='round'/></svg>">
 
-  /* ---------- Ambient Grid & Lights ---------- */
-  .bg-grid {
-    position: fixed;
-    inset: 0;
-    background-image: 
-      linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
-    z-index: -2;
-  }
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
-  .ambient-glow {
-    position: fixed;
-    top: -20vh;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 1000px;
-    height: 600px;
-    background: var(--grad-glow);
-    filter: blur(80px);
-    z-index: -1;
-    pointer-events: none;
-  }
+  <style>
+    :root {
+      --bg-base: #000000;
+      --bg-surface: #0a0a0a;
+      --border-subtle: rgba(255, 255, 255, 0.12);
+      --border-active: rgba(255, 255, 255, 0.4);
+      --text-primary: #ffffff;
+      --text-muted: #a1a1aa;
+      --text-dim: #71717a;
+    }
 
-  /* ---------- Header ---------- */
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 20px 6%;
-    backdrop-filter: blur(12px);
-    background: rgba(0, 0, 0, 0.8);
-    border-bottom: 1px solid var(--border-subtle);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    text-decoration: none;
-  }
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-primary);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
 
-  .brand-logo {
-    width: 38px;
-    height: 38px;
-    background: #000;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
-  }
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      z-index: -1;
+    }
 
-  .brand-name {
-    font-size: 1.25rem;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    color: var(--text-primary);
-  }
+    /* Header */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 6%;
+      backdrop-filter: blur(12px);
+      background: rgba(0, 0, 0, 0.8);
+      border-bottom: 1px solid var(--border-subtle);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
 
-  .brand-name span { color: var(--accent-monochrome); }
+    .brand { display: flex; align-items: center; gap: 14px; text-decoration: none; color: var(--text-primary); }
+    .brand-logo {
+      width: 34px; height: 34px; background: #000; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    .brand-name { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.02em; }
 
-  nav ul {
-    display: flex;
-    list-style: none;
-    gap: 32px;
-  }
+    .nav-center {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .nav-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: color 0.2s ease;
+    }
+    .nav-link:hover { color: var(--text-primary); }
 
-  nav a {
-    text-decoration: none;
-    color: var(--text-muted);
-    font-size: 0.9rem;
-    font-weight: 500;
-    transition: color 0.2s ease;
-  }
+    .user-chip {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 6px 8px 6px 6px;
+      border-radius: 30px;
+      border: 1px solid var(--border-subtle);
+    }
 
-  nav a:hover { color: var(--text-primary); }
+    .user-chip img {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1px solid var(--border-subtle);
+    }
 
-  /* ---------- Buttons ---------- */
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 10px 20px;
-    border-radius: 10px;
-    font-size: 0.88rem;
-    font-weight: 600;
-    text-decoration: none;
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    cursor: pointer;
-    border: 1px solid transparent;
-  }
+    #user-name { font-size: 0.88rem; font-weight: 600; padding-right: 2px; }
 
-  .btn-primary {
-    background: #ffffff;
-    color: #000000;
-    box-shadow: 0 4px 20px rgba(255, 255, 255, 0.15);
-  }
+    .logout-btn {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      transition: all 0.2s ease;
+    }
 
-  .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 30px rgba(255, 255, 255, 0.3);
-    background: #e4e4e7;
-  }
+    .logout-btn:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.12);
+    }
 
-  .btn-secondary {
-    background: rgba(255, 255, 255, 0.05);
-    color: var(--text-primary);
-    border-color: var(--border-subtle);
-  }
+    /* Buttons */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 10px 18px; border-radius: 10px; font-size: 0.88rem; font-weight: 600;
+      text-decoration: none; border: 1px solid transparent; cursor: pointer;
+      transition: all 0.2s ease; white-space: nowrap; font-family: inherit;
+    }
+    .btn-primary { background: #ffffff; color: #000000; }
+    .btn-primary:hover { background: #e4e4e7; transform: translateY(-2px); }
+    .btn-secondary { background: rgba(255, 255, 255, 0.05); color: var(--text-primary); border-color: var(--border-subtle); }
+    .btn-secondary:hover { background: rgba(255, 255, 255, 0.12); border-color: var(--border-active); transform: translateY(-2px); }
 
-  .btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.4);
-    transform: translateY(-2px);
-  }
+    /* Container / page heading */
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 60px 24px 100px;
+      width: 100%;
+    }
 
-  /* ---------- Hero Section ---------- */
-  .hero-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 80px 24px 60px;
-    display: grid;
-    grid-template-columns: 1.1fr 0.9fr;
-    gap: 60px;
-    align-items: center;
-  }
+    .page-heading { text-align: center; margin-bottom: 48px; }
+    .page-heading h2 { font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 10px; }
+    .page-subtitle { color: var(--text-muted); font-size: 0.95rem; }
 
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 14px;
-    border-radius: 30px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: var(--text-primary);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.8rem;
-    font-weight: 500;
-    margin-bottom: 24px;
-  }
+    .state-box {
+      background: var(--bg-surface);
+      padding: 3rem;
+      border-radius: 16px;
+      text-align: center;
+      color: var(--text-muted);
+      border: 1px solid var(--border-subtle);
+      font-size: 0.95rem;
+    }
 
-  .badge-pulse {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: #ffffff;
-    box-shadow: 0 0 8px #ffffff;
-    animation: pulse 2s infinite;
-  }
+    /* Guild Cards Grid — mehr Platz für Servernamen */
+    .guild-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
 
-  @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.3; transform: scale(0.85); }
-  }
+    .guild-card {
+      background: var(--bg-surface);
+      padding: 1.4rem;
+      border-radius: 16px;
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 18px;
+      transition: all 0.25s ease;
+    }
 
-  h1 {
-    font-size: 3.5rem;
-    line-height: 1.1;
-    font-weight: 800;
-    letter-spacing: -0.03em;
-    margin-bottom: 20px;
-  }
+    .guild-card:hover {
+      border-color: var(--border-active);
+      transform: translateY(-4px);
+    }
 
-  h1 .text-gradient {
-    background: var(--grad-primary);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
+    .guild-info {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+      width: 100%;
+    }
 
-  .hero-description {
-    color: var(--text-muted);
-    font-size: 1.1rem;
-    line-height: 1.6;
-    margin-bottom: 36px;
-    max-width: 500px;
-  }
+    .guild-icon {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
 
-  .hero-buttons {
-    display: flex;
-    gap: 16px;
-    margin-bottom: 48px;
-  }
+    .guild-name {
+      flex: 1;
+      min-width: 0;
+      font-size: 1.02rem;
+      font-weight: 700;
+      line-height: 1.3;
+      color: var(--text-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      white-space: normal;
+    }
 
-  .highlights-row {
-    display: flex;
-    gap: 32px;
-    padding-top: 24px;
-    border-top: 1px solid var(--border-subtle);
-  }
+    .guild-action {
+      width: 100%;
+    }
 
-  .highlight-item {
-    display: flex;
-    flex-direction: column;
-  }
+    .guild-action .btn {
+      width: 100%;
+    }
 
-  .highlight-value {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--text-primary);
-  }
+    .guild-action .btn-primary {
+      background: #ffffff;
+      color: #000000;
+    }
 
-  .highlight-label {
-    font-size: 0.82rem;
-    color: var(--text-dim);
-    margin-top: 2px;
-  }
+    .guild-action .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-primary);
+      border: 1px solid var(--border-subtle);
+    }
 
-  /* ---------- Live System Overview Card ---------- */
-  .dashboard-card {
-    background: var(--bg-card);
-    backdrop-filter: blur(20px);
-    border: 1px solid var(--border-subtle);
-    border-radius: 20px;
-    padding: 30px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
-    position: relative;
-  }
+    /* Overlay / Sidebar Dashboard */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg-base);
+      display: flex;
+      z-index: 200;
+    }
 
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid var(--border-subtle);
-  }
+    .sidebar {
+      width: 270px;
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border-subtle);
+      padding: 1.75rem 1.1rem;
+      display: flex;
+      flex-direction: column;
+    }
 
-  .card-title {
-    font-weight: 700;
-    font-size: 1rem;
-  }
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 2rem;
+      padding-bottom: 1.1rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
 
-  .card-status {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.75rem;
-    color: var(--text-primary);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
+    .guild-icon-small {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1px solid var(--border-subtle);
+    }
 
-  .info-list {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-  }
+    #active-guild-name { font-weight: 700; font-size: 0.95rem; }
 
-  .info-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    font-size: 0.9rem;
-    color: var(--text-muted);
-  }
+    .sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+    }
 
-  .info-item svg {
-    color: var(--text-primary);
-    flex-shrink: 0;
-    margin-top: 2px;
-  }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 11px 14px;
+      border-radius: 10px;
+      text-align: left;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
 
-  /* ---------- Features Grid Section ---------- */
-  .features-section {
-    max-width: 1200px;
-    margin: 40px auto 100px;
-    padding: 0 24px;
-  }
+    .tab-btn:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.05);
+    }
 
-  .section-title {
-    font-size: 1.8rem;
-    font-weight: 700;
-    margin-bottom: 32px;
-    text-align: center;
-  }
+    .tab-btn.active {
+      background: #ffffff;
+      color: #000000;
+    }
 
-  .features-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
-  }
+    .tab-btn.active .tab-icon svg {
+      stroke: #000000;
+    }
 
-  .feature-card {
-    background: var(--bg-surface);
-    border: 1px solid var(--border-subtle);
-    border-radius: 16px;
-    padding: 24px;
-    transition: transform 0.25s ease, border-color 0.25s ease;
-  }
+    .tab-icon {
+      width: 18px;
+      height: 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
 
-  .feature-card:hover {
-    transform: translateY(-4px);
-    border-color: var(--border-active);
-  }
+    .tab-icon svg {
+      width: 18px;
+      height: 18px;
+      stroke: var(--text-muted);
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transition: stroke 0.2s ease;
+    }
 
-  .feature-icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--text-primary);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 18px;
-  }
+    .tab-btn:hover .tab-icon svg {
+      stroke: var(--text-primary);
+    }
 
-  .feature-title {
-    font-size: 1.1rem;
-    font-weight: 700;
-    margin-bottom: 8px;
-  }
+    .back-btn {
+      margin-top: auto;
+      width: 100%;
+      text-align: center;
+    }
 
-  .feature-desc {
-    font-size: 0.88rem;
-    color: var(--text-muted);
-    line-height: 1.5;
-  }
+    .content-area {
+      flex: 1;
+      padding: 2.75rem;
+      overflow-y: auto;
+    }
 
-  @media (max-width: 968px) {
-    .hero-container { grid-template-columns: 1fr; text-align: center; }
-    .hero-description { margin: 0 auto 36px; }
-    .hero-buttons { justify-content: center; }
-    .highlights-row { justify-content: center; }
-    .features-grid { grid-template-columns: 1fr; }
-    nav { display: none; }
-  }
-</style>
+    .content-area h2 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      margin-bottom: 8px;
+    }
+
+    .module-page > p {
+      color: var(--text-muted);
+      font-size: 0.92rem;
+    }
+
+    /* Cards & Forms */
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 1.5rem;
+    }
+
+    .card h3 {
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .card p {
+      font-size: 1.6rem;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      margin-top: 1.5rem;
+    }
+
+    .form-card {
+      margin-top: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      max-width: 600px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .form-group label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .form-group input, .form-group textarea, .form-group select {
+      width: 100%;
+      background: var(--bg-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 11px 14px;
+      color: var(--text-primary);
+      outline: none;
+      font-family: inherit;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    .form-group select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 40px;
+      cursor: pointer;
+    }
+
+    .form-group select:hover {
+      border-color: var(--border-active);
+      background-color: rgba(255, 255, 255, 0.02);
+    }
+
+    .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+      border-color: var(--border-active);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+    }
+
+    .form-group small {
+      color: var(--text-dim);
+      font-size: 0.75rem;
+    }
+
+    .form-action {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-top: 4px;
+    }
+
+    .status-success {
+      color: var(--text-primary);
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .status-dot.online {
+      background: #ffffff;
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+    }
+
+    footer {
+      text-align: center;
+      padding: 40px 24px;
+      border-top: 1px solid var(--border-subtle);
+      color: var(--text-dim);
+      font-size: 0.85rem;
+    }
+
+    .sidebar-nav { overflow-y: auto; padding-right: 2px; }
+    .sidebar-nav::-webkit-scrollbar { width: 5px; }
+    .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
+
+    /* Sub tabs */
+    .subtabs {
+      display: flex;
+      gap: 8px;
+      margin: 1.5rem 0 0.5rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .subtab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 10px 4px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s ease;
+    }
+    .subtab-btn:hover { color: var(--text-primary); }
+    .subtab-btn.active { color: var(--text-primary); border-bottom-color: #ffffff; }
+    .subpage.hidden { display: none; }
+
+    /* Color picker row */
+    .color-row { display: flex; align-items: center; gap: 12px; }
+    .color-row input[type="color"] {
+      width: 44px; height: 38px; padding: 0; border: 1px solid var(--border-subtle);
+      border-radius: 8px; background: var(--bg-base); cursor: pointer;
+    }
+    .color-row input[type="text"] { max-width: 140px; font-family: 'JetBrains Mono', monospace; }
+
+    /* Toggle switch */
+    .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .switch-slider {
+      position: absolute; inset: 0; background: rgba(255,255,255,0.12);
+      border-radius: 30px; cursor: pointer; transition: 0.2s;
+    }
+    .switch-slider::before {
+      content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px;
+      background: var(--text-muted); border-radius: 50%; transition: 0.2s;
+    }
+    .switch input:checked + .switch-slider { background: #ffffff; }
+    .switch input:checked + .switch-slider::before { background: #000000; transform: translateX(20px); }
+
+    /* Image upload */
+    .image-upload {
+      display: flex; align-items: center; gap: 16px;
+    }
+    .image-preview {
+      width: 72px; height: 72px; border-radius: 12px; object-fit: cover;
+      background: var(--bg-base); border: 1px solid var(--border-subtle);
+    }
+    .upload-btn-wrap input[type="file"] { display: none; }
+
+    /* Role / multi-select chips */
+    .chip-select {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      background: var(--bg-base); border: 1px solid var(--border-subtle);
+      border-radius: 12px; padding: 12px; min-height: 52px;
+      transition: border-color 0.2s ease;
+    }
+    .chip-select:hover {
+      border-color: var(--border-active);
+    }
+    .role-chip {
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,0.05); border: 1px solid var(--border-subtle);
+      padding: 6px 14px; border-radius: 20px; font-size: 0.84rem; font-weight: 600;
+      cursor: pointer; user-select: none; transition: all 0.2s ease;
+      color: var(--text-muted);
+    }
+    .role-chip .chip-icon {
+      font-size: 0.75rem;
+      opacity: 0.6;
+      font-weight: 800;
+    }
+    .role-chip:hover {
+      border-color: var(--border-active);
+      color: var(--text-primary);
+      transform: translateY(-1px);
+      background: rgba(255,255,255,0.1);
+    }
+    .role-chip.selected {
+      background: #ffffff; color: #000000; border-color: #ffffff;
+      box-shadow: 0 2px 8px rgba(255, 255, 255, 0.2);
+    }
+    .role-chip.selected .chip-icon {
+      opacity: 0.8;
+      color: #000000;
+    }
+    .chip-empty { color: var(--text-dim); font-size: 0.85rem; padding: 6px 4px; }
+
+    /* Ticket category rows */
+    .option-row {
+      display: flex; gap: 10px; align-items: center;
+      background: var(--bg-base); border: 1px solid var(--border-subtle);
+      border-radius: 10px; padding: 10px 12px;
+    }
+    .option-row input, .option-row select { flex: 1; }
+    .option-remove {
+      background: transparent; border: 1px solid var(--border-subtle); color: var(--text-muted);
+      border-radius: 8px; width: 34px; height: 34px; cursor: pointer; font-size: 1rem;
+      flex-shrink: 0; transition: all 0.2s ease;
+    }
+    .option-remove:hover { color: #ff6b6b; border-color: #ff6b6b; }
+    .add-option-btn {
+      align-self: flex-start;
+      background: rgba(255,255,255,0.05); border: 1px dashed var(--border-subtle);
+      color: var(--text-muted); padding: 10px 16px; border-radius: 10px; cursor: pointer;
+      font-family: inherit; font-size: 0.85rem; font-weight: 600; transition: all 0.2s ease;
+    }
+    .add-option-btn:hover { color: var(--text-primary); border-color: var(--border-active); }
+
+    /* Embed live preview */
+    .embed-preview-wrap { max-width: 420px; }
+    .discord-embed {
+      background: #2b2d31; border-left: 4px solid #ffffff; border-radius: 6px;
+      padding: 14px 16px; font-family: 'Plus Jakarta Sans', sans-serif; color: #dbdee1;
+      display: flex; gap: 14px; justify-content: space-between;
+    }
+    .discord-embed-body { flex: 1; min-width: 0; }
+    .discord-embed-title { font-weight: 700; color: #ffffff; margin-bottom: 6px; font-size: 0.95rem; }
+    .discord-embed-desc { font-size: 0.85rem; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+    .discord-embed-thumb {
+      width: 56px; height: 56px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
+    }
+    .discord-embed-image { width: 100%; border-radius: 6px; margin-top: 10px; max-height: 160px; object-fit: cover; }
+    .discord-embed-footer {
+      display: flex; align-items: center; gap: 8px; margin-top: 10px;
+      font-size: 0.72rem; color: #949ba4;
+    }
+    .discord-embed-footer img { width: 18px; height: 18px; border-radius: 50%; }
+
+    /* Placeholder / coming-soon module cards */
+    .soon-badge {
+      display: inline-block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em;
+      text-transform: uppercase; color: var(--text-dim); background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border-subtle); padding: 3px 9px; border-radius: 20px; margin-left: 10px;
+    }
+
+    /* Toast */
+    #toast-container {
+      position: fixed; bottom: 24px; right: 24px; z-index: 999;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .toast {
+      background: #ffffff; color: #000000; font-weight: 700; font-size: 0.88rem;
+      padding: 13px 20px; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      display: flex; align-items: center; gap: 10px;
+      animation: toast-in 0.25s ease, toast-out 0.25s ease 2.75s forwards;
+    }
+    @keyframes toast-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes toast-out { from { opacity: 1; } to { opacity: 0; transform: translateY(-6px); } }
+
+    @media (max-width: 768px) {
+      .nav-center { display: none; }
+      .stats-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      .overlay { flex-direction: column; }
+      .sidebar {
+        width: 100%;
+        flex-direction: row;
+        align-items: center;
+        padding: 12px 16px;
+        overflow-x: auto;
+      }
+      .sidebar-header { margin-bottom: 0; padding-bottom: 0; border-bottom: none; margin-right: 14px; }
+      .sidebar-nav { flex-direction: row; flex: none; }
+      .back-btn { margin-top: 0; margin-left: auto; width: auto; }
+      .content-area { padding: 1.5rem; }
+    }
+  </style>
 </head>
 <body>
 
   <div class="bg-grid"></div>
-  <div class="ambient-glow"></div>
 
-  <!-- Header -->
+  <!-- Top Navigation -->
   <header>
     <a href="/" class="brand">
       <div class="brand-logo">
-        <svg width="22" height="22" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg width="18" height="18" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M50 18 L22 75 L38 75 L50 48 L62 75 L78 75 Z" fill="#FFFFFF"/>
           <path d="M15 50 C20 25, 40 12, 68 12" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
           <path d="M85 50 C80 75, 60 88, 32 88" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
@@ -392,141 +674,510 @@
       <span class="brand-name">APEX<span>.</span></span>
     </a>
 
-    <nav>
-      <ul>
-        <li><a href="#features">Funktionen</a></li>
-        <li><a href="#about">Über Apex</a></li>
-      </ul>
+    <nav class="nav-center">
+      <a href="/" class="nav-link">Startseite</a>
     </nav>
 
-    <!-- Dashboard Button leitet zur Discord-Verifizierung weiter -->
-    <div>
-      <a href="/auth/discord/login" class="btn btn-secondary">Dashboard</a>
+    <div id="user-chip" class="user-chip">
+      <img id="user-avatar" src="" alt="Avatar">
+      <span id="user-name">Laden...</span>
+      <a href="/auth/logout" class="logout-btn">Abmelden</a>
     </div>
   </header>
 
-  <!-- Hero Section -->
-  <main class="hero-container">
-    <div class="hero-content">
-      <div class="badge">
-        <span class="badge-pulse"></span>
-        APEX SYSTEM ONLINE
-      </div>
-
-      <h1>Perfekte Kontrolle für deinen <span class="text-gradient">Discord Server.</span></h1>
-
-      <p class="hero-description">
-        Automatisierung, High-Speed Moderation und erweiterte Utility-Systeme. Entwickelt für Communitys, die professionelle Performance verlangen.
-      </p>
-
-      <div class="hero-buttons">
-        <a href="https://discord.com/api/oauth2/authorize?client_id=1525613011262377994&scope=bot%20applications.commands&permissions=8" 
-           target="_blank" 
-           rel="noopener noreferrer" 
-           class="btn btn-primary">
-          Apex Hinzufügen
-        </a>
-        <a href="#features" class="btn btn-secondary">Funktionen entdecken</a>
-      </div>
-
-      <div class="highlights-row">
-        <div class="highlight-item">
-          <span class="highlight-value">24/7 Online</span>
-          <span class="highlight-label">Hosting Uptime</span>
-        </div>
-        <div class="highlight-item">
-          <span class="highlight-value">Slash Commands</span>
-          <span class="highlight-label">Moderne Steuerung</span>
-        </div>
-        <div class="highlight-item">
-          <span class="highlight-value">Low Latency</span>
-          <span class="highlight-label">Schnelle Antworten</span>
-        </div>
-      </div>
+  <!-- Server-Auswahl Bereich -->
+  <main class="container">
+    <div class="page-heading">
+      <h2>Wähle einen Server</h2>
+      <p class="page-subtitle">Wähle einen Server aus, um Module zu konfigurieren und den Bot zu verwalten.</p>
     </div>
 
-    <!-- Info-Card rechts -->
-    <div class="dashboard-card" id="about">
-      <div class="card-header">
-        <span class="card-title">System & Infrastruktur</span>
-        <span class="card-status">
-          <span class="badge-pulse"></span> ONLINE
-        </span>
-      </div>
-
-      <div class="info-list">
-        <div class="info-item">
-          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"></path></svg>
-          <span><strong>High-Speed Core:</strong> Läuft dauerhaft auf dedizierter Performance-Infrastruktur.</span>
-        </div>
-        <div class="info-item">
-          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"></path></svg>
-          <span><strong>Discord Integration:</strong> Vollständige Unterstützung aller Interaktions- und Bot-Features.</span>
-        </div>
-        <div class="info-item">
-          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"></path></svg>
-          <span><strong>Echtzeit-Synchronisierung:</strong> Änderungen an Einstellungen greifen ohne Verzögerung.</span>
-        </div>
-      </div>
+    <div id="loading-state" class="state-box">Lade deine Server...</div>
+    <div id="empty-state" class="state-box hidden">Keine verwalterbaren Server gefunden.</div>
+    <div id="error-state" class="state-box hidden">
+      <span id="error-message">Ein Fehler ist aufgetreten.</span>
     </div>
+
+    <div id="guild-list" class="guild-grid hidden"></div>
   </main>
 
-  <!-- Features Grid -->
-  <section class="features-section" id="features">
-    <h2 class="section-title">Hauptfunktionen</h2>
-
-    <div class="features-grid">
-      <div class="feature-card">
-        <div class="feature-icon">
-          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-        </div>
-        <h3 class="feature-title">Smart Automod</h3>
-        <p class="feature-desc">Schützt deinen Server vor Spam, unerwünschten Links und sorgt automatisch für einen sauberen Chat.</p>
+  <!-- Server Management Overlay / Modal -->
+  <div id="manage-overlay" class="overlay hidden">
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <img id="active-guild-icon" src="" class="guild-icon-small">
+        <span id="active-guild-name">Server Name</span>
       </div>
-
-      <div class="feature-card">
-        <div class="feature-icon">
-          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2H5z"></path></svg>
-        </div>
-        <h3 class="feature-title">Ticket & Support</h3>
-        <p class="feature-desc">Nutzerfreundliche Support-Tickets mit übersichtlichen Kanälen und schnellem Moderations-Zugriff.</p>
-      </div>
-
-      <div class="feature-card">
-        <div class="feature-icon">
-          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-        </div>
-        <h3 class="feature-title">Hohe Performance</h3>
-        <p class="feature-desc">Optimierte Bot-Logik sorgt für ultraschnelle Antworten auf jeden Sprach- und Textbefehl.</p>
-      </div>
+      <nav class="sidebar-nav">
+        <button class="tab-btn active" data-tab="overview" onclick="switchTab('overview')">
+          <span class="tab-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span> Übersicht
+        </button>
+        <button class="tab-btn" data-tab="welcome" onclick="switchTab('welcome')">
+          <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></span> Willkommens System
+        </button>
+        <button class="tab-btn" data-tab="tickets" onclick="switchTab('tickets')">
+          <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><line x1="12" y1="9" x2="12" y2="15"/></svg></span> Ticket System
+        </button>
+        <button class="tab-btn" data-tab="teamliste" onclick="switchTab('teamliste')">
+          <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Teamliste
+        </button>
+        <button class="tab-btn" data-tab="support" onclick="switchTab('support')">
+          <span class="tab-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> Support &amp; FAQ
+        </button>
+        <button class="tab-btn" data-tab="moderation" onclick="switchTab('moderation')">
+          <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span> Moderations System
+        </button>
+        <button class="tab-btn" data-tab="teamupdate" onclick="switchTab('teamupdate')">
+          <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></span> Teamupdate Log
+        </button>
+        <button class="tab-btn" data-tab="stats" onclick="switchTab('stats')">
+          <span class="tab-icon"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span> Kanal Statistiken
+        </button>
+        <button class="tab-btn" data-tab="verification" onclick="switchTab('verification')">
+          <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span> Verifizierungs System
+        </button>
+        <button class="tab-btn" data-tab="antinuke" onclick="switchTab('antinuke')">
+          <span class="tab-icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span> Anti Nuke System
+        </button>
+      </nav>
+      <button class="btn btn-secondary back-btn" onclick="closeManagement()">← Server wechseln</button>
     </div>
-  </section>
 
-  <script>
-    // Zeigt eine kurze Meldung, falls /auth/discord/callback mit ?error=... zurückleitet
-    (function () {
-      const params = new URLSearchParams(window.location.search);
-      const error = params.get('error');
-      if (!error) return;
+    <div class="content-area">
 
-      const messages = {
-        missing_code: 'Discord-Login wurde abgebrochen. Bitte versuch es erneut.',
-        auth_failed: 'Verifizierung fehlgeschlagen. Bitte versuch es erneut.'
-      };
+      <!-- Übersicht Tab -->
+      <div id="mod-overview" class="module-page">
+        <h2>Übersicht</h2>
+        <p>Statistiken und allgemeiner Status des Bots auf deinem Server.</p>
 
-      const banner = document.createElement('div');
-      banner.textContent = messages[error] || 'Es ist ein Fehler aufgetreten. Bitte versuch es erneut.';
-      banner.style.cssText = `
-        max-width: 1200px; margin: 20px auto 0; padding: 12px 20px;
-        background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle);
-        border-radius: 10px; color: var(--text-primary); font-size: 0.88rem; text-align: center;
-      `;
-      document.querySelector('header').insertAdjacentElement('afterend', banner);
+        <div class="stats-grid">
+          <div class="card">
+            <h3>Mitglieder</h3>
+            <p id="overview-members">N/A</p>
+          </div>
+          <div class="card">
+            <h3>Server Boosts</h3>
+            <p id="overview-boosts">N/A</p>
+          </div>
+          <div class="card">
+            <h3>Bot Status</h3>
+            <p style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1rem; font-weight: 600; display:flex; align-items:center; gap:8px;"><span class="status-dot online"></span> Online</p>
+          </div>
+        </div>
+      </div>
 
-      // Fehler-Query aus der URL entfernen
-      window.history.replaceState({}, '', window.location.pathname);
-    })();
-  </script>
+      <!-- Willkommen Tab -->
+      <div id="mod-welcome" class="module-page hidden">
+        <h2>👋 Willkommen</h2>
+        <p>Lass den Bot automatisch Nachrichten versenden und Rollen verwalten wenn ein Member beitritt oder verlässt.</p>
 
+        <div class="subtabs">
+          <button class="subtab-btn active" data-sub="join" onclick="switchSubtab('welcome','join')">Beitritt</button>
+          <button class="subtab-btn" data-sub="leave" onclick="switchSubtab('welcome','leave')">Verlassen</button>
+        </div>
+
+        <!-- Beitritt -->
+        <div id="welcome-join-page" class="subpage">
+          <div class="card form-card" style="max-width: 100%; display:grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items:start;">
+            <div class="form-card" style="max-width:none;">
+              <div class="form-group">
+                <div class="switch-row">
+                  <label style="margin:0;">Willkommens-Nachricht aktiv</label>
+                  <label class="switch"><input type="checkbox" id="join-enabled" checked><span class="switch-slider"></span></label>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Nachrichtentyp</label>
+                <select id="join-mode" onchange="updateEmbedPreview('join')">
+                  <option value="embed">Embed</option>
+                  <option value="text">Einfache Nachricht</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="join-channel">Kanal</label>
+                <select id="join-channel"></select>
+              </div>
+
+              <div class="form-group">
+                <label for="join-title">Embed-Titel</label>
+                <input type="text" id="join-title" placeholder="Willkommen auf {server}! 🎉" oninput="updateEmbedPreview('join')">
+              </div>
+
+              <div class="form-group">
+                <label for="join-text">Nachricht / Beschreibung</label>
+                <textarea id="join-text" rows="4" placeholder="Hey {user}, schön dass du da bist! Wir sind jetzt {membercount} Mitglieder." oninput="updateEmbedPreview('join')"></textarea>
+                <small>Platzhalter: <code>{user}</code>, <code>{username}</code>, <code>{server}</code>, <code>{membercount}</code></small>
+              </div>
+
+              <div class="form-group">
+                <label>Embed-Bild</label>
+                <div class="image-upload">
+                  <img id="join-image-preview" class="image-preview" src="" alt="">
+                  <div class="upload-btn-wrap">
+                    <label class="btn btn-secondary" for="join-image-input">Bild hochladen</label>
+                    <input type="file" id="join-image-input" accept="image/*" onchange="handleImageUpload(this,'join')">
+                  </div>
+                  <button class="btn btn-secondary" onclick="clearImage('join')" type="button">Entfernen</button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <div class="switch-row">
+                  <label style="margin:0;">Thumbnail = Profilbild des Beitretenden</label>
+                  <label class="switch"><input type="checkbox" id="join-avatar-thumb" checked onchange="updateEmbedPreview('join')"><span class="switch-slider"></span></label>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Embed-Farbe</label>
+                <div class="color-row">
+                  <input type="color" id="join-color" value="#ffffff" oninput="syncColor('join')">
+                  <input type="text" id="join-color-hex" value="#ffffff" oninput="syncColorHex('join')">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Auto-Rolle(n) bei Beitritt</label>
+                <div id="join-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span></div>
+              </div>
+
+              <div class="form-action">
+                <button class="btn btn-primary" onclick="saveModuleSettings('welcome')">Einstellungen speichern</button>
+              </div>
+            </div>
+
+            <div class="embed-preview-wrap">
+              <label style="font-size:0.85rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:10px;">Live-Vorschau</label>
+              <div class="discord-embed" id="join-preview" style="border-left-color:#ffffff;">
+                <div class="discord-embed-body">
+                  <div class="discord-embed-title" id="join-preview-title">Willkommen auf {server}! 🎉</div>
+                  <div class="discord-embed-desc" id="join-preview-desc">Hey {user}, schön dass du da bist!</div>
+                  <img id="join-preview-image" class="discord-embed-image hidden" src="">
+                  <div class="discord-embed-footer">
+                    <img src="apex_logo.png">
+                    <span>Willkommens System • Powered by Apex</span>
+                  </div>
+                </div>
+                <img id="join-preview-thumb" class="discord-embed-thumb" src="https://cdn.discordapp.com/embed/avatars/0.png">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Verlassen -->
+        <div id="welcome-leave-page" class="subpage hidden">
+          <div class="card form-card" style="max-width: 100%; display:grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items:start;">
+            <div class="form-card" style="max-width:none;">
+              <div class="form-group">
+                <div class="switch-row">
+                  <label style="margin:0;">Verlassen-Nachricht aktiv</label>
+                  <label class="switch"><input type="checkbox" id="leave-enabled"><span class="switch-slider"></span></label>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Nachrichtentyp</label>
+                <select id="leave-mode" onchange="updateEmbedPreview('leave')">
+                  <option value="embed">Embed</option>
+                  <option value="text">Einfache Nachricht</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="leave-channel">Kanal</label>
+                <select id="leave-channel"></select>
+              </div>
+
+              <div class="form-group">
+                <label for="leave-title">Embed-Titel</label>
+                <input type="text" id="leave-title" placeholder="Auf Wiedersehen 👋" oninput="updateEmbedPreview('leave')">
+              </div>
+
+              <div class="form-group">
+                <label for="leave-text">Nachricht / Beschreibung</label>
+                <textarea id="leave-text" rows="4" placeholder="{username} hat den Server verlassen. Wir sind jetzt {membercount} Mitglieder." oninput="updateEmbedPreview('leave')"></textarea>
+                <small>Platzhalter: <code>{username}</code>, <code>{server}</code>, <code>{membercount}</code></small>
+              </div>
+
+              <div class="form-group">
+                <label>Embed-Bild</label>
+                <div class="image-upload">
+                  <img id="leave-image-preview" class="image-preview" src="" alt="">
+                  <div class="upload-btn-wrap">
+                    <label class="btn btn-secondary" for="leave-image-input">Bild hochladen</label>
+                    <input type="file" id="leave-image-input" accept="image/*" onchange="handleImageUpload(this,'leave')">
+                  </div>
+                  <button class="btn btn-secondary" onclick="clearImage('leave')" type="button">Entfernen</button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <div class="switch-row">
+                  <label style="margin:0;">Thumbnail = Profilbild des Verlassenden</label>
+                  <label class="switch"><input type="checkbox" id="leave-avatar-thumb" checked onchange="updateEmbedPreview('leave')"><span class="switch-slider"></span></label>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Embed-Farbe</label>
+                <div class="color-row">
+                  <input type="color" id="leave-color" value="#ffffff" oninput="syncColor('leave')">
+                  <input type="text" id="leave-color-hex" value="#ffffff" oninput="syncColorHex('leave')">
+                </div>
+              </div>
+
+              <div class="form-action">
+                <button class="btn btn-primary" onclick="saveModuleSettings('welcome')">Einstellungen speichern</button>
+              </div>
+            </div>
+
+            <div class="embed-preview-wrap">
+              <label style="font-size:0.85rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:10px;">Live-Vorschau</label>
+              <div class="discord-embed" id="leave-preview" style="border-left-color:#ffffff;">
+                <div class="discord-embed-body">
+                  <div class="discord-embed-title" id="leave-preview-title">Auf Wiedersehen 👋</div>
+                  <div class="discord-embed-desc" id="leave-preview-desc">{username} hat den Server verlassen.</div>
+                  <img id="leave-preview-image" class="discord-embed-image hidden" src="">
+                  <div class="discord-embed-footer">
+                    <img src="apex_logo.png">
+                    <span>Willkommens System • Powered by Apex</span>
+                  </div>
+                </div>
+                <img id="leave-preview-thumb" class="discord-embed-thumb" src="https://cdn.discordapp.com/embed/avatars/0.png">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ticket System Tab -->
+      <div id="mod-tickets" class="module-page hidden">
+        <h2>🎫 Ticket System</h2>
+        <p>Erstelle ein Dropdown-Panel, über das Mitglieder Tickets öffnen können.</p>
+
+        <div class="card form-card" style="max-width:100%; display:grid; grid-template-columns: 1fr 1fr; gap:28px; align-items:start;">
+          <div class="form-card" style="max-width:none;">
+            <div class="form-group">
+              <label for="ticket-panel-channel">Kanal für das Ticket-Panel (Dropdown-Embed)</label>
+              <select id="ticket-panel-channel"></select>
+            </div>
+
+            <div class="form-group">
+              <label for="ticket-panel-title">Panel Embed-Titel</label>
+              <input type="text" id="ticket-panel-title" placeholder="Tickets" oninput="updateEmbedPreview('ticket')">
+            </div>
+
+            <div class="form-group">
+              <label for="ticket-panel-desc">Panel Embed-Beschreibung</label>
+              <textarea id="ticket-panel-desc" rows="3" placeholder="Wähle unten eine Kategorie aus, um ein Ticket zu eröffnen." oninput="updateEmbedPreview('ticket')"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label>Panel Embed-Bild</label>
+              <div class="image-upload">
+                <img id="ticket-image-preview" class="image-preview" src="" alt="">
+                <div class="upload-btn-wrap">
+                  <label class="btn btn-secondary" for="ticket-image-input">Bild hochladen</label>
+                  <input type="file" id="ticket-image-input" accept="image/*" onchange="handleImageUpload(this,'ticket')">
+                </div>
+                <button class="btn btn-secondary" onclick="clearImage('ticket')" type="button">Entfernen</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Embed-Farbe</label>
+              <div class="color-row">
+                <input type="color" id="ticket-color" value="#ffffff" oninput="syncColor('ticket')">
+                <input type="text" id="ticket-color-hex" value="#ffffff" oninput="syncColorHex('ticket')">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="ticket-create-msg">Nachricht bei Ticket-Erstellung</label>
+              <textarea id="ticket-create-msg" rows="3" placeholder="Hallo {user}, ein Teammitglied kümmert sich gleich um dein Anliegen."></textarea>
+              <small>Wird als erste Nachricht im neu erstellten Ticket-Kanal gepostet.</small>
+            </div>
+
+            <div class="form-group">
+              <label>Ticket-Kategorien (Dropdown-Optionen)</label>
+              <div id="ticket-options-list" style="display:flex; flex-direction:column; gap:10px;"></div>
+              <button type="button" class="add-option-btn" onclick="addTicketOption()">+ Kategorie hinzufügen</button>
+            </div>
+
+            <div class="form-action">
+              <button class="btn btn-primary" onclick="saveModuleSettings('tickets')">Einstellungen speichern</button>
+            </div>
+          </div>
+
+          <div class="embed-preview-wrap">
+            <label style="font-size:0.85rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:10px;">Live-Vorschau</label>
+            <div class="discord-embed" id="ticket-preview" style="border-left-color:#ffffff;">
+              <div class="discord-embed-body">
+                <div class="discord-embed-title" id="ticket-preview-title">Support Center</div>
+                <div class="discord-embed-desc" id="ticket-preview-desc">Wähle unten eine Kategorie aus, um ein Ticket zu eröffnen.</div>
+                <img id="ticket-preview-image" class="discord-embed-image hidden" src="">
+                <div class="discord-embed-footer">
+                  <img src="apex_logo.png">
+                  <span>Ticket System • Powered by Apex</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Teamliste Tab -->
+      <div id="mod-teamliste" class="module-page hidden">
+        <h2>👥 Teamliste</h2>
+        <p>Generiert automatisch eine immer aktuelle Übersicht deines Teams in einem Kanal.</p>
+
+        <div class="card form-card">
+          <div class="form-group">
+            <label for="teamliste-channel">Kanal für die Teamliste</label>
+            <select id="teamliste-channel"></select>
+          </div>
+
+          <div class="form-group">
+            <label>Team-Rollen (beliebig viele, in Reihenfolge der Anzeige)</label>
+            <div id="teamliste-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span></div>
+            <small>Ausgewählte Rollen werden automatisch mit ihren Mitgliedern gruppiert angezeigt und aktualisieren sich live.</small>
+          </div>
+
+          <div class="form-action">
+            <button class="btn btn-primary" onclick="saveModuleSettings('teamliste')">Einstellungen speichern</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Support & FAQ Tab -->
+      <div id="mod-support" class="module-page hidden">
+        <h2>❓ Support &amp; FAQ<span class="soon-badge">Grundeinrichtung</span></h2>
+        <p>Automatisiere häufige Fragen mit intelligenten Auto-Antworten und einer strukturierten Hilfeseite.</p>
+        <div class="card form-card">
+          <div class="form-group">
+            <div class="switch-row">
+              <label style="margin:0;">Modul aktiv</label>
+              <label class="switch"><input type="checkbox" id="support-enabled"><span class="switch-slider"></span></label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="support-channel">FAQ-Kanal</label>
+            <select id="support-channel"></select>
+          </div>
+          <div class="form-action">
+            <button class="btn btn-primary" onclick="saveModuleSettings('support')">Einstellungen speichern</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Moderation Tab -->
+      <div id="mod-moderation" class="module-page hidden">
+        <h2>🛡️ Moderation<span class="soon-badge">Grundeinrichtung</span></h2>
+        <p>Automod, Temp-Mutes, Warn-System und detaillierte Sanctions-Logs.</p>
+        <div class="card form-card">
+          <div class="form-group">
+            <div class="switch-row">
+              <label style="margin:0;">Automod aktiv</label>
+              <label class="switch"><input type="checkbox" id="moderation-enabled"><span class="switch-slider"></span></label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="moderation-log-channel">Log-Kanal für Sanktionen</label>
+            <select id="moderation-log-channel"></select>
+          </div>
+          <div class="form-action">
+            <button class="btn btn-primary" onclick="saveModuleSettings('moderation')">Einstellungen speichern</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Teamupdate Log Tab -->
+      <div id="mod-teamupdate" class="module-page hidden">
+        <h2>📝 Teamupdate Log<span class="soon-badge">Grundeinrichtung</span></h2>
+        <p>Postet Beförderungen, Rang-Anpassungen und Team-Eintritte strukturiert in einem Log-Kanal.</p>
+        <div class="card form-card">
+          <div class="form-group">
+            <div class="switch-row">
+              <label style="margin:0;">Log aktiv</label>
+              <label class="switch"><input type="checkbox" id="teamupdate-enabled"><span class="switch-slider"></span></label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="teamupdate-channel">Log-Kanal</label>
+            <select id="teamupdate-channel"></select>
+          </div>
+          <div class="form-action">
+            <button class="btn btn-primary" onclick="saveModuleSettings('teamupdate')">Einstellungen speichern</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kanal Statistiken Tab -->
+      <div id="mod-stats" class="module-page hidden">
+        <h2>📈 Kanal Statistiken<span class="soon-badge">Grundeinrichtung</span></h2>
+        <p>Zeigt Mitgliederzahl, Boosts und Online-Status live als Sprachkanal-Namen an.</p>
+        <div class="card form-card">
+          <div class="form-group">
+            <div class="switch-row">
+              <label style="margin:0;">Live-Statistik-Kanäle aktiv</label>
+              <label class="switch"><input type="checkbox" id="stats-enabled"><span class="switch-slider"></span></label>
+            </div>
+          </div>
+          <div class="form-action">
+            <button class="btn btn-primary" onclick="saveModuleSettings('stats')">Einstellungen speichern</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Verifizierungs System Tab -->
+      <div id="mod-verification" class="module-page hidden">
+        <h2>✅ Verifizierungs System<span class="soon-badge">Grundeinrichtung</span></h2>
+        <p>Schütze deine Community vor Raid-Bots durch Button- oder Captcha-Verifizierung vor dem Serverbeitritt.</p>
+        <div class="card form-card">
+          <div class="form-group">
+            <div class="switch-row">
+              <label style="margin:0;">Verifizierung aktiv</label>
+              <label class="switch"><input type="checkbox" id="verification-enabled"><span class="switch-slider"></span></label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="verification-role">Rolle nach Verifizierung</label>
+            <div id="verification-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span></div>
+          </div>
+          <div class="form-action">
+            <button class="btn btn-primary" onclick="saveModuleSettings('verification')">Einstellungen speichern</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Anti Nuke Schutz Tab -->
+      <div id="mod-antinuke" class="module-page hidden">
+        <h2>🔒 Anti Nuke Schutz<span class="soon-badge">Grundeinrichtung</span></h2>
+        <p>Echtzeit-Erkennung gegen Rechte-Missbrauch: Stoppt Massen-Kicks, Channel-Löschungen und Rollen-Griefing sofort.</p>
+        <div class="card form-card">
+          <div class="form-group">
+            <div class="switch-row">
+              <label style="margin:0;">Anti Nuke aktiv</label>
+              <label class="switch"><input type="checkbox" id="antinuke-enabled" checked><span class="switch-slider"></span></label>
+            </div>
+          </div>
+          <div class="form-action">
+            <button class="btn btn-primary" onclick="saveModuleSettings('antinuke')">Einstellungen speichern</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+
+  <footer>
+    <p>&copy; 2026 APEX BOT SYSTEM. All rights reserved.</p>
+  </footer>
+
+  <script src="/dashboard.js"></script>
 </body>
 </html>
