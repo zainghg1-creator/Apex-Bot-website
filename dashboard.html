@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Apex Bot – Dashboard</title>
 
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='50' fill='%23000000'/><path d='M50 18 L22 75 L38 75 L50 48 L62 75 L78 75 Z' fill='%23FFFFFF'/><path d='M15 50 C20 25, 40 12, 68 12' stroke='%23FFFFFF' stroke-width='4' stroke-linecap='round' fill='none'/><path d='M85 50 C80 75, 60 88, 32 88' stroke='%23FFFFFF' stroke-width='4' stroke-linecap='round' fill='none'/><line x1='72' y1='20' x2='28' y2='80' stroke='%23FFFFFF' stroke-width='3' stroke-linecap='round'/></svg>">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='50' fill='%23000000'/><path d='M50 20 L30 70 L40 70 L50 40 L60 70 L70 70 Z' fill='%23FFFFFF'/></svg>">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -151,7 +151,7 @@
       font-size: 0.95rem;
     }
 
-    /* Guild Cards Grid — mehr Platz für Servernamen */
+    /* Guild Cards Grid */
     .guild-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -269,7 +269,12 @@
       flex-direction: column;
       gap: 6px;
       flex: 1;
+      overflow-y: auto;
+      padding-right: 2px;
     }
+
+    .sidebar-nav::-webkit-scrollbar { width: 5px; }
+    .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
 
     .tab-btn {
       background: transparent;
@@ -400,7 +405,8 @@
       color: var(--text-muted);
     }
 
-    .form-group input, .form-group textarea, .form-group select {
+    /* ========== CUSTOM DROPDOWN STYLING FIX ========== */
+    .form-group input, .form-group textarea {
       width: 100%;
       background: var(--bg-base);
       border: 1px solid var(--border-subtle);
@@ -411,16 +417,28 @@
       font-family: inherit;
       font-size: 0.9rem;
       transition: all 0.2s ease;
-      appearance: none;
-      -webkit-appearance: none;
     }
 
     .form-group select {
+      width: 100%;
+      background: var(--bg-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 11px 14px;
+      padding-right: 40px;
+      color: var(--text-primary);
+      outline: none;
+      font-family: inherit;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      cursor: pointer;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
       background-repeat: no-repeat;
-      background-position: right 14px center;
-      padding-right: 40px;
-      cursor: pointer;
+      background-position: right 12px center;
+      background-color: var(--bg-base);
     }
 
     .form-group select:hover {
@@ -428,7 +446,12 @@
       background-color: rgba(255, 255, 255, 0.02);
     }
 
-    .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+    .form-group select:focus {
+      border-color: var(--border-active);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+    }
+
+    .form-group input:focus, .form-group textarea:focus {
       border-color: var(--border-active);
       box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
     }
@@ -474,10 +497,6 @@
       color: var(--text-dim);
       font-size: 0.85rem;
     }
-
-    .sidebar-nav { overflow-y: auto; padding-right: 2px; }
-    .sidebar-nav::-webkit-scrollbar { width: 5px; }
-    .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
 
     /* Sub tabs */
     .subtabs {
@@ -713,31 +732,31 @@
           <span class="tab-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span> Übersicht
         </button>
         <button class="tab-btn" data-tab="welcome" onclick="switchTab('welcome')">
-          <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></span> Willkommens System
+          <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></span> Willkommen
         </button>
         <button class="tab-btn" data-tab="tickets" onclick="switchTab('tickets')">
-          <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><line x1="12" y1="9" x2="12" y2="15"/></svg></span> Ticket System
+          <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><line x1="12" y1="9" x2="12" y2="15"/></svg></span> Tickets
         </button>
         <button class="tab-btn" data-tab="teamliste" onclick="switchTab('teamliste')">
-          <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Teamliste
+          <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Team
         </button>
         <button class="tab-btn" data-tab="support" onclick="switchTab('support')">
-          <span class="tab-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> Support &amp; FAQ
+          <span class="tab-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> Support
         </button>
         <button class="tab-btn" data-tab="moderation" onclick="switchTab('moderation')">
-          <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span> Moderations System
+          <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span> Moderation
         </button>
         <button class="tab-btn" data-tab="teamupdate" onclick="switchTab('teamupdate')">
-          <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></span> Teamupdate Log
+          <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></span> Team Update
         </button>
         <button class="tab-btn" data-tab="stats" onclick="switchTab('stats')">
           <span class="tab-icon"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span> Kanal Statistiken
         </button>
         <button class="tab-btn" data-tab="verification" onclick="switchTab('verification')">
-          <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span> Verifizierungs System
+          <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span> Verifizierung
         </button>
         <button class="tab-btn" data-tab="antinuke" onclick="switchTab('antinuke')">
-          <span class="tab-icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span> Anti Nuke System
+          <span class="tab-icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span> Anti Nuke
         </button>
       </nav>
       <button class="btn btn-secondary back-btn" onclick="closeManagement()">← Server wechseln</button>
@@ -1001,13 +1020,13 @@
             </div>
 
             <div class="form-group">
-              <label>Ticket-Kategorien (Dropdown-Optionen)</label>
-              <div id="ticket-options-list" style="display:flex; flex-direction:column; gap:10px;"></div>
+              <label>Ticket-Kategorien</label>
+              <div id="ticket-options-list"></div>
               <button type="button" class="add-option-btn" onclick="addTicketOption()">+ Kategorie hinzufügen</button>
             </div>
 
             <div class="form-action">
-              <button class="btn btn-primary" onclick="saveModuleSettings('tickets')">Einstellungen speichern</button>
+              <button class="btn btn-primary" onclick="saveModuleSettings('tickets')">Ticket-System speichern</button>
             </div>
           </div>
 
@@ -1015,7 +1034,7 @@
             <label style="font-size:0.85rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:10px;">Live-Vorschau</label>
             <div class="discord-embed" id="ticket-preview" style="border-left-color:#ffffff;">
               <div class="discord-embed-body">
-                <div class="discord-embed-title" id="ticket-preview-title">Support Center</div>
+                <div class="discord-embed-title" id="ticket-preview-title">Tickets</div>
                 <div class="discord-embed-desc" id="ticket-preview-desc">Wähle unten eine Kategorie aus, um ein Ticket zu eröffnen.</div>
                 <img id="ticket-preview-image" class="discord-embed-image hidden" src="">
                 <div class="discord-embed-footer">
@@ -1028,113 +1047,124 @@
         </div>
       </div>
 
-      <!-- Teamliste Tab -->
+      <!-- Team Liste Tab -->
       <div id="mod-teamliste" class="module-page hidden">
-        <h2>👥 Teamliste</h2>
-        <p>Generiert automatisch eine immer aktuelle Übersicht deines Teams in einem Kanal.</p>
+        <h2>👥 Team Liste</h2>
+        <p>Zeige eine Liste deines Teams an.</p>
 
         <div class="card form-card">
           <div class="form-group">
-            <label for="teamliste-channel">Kanal für die Teamliste</label>
+            <label for="teamliste-channel">Kanal</label>
             <select id="teamliste-channel"></select>
           </div>
 
           <div class="form-group">
-            <label>Team-Rollen (beliebig viele, in Reihenfolge der Anzeige)</label>
+            <label>Rollen</label>
             <div id="teamliste-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span></div>
-            <small>Ausgewählte Rollen werden automatisch mit ihren Mitgliedern gruppiert angezeigt und aktualisieren sich live.</small>
           </div>
 
           <div class="form-action">
-            <button class="btn btn-primary" onclick="saveModuleSettings('teamliste')">Einstellungen speichern</button>
+            <button class="btn btn-primary" onclick="saveModuleSettings('teamliste')">Team Liste speichern</button>
           </div>
         </div>
       </div>
 
-      <!-- Support & FAQ Tab -->
+      <!-- Support Tab -->
       <div id="mod-support" class="module-page hidden">
-        <h2>❓ Support &amp; FAQ<span class="soon-badge">Grundeinrichtung</span></h2>
-        <p>Automatisiere häufige Fragen mit intelligenten Auto-Antworten und einer strukturierten Hilfeseite.</p>
+        <h2>💬 Support System</h2>
+        <p>Konfiguriere das Support-System für deinen Server.</p>
+
         <div class="card form-card">
           <div class="form-group">
             <div class="switch-row">
-              <label style="margin:0;">Modul aktiv</label>
+              <label style="margin:0;">Support aktiv</label>
               <label class="switch"><input type="checkbox" id="support-enabled"><span class="switch-slider"></span></label>
             </div>
           </div>
+
           <div class="form-group">
-            <label for="support-channel">FAQ-Kanal</label>
+            <label for="support-channel">Kanal</label>
             <select id="support-channel"></select>
           </div>
+
           <div class="form-action">
-            <button class="btn btn-primary" onclick="saveModuleSettings('support')">Einstellungen speichern</button>
+            <button class="btn btn-primary" onclick="saveModuleSettings('support')">Support speichern</button>
           </div>
         </div>
       </div>
 
       <!-- Moderation Tab -->
       <div id="mod-moderation" class="module-page hidden">
-        <h2>🛡️ Moderation<span class="soon-badge">Grundeinrichtung</span></h2>
-        <p>Automod, Temp-Mutes, Warn-System und detaillierte Sanctions-Logs.</p>
+        <h2>🛡️ Moderations System</h2>
+        <p>Konfiguriere das Moderations-System für deinen Server.</p>
+
         <div class="card form-card">
           <div class="form-group">
             <div class="switch-row">
-              <label style="margin:0;">Automod aktiv</label>
+              <label style="margin:0;">Moderation aktiv</label>
               <label class="switch"><input type="checkbox" id="moderation-enabled"><span class="switch-slider"></span></label>
             </div>
           </div>
+
           <div class="form-group">
-            <label for="moderation-log-channel">Log-Kanal für Sanktionen</label>
+            <label for="moderation-log-channel">Log-Kanal</label>
             <select id="moderation-log-channel"></select>
           </div>
+
           <div class="form-action">
-            <button class="btn btn-primary" onclick="saveModuleSettings('moderation')">Einstellungen speichern</button>
+            <button class="btn btn-primary" onclick="saveModuleSettings('moderation')">Moderation speichern</button>
           </div>
         </div>
       </div>
 
-      <!-- Teamupdate Log Tab -->
+      <!-- Team Update Tab -->
       <div id="mod-teamupdate" class="module-page hidden">
-        <h2>📝 Teamupdate Log<span class="soon-badge">Grundeinrichtung</span></h2>
-        <p>Postet Beförderungen, Rang-Anpassungen und Team-Eintritte strukturiert in einem Log-Kanal.</p>
+        <h2>📢 Team Update</h2>
+        <p>Sende automatisch Team-Updates.</p>
+
         <div class="card form-card">
           <div class="form-group">
             <div class="switch-row">
-              <label style="margin:0;">Log aktiv</label>
+              <label style="margin:0;">Team Updates aktiv</label>
               <label class="switch"><input type="checkbox" id="teamupdate-enabled"><span class="switch-slider"></span></label>
             </div>
           </div>
+
           <div class="form-group">
-            <label for="teamupdate-channel">Log-Kanal</label>
+            <label for="teamupdate-channel">Kanal</label>
             <select id="teamupdate-channel"></select>
           </div>
+
           <div class="form-action">
-            <button class="btn btn-primary" onclick="saveModuleSettings('teamupdate')">Einstellungen speichern</button>
+            <button class="btn btn-primary" onclick="saveModuleSettings('teamupdate')">Team Update speichern</button>
           </div>
         </div>
       </div>
 
-      <!-- Kanal Statistiken Tab -->
+      <!-- Stats Tab -->
       <div id="mod-stats" class="module-page hidden">
-        <h2>📈 Kanal Statistiken<span class="soon-badge">Grundeinrichtung</span></h2>
-        <p>Zeigt Mitgliederzahl, Boosts und Online-Status live als Sprachkanal-Namen an.</p>
+        <h2>📊 Kanal Statistiken</h2>
+        <p>Zeige Statistiken der Kanäle an.</p>
+
         <div class="card form-card">
           <div class="form-group">
             <div class="switch-row">
-              <label style="margin:0;">Live-Statistik-Kanäle aktiv</label>
+              <label style="margin:0;">Statistiken aktiv</label>
               <label class="switch"><input type="checkbox" id="stats-enabled"><span class="switch-slider"></span></label>
             </div>
           </div>
+
           <div class="form-action">
-            <button class="btn btn-primary" onclick="saveModuleSettings('stats')">Einstellungen speichern</button>
+            <button class="btn btn-primary" onclick="saveModuleSettings('stats')">Statistiken speichern</button>
           </div>
         </div>
       </div>
 
-      <!-- Verifizierungs System Tab -->
+      <!-- Verification Tab -->
       <div id="mod-verification" class="module-page hidden">
-        <h2>✅ Verifizierungs System<span class="soon-badge">Grundeinrichtung</span></h2>
-        <p>Schütze deine Community vor Raid-Bots durch Button- oder Captcha-Verifizierung vor dem Serverbeitritt.</p>
+        <h2>✅ Verifizierungs System</h2>
+        <p>Konfiguriere das Verifizierungs-System.</p>
+
         <div class="card form-card">
           <div class="form-group">
             <div class="switch-row">
@@ -1142,29 +1172,33 @@
               <label class="switch"><input type="checkbox" id="verification-enabled"><span class="switch-slider"></span></label>
             </div>
           </div>
+
           <div class="form-group">
-            <label for="verification-role">Rolle nach Verifizierung</label>
+            <label>Verifizierungs-Rolle</label>
             <div id="verification-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span></div>
           </div>
+
           <div class="form-action">
-            <button class="btn btn-primary" onclick="saveModuleSettings('verification')">Einstellungen speichern</button>
+            <button class="btn btn-primary" onclick="saveModuleSettings('verification')">Verifizierung speichern</button>
           </div>
         </div>
       </div>
 
-      <!-- Anti Nuke Schutz Tab -->
+      <!-- Anti Nuke Tab -->
       <div id="mod-antinuke" class="module-page hidden">
-        <h2>🔒 Anti Nuke Schutz<span class="soon-badge">Grundeinrichtung</span></h2>
-        <p>Echtzeit-Erkennung gegen Rechte-Missbrauch: Stoppt Massen-Kicks, Channel-Löschungen und Rollen-Griefing sofort.</p>
+        <h2>🔒 Anti Nuke System</h2>
+        <p>Schütze deinen Server vor Angriffen.</p>
+
         <div class="card form-card">
           <div class="form-group">
             <div class="switch-row">
               <label style="margin:0;">Anti Nuke aktiv</label>
-              <label class="switch"><input type="checkbox" id="antinuke-enabled" checked><span class="switch-slider"></span></label>
+              <label class="switch"><input type="checkbox" id="antinuke-enabled"><span class="switch-slider"></span></label>
             </div>
           </div>
+
           <div class="form-action">
-            <button class="btn btn-primary" onclick="saveModuleSettings('antinuke')">Einstellungen speichern</button>
+            <button class="btn btn-primary" onclick="saveModuleSettings('antinuke')">Anti Nuke speichern</button>
           </div>
         </div>
       </div>
@@ -1172,12 +1206,9 @@
     </div>
   </div>
 
+  <!-- Toast Container -->
   <div id="toast-container"></div>
 
-  <footer>
-    <p>&copy; 2026 APEX BOT SYSTEM. All rights reserved.</p>
-  </footer>
-
-  <script src="/dashboard.js"></script>
+  <script src="dashboard.js"></script>
 </body>
 </html>
