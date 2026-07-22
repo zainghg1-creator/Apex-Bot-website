@@ -1459,4 +1459,65 @@ header.scrolled {
     font-size: 0.8rem;
     padding: 12px 16px;
   }
+   /* HERO */
+.hero {
+  padding: 160px 24px 120px;
+  text-align: center;
+}
+
+.hero-title {
+  font-size: 3.4rem;
+  line-height: 1.05;
+  font-weight: 800;
+  margin-bottom: 20px;
+  animation: fadeUp 0.9s ease;
+}
+
+.hero-subtitle {
+  font-size: 1.3rem;
+  max-width: 680px;
+  margin: 0 auto 48px;
+  color: var(--text-secondary);
+}
+
+.hero-cta {
+  margin-bottom: 60px;
+}
+
+.hero-cta .btn {
+  padding: 16px 36px;
+  font-size: 1.1rem;
+  margin: 0 10px;
+}
+
+.stats-bar {
+  display: flex;
+  justify-content: center;
+  gap: 80px;
+  flex-wrap: wrap;
+}
+
+.stat {
+  text-align: center;
+}
+
+.stat-number {
+  font-size: 2.8rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  display: block;
+  transition: all 0.4s ease;
+}
+
+.stat-label {
+  font-size: 1rem;
+  color: var(--text-muted);
+  display: block;
+  margin-top: 6px;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 }
