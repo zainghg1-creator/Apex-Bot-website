@@ -1,10 +1,9 @@
 /* ====================================================
    APEX BOT - MODERN DARK THEME v2.0
-   Verbesserte Version mit flüssigen Animationen
-   und besserer Responsivität
+   Vollständige Version mit allen Styles
    ==================================================== */
 
-/* ---------- CSS VARIABLEN (leicht anpassbar) ---------- */
+/* ---------- CSS VARIABLEN ---------- */
 :root {
   /* Farben */
   --bg-base: #000000;
@@ -14,7 +13,7 @@
   --bg-hover: rgba(255, 255, 255, 0.06);
   --bg-active: rgba(255, 255, 255, 0.10);
 
-  /* Border / Trenner */
+  /* Border */
   --border-subtle: rgba(255, 255, 255, 0.08);
   --border-medium: rgba(255, 255, 255, 0.12);
   --border-strong: rgba(255, 255, 255, 0.20);
@@ -134,7 +133,6 @@ header.scrolled {
   border-bottom-color: var(--border-medium);
 }
 
-/* Brand / Logo */
 .brand {
   display: flex;
   align-items: center;
@@ -171,7 +169,6 @@ header.scrolled {
   color: var(--text-muted);
 }
 
-/* Zentrierte Navigation */
 .nav-center {
   display: flex;
   align-items: center;
@@ -209,7 +206,6 @@ header.scrolled {
   width: 100%;
 }
 
-/* User Chip */
 .user-chip {
   display: flex;
   align-items: center;
@@ -376,7 +372,7 @@ header.scrolled {
   font-size: 0.95rem;
 }
 
-/* ---------- STATE BOXES (Loading, Empty, Error) ---------- */
+/* ---------- STATE BOXES ---------- */
 .state-box {
   background: var(--bg-surface);
   padding: 3rem 2rem;
@@ -404,7 +400,7 @@ header.scrolled {
   }
 }
 
-/* ---------- GUILD CARDS (Server-Liste) ---------- */
+/* ---------- GUILD CARDS ---------- */
 .guild-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -480,7 +476,7 @@ header.scrolled {
   width: 100%;
 }
 
-/* ---------- OVERLAY / SIDEBAR DASHBOARD ---------- */
+/* ---------- OVERLAY / SIDEBAR ---------- */
 .overlay {
   position: fixed;
   inset: 0;
@@ -501,7 +497,6 @@ header.scrolled {
   }
 }
 
-/* Sidebar */
 .sidebar {
   width: var(--sidebar-width);
   background: var(--bg-surface);
@@ -556,7 +551,6 @@ header.scrolled {
   border-radius: var(--radius-full);
 }
 
-/* Tab Buttons in Sidebar */
 .tab-btn {
   background: transparent;
   border: none;
@@ -614,14 +608,12 @@ header.scrolled {
   stroke: var(--text-primary);
 }
 
-/* Back Button */
 .back-btn {
   margin-top: auto;
   width: 100%;
   text-align: center;
 }
 
-/* Content Area */
 .content-area {
   flex: 1;
   padding: 2.5rem 3rem;
@@ -670,7 +662,6 @@ header.scrolled {
   font-family: var(--font-mono);
 }
 
-/* Stats Grid */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -704,7 +695,6 @@ header.scrolled {
   letter-spacing: 0.01em;
 }
 
-/* Inputs & Textareas */
 .form-group input,
 .form-group textarea {
   width: 100%;
@@ -749,7 +739,7 @@ header.scrolled {
   font-size: 0.75rem;
 }
 
-/* ---------- CUSTOM SELECT (Dropdown) ---------- */
+/* ---------- CUSTOM SELECT ---------- */
 .form-group select {
   width: 100%;
   background: var(--bg-base);
@@ -876,7 +866,7 @@ header.scrolled {
   text-transform: uppercase;
 }
 
-/* ---------- CHIP SELECT (Rollen-Auswahl) ---------- */
+/* ---------- CHIP SELECT ---------- */
 .chip-select {
   display: flex;
   flex-wrap: wrap;
@@ -1203,4 +1193,270 @@ header.scrolled {
   background: var(--bg-surface);
   color: var(--text-primary);
   font-weight: 600;
-  font-size: 0
+  font-size: 0.88rem;
+  padding: 14px 20px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-lg);
+  animation: slideIn 0.3s ease, slideOut 0.3s ease 2.8s forwards;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toast.success {
+  border-left: 4px solid #22c55e;
+}
+
+.toast.error {
+  border-left: 4px solid #ef4444;
+}
+
+.toast.info {
+  border-left: 4px solid #3b82f6;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes slideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(30px) scale(0.95);
+  }
+}
+
+/* ---------- LOADING SPINNER ---------- */
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border-subtle);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 10px;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- RESPONSIVE DESIGN ---------- */
+@media (max-width: 1024px) {
+  .content-area {
+    padding: 1.75rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .nav-center {
+    display: none !important;
+  }
+
+  .hero-title {
+    font-size: 2.2rem;
+  }
+
+  .container {
+    padding: 40px 16px 60px;
+  }
+
+  .guild-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    width: 220px;
+    padding: 1rem 0.8rem;
+  }
+
+  .content-area {
+    padding: 1.25rem;
+  }
+
+  .content-area h2 {
+    font-size: 1.3rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .overlay {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 10px 14px;
+    max-height: 120px;
+    overflow-x: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .sidebar-header {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+    margin-right: 12px;
+    flex-shrink: 0;
+  }
+
+  .sidebar-nav {
+    flex-direction: row;
+    flex: 1;
+    gap: 4px;
+    overflow-x: auto;
+    padding: 4px 0;
+  }
+
+  .tab-btn {
+    padding: 8px 12px;
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+
+  .tab-btn .tab-icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  .tab-btn .tab-icon svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .back-btn {
+    margin-top: 0;
+    margin-left: auto;
+    width: auto;
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+  }
+
+  .page-heading h2 {
+    font-size: 1.5rem;
+  }
+
+  .form-card {
+    max-width: 100%;
+  }
+
+  .form-card[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .embed-preview-wrap {
+    max-width: 100%;
+  }
+
+  .showcase-card {
+    padding: 20px;
+  }
+
+  .showcase-stats {
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    padding-bottom: 16px;
+  }
+
+  .stat-value {
+    font-size: 1.2rem;
+  }
+
+  .showcase-highlights {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .modules-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  header {
+    padding: 0 4%;
+  }
+
+  .brand-name {
+    font-size: 0.95rem;
+  }
+
+  .user-chip {
+    padding: 4px 6px 4px 4px;
+    gap: 6px;
+  }
+
+  .user-chip img {
+    width: 26px;
+    height: 26px;
+  }
+
+  #user-name {
+    font-size: 0.75rem;
+  }
+
+  .logout-btn {
+    font-size: 0.7rem;
+    padding: 4px 10px;
+  }
+
+  .hero-title {
+    font-size: 1.8rem;
+  }
+
+  .hero-subtitle {
+    font-size: 0.95rem;
+  }
+
+  .btn {
+    padding: 8px 14px;
+    font-size: 0.8rem;
+  }
+
+  .content-area {
+    padding: 1rem;
+  }
+
+  .stats-grid .card p {
+    font-size: 1.4rem;
+  }
+
+  #toast-container {
+    bottom: 16px;
+    right: 16px;
+    max-width: calc(100% - 32px);
+  }
+
+  .toast {
+    font-size: 0.8rem;
+    padding: 12px 16px;
+  }
+}
