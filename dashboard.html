@@ -7,14 +7,14 @@
   
   <style>
     :root {
-      --bg-dark: #0f172a;
-      --bg-card: #1e293b;
-      --bg-hover: #334155;
+      --bg-dark: #0b0e14;
+      --bg-card: #151d2a;
+      --bg-hover: #1e293b;
       --accent: #5865f2;
       --accent-hover: #4752c4;
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
-      --border: #334155;
+      --border: #1e293b;
       --radius: 12px;
     }
 
@@ -22,7 +22,7 @@
       margin: 0;
       padding: 0;
       box-sizing: border-box;
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
     }
 
     body {
@@ -33,7 +33,7 @@
       flex-direction: column;
     }
 
-    /* Header */
+    /* Top Navigation */
     .navbar {
       display: flex;
       justify-content: space-between;
@@ -47,6 +47,7 @@
       font-weight: 700;
       font-size: 1.2rem;
       letter-spacing: 0.5px;
+      color: var(--text-main);
     }
 
     .user-chip {
@@ -63,6 +64,7 @@
       width: 32px;
       height: 32px;
       border-radius: 50%;
+      object-fit: cover;
     }
 
     .logout-btn {
@@ -70,9 +72,14 @@
       text-decoration: none;
       font-size: 0.85rem;
       margin-left: 8px;
+      font-weight: 500;
     }
 
-    /* Container */
+    .logout-btn:hover {
+      text-decoration: underline;
+    }
+
+    /* Hauptbereich */
     .container {
       max-width: 1000px;
       margin: 2rem auto;
@@ -83,6 +90,7 @@
     h2 {
       margin-bottom: 1.5rem;
       font-weight: 600;
+      font-size: 1.5rem;
     }
 
     .state-box {
@@ -94,7 +102,7 @@
       border: 1px solid var(--border);
     }
 
-    /* Guild Cards */
+    /* Server Grid */
     .guild-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -103,17 +111,18 @@
 
     .guild-card {
       background: var(--bg-card);
-      padding: 1rem 1.25rem;
+      padding: 1.25rem;
       border-radius: var(--radius);
       border: 1px solid var(--border);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      transition: transform 0.2s;
+      transition: all 0.2s ease;
     }
 
     .guild-card:hover {
       transform: translateY(-2px);
+      border-color: var(--accent);
     }
 
     .guild-info {
@@ -127,6 +136,7 @@
       height: 44px;
       border-radius: 50%;
       object-fit: cover;
+      background: var(--bg-hover);
     }
 
     /* Buttons */
@@ -157,10 +167,10 @@
     }
 
     .btn-secondary:hover {
-      background: #475569;
+      background: #334155;
     }
 
-    /* Overlay / Sidebar Dashboard */
+    /* Dashboard Management Overlay */
     .overlay {
       position: fixed;
       inset: 0;
@@ -191,6 +201,7 @@
       width: 36px;
       height: 36px;
       border-radius: 50%;
+      object-fit: cover;
     }
 
     .sidebar-nav {
@@ -264,10 +275,10 @@
 
     .form-group input, .form-group textarea {
       width: 100%;
-      background: rgba(0, 0, 0, 0.2);
+      background: rgba(0, 0, 0, 0.25);
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 10px;
+      padding: 10px 12px;
       color: var(--text-main);
       outline: none;
     }
@@ -336,11 +347,11 @@
     <div id="guild-list" class="guild-grid hidden"></div>
   </main>
 
-  <!-- Server Management Overlay / Modal -->
+  <!-- Server Management Overlay -->
   <div id="manage-overlay" class="overlay hidden">
     <div class="sidebar">
       <div class="sidebar-header">
-        <img id="active-guild-icon" src="" class="guild-icon-small">
+        <img id="active-guild-icon" src="" class="guild-icon-small" alt="Icon">
         <span id="active-guild-name">Server Name</span>
       </div>
       <nav class="sidebar-nav">
@@ -355,20 +366,22 @@
       <!-- Übersicht Tab -->
       <div id="mod-overview" class="module-page">
         <h2>Übersicht</h2>
-        <p>Statistiken und allgemeiner Status des Bots auf deinem Server.</p>
+        <p style="color: var(--text-muted);">Statistiken und allgemeiner Status des Bots auf deinem Server.</p>
 
         <div class="stats-grid">
           <div class="card">
             <h3>Mitglieder</h3>
-            <p id="overview-members">N/A</p>
+            <p id="overview-members" style="font-size: 1.5rem; font-weight: bold; margin-top: 8px;">N/A</p>
           </div>
           <div class="card">
             <h3>Server Boosts</h3>
-            <p id="overview-boosts">N/A</p>
+            <p id="overview-boosts" style="font-size: 1.5rem; font-weight: bold; margin-top: 8px;">N/A</p>
           </div>
           <div class="card">
             <h3>Bot Status</h3>
-            <p><span class="status-dot online"></span> Online</p>
+            <p style="font-size: 1.2rem; font-weight: 500; margin-top: 8px;">
+              <span class="status-dot online"></span> Online
+            </p>
           </div>
         </div>
       </div>
@@ -376,7 +389,7 @@
       <!-- Willkommen Tab -->
       <div id="mod-welcome" class="module-page hidden">
         <h2>Willkommen</h2>
-        <p>Begrüße neue Mitglieder automatisch beim Beitreten.</p>
+        <p style="color: var(--text-muted);">Begrüße neue Mitglieder automatisch beim Beitreten.</p>
 
         <div class="card form-card">
           <div class="form-group">
