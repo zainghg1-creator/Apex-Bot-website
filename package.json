@@ -1,24 +1,19 @@
 {
-  "name": "apex-bot-website",
+  "name": "discord-bot-dashboard",
   "version": "1.0.0",
-  "description": "Apex Dashboard – Discord-Login & Server-Verwaltung",
+  "description": "Sicheres und optimiertes Dashboard für Discord Bot",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
   "dependencies": {
-    "axios": "^1.4.0",
-    "cookie-parser": "^1.4.6",
     "cookie-session": "^2.1.0",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "mongoose": "^8.0.0"
+    "mongoose": "^8.3.1"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
-  },
-  "engines": {
-    "node": ">=18.0.0"
+    "nodemon": "^3.1.0"
   }
 }
