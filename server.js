@@ -1,241 +1,130 @@
-require('dotenv').config();
 const express = require('express');
-const cookieSession = require('cookie-session');
-const path = require('path');
+const session = require('express-session');
+const passport = require('passport');
+const { Strategy } = require('passport-discord');
 const fs = require('fs');
-
-const {
-  CLIENT_ID,
-  CLIENT_SECRET,
-  BOT_TOKEN,
-  REDIRECT_URI,
-  SESSION_SECRET,
-  PORT = 3000
-} = process.env;
-
-// Pflicht-Variablen prüfen
-['CLIENT_ID', 'CLIENT_SECRET', 'BOT_TOKEN', 'REDIRECT_URI', 'SESSION_SECRET'].forEach((key) => {
-  if (!process.env[key]) {
-    console.warn(`[WARNUNG] Umgebungsvariable ${key} ist nicht gesetzt (siehe .env.example)`);
-  }
-});
-
-const DISCORD_API = 'https://discord.com/api/v10';
-const ADMINISTRATOR = 0x8n;
-const CONFIG_FILE = path.join(__dirname, 'guild_configs.json');
+const path = require('path');
 
 const app = express();
+const PORT = process.env.PORT || 3000;
 
-app.set('trust proxy', 1);
-app.use(express.static(__dirname));
-app.use(express.json());
+// Discord OAuth2 Konfiguration
+// ERSETZE DIESE WERTE MIT DEINEN ANGABEN AUS DEM DISCORD DEVELOPER PORTAL
+const CLIENT_ID = 'DEINE_DISCORD_CLIENT_ID';
+const CLIENT_SECRET = 'DEIN_DISCORD_CLIENT_SECRET';
+const CALLBACK_URL = 'http://localhost:3000/auth/discord/callback';
 
-app.use(
-  cookieSession({
-    name: 'apex_session',
-    keys: [SESSION_SECRET || 'bitte-in-der-.env-aendern'],
-    maxAge: 24 * 60 * 60 * 1000,
-    secure: true,
-    sameSite: 'lax',
-    httpOnly: true
-  })
-);
+const CONFIG_FILE = path.join(__dirname, 'guild_configs.json');
 
-// Hilfsfunktionen für Config-Datenbank
+// Helper-Funktionen für JSON Speicherung
 function getConfigs() {
-  if (!fs.existsSync(CONFIG_FILE)) return {};
+  if (!fs.existsSync(CONFIG_FILE)) {
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify({}), 'utf-8');
+  }
   try {
-    return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
-  } catch (e) {
+    const data = fs.readFileSync(CONFIG_FILE, 'utf-8');
+    return JSON.parse(data);
+  } catch (err) {
     return {};
   }
 }
 
-function saveConfigs(data) {
-  fs.writeFileSync(CONFIG_FILE, JSON.stringify(data, null, 2), 'utf-8');
+function saveConfigs(configs) {
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify(configs, null, 2), 'utf-8');
 }
 
-// Landingpage
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
+// Passport Session Setup
+passport.serializeUser((user, done) => done(null, user));
+passport.deserializeUser((obj, done) => done(null, obj));
 
-// OAuth2 Login
-app.get('/auth/discord/login', (req, res) => {
-  const params = new URLSearchParams({
-    client_id: CLIENT_ID,
-    redirect_uri: REDIRECT_URI,
-    response_type: 'code',
-    scope: 'identify guilds',
-    prompt: 'consent'
-  });
-  res.redirect(`https://discord.com/api/oauth2/authorize?${params.toString()}`);
-});
+passport.use(new Strategy({
+  clientID: CLIENT_ID,
+  clientSecret: CLIENT_SECRET,
+  callbackURL: CALLBACK_URL,
+  scope: ['identify', 'guilds']
+}, (accessToken, refreshToken, profile, done) => {
+  process.nextTick(() => done(null, profile));
+}));
 
-// OAuth2 Callback
-app.get('/auth/discord/callback', async (req, res) => {
-  const { code } = req.query;
-  if (!code) return res.redirect('/?error=missing_code');
+// Express Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, 'public'))); // Stelle sicher, dass html/js in 'public' liegen oder passe den Pfad an
 
-  try {
-    const tokenRes = await fetch(`${DISCORD_API}/oauth2/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET,
-        grant_type: 'authorization_code',
-        code,
-        redirect_uri: REDIRECT_URI
-      })
-    });
+app.use(session({
+  secret: 'apex_super_secret_key_change_me',
+  resave: false,
+  saveUninitialized: false
+}));
 
-    if (!tokenRes.ok) return res.redirect('/?error=auth_failed');
-    const tokenData = await tokenRes.json();
+app.use(passport.initialize());
+app.use(passport.session());
 
-    const userRes = await fetch(`${DISCORD_API}/users/@me`, {
-      headers: { Authorization: `Bearer ${tokenData.access_token}` }
-    });
-    if (!userRes.ok) return res.redirect('/?error=auth_failed');
-    const user = await userRes.json();
-
-    req.session.accessToken = tokenData.access_token;
-    req.session.user = { id: user.id, username: user.username, avatar: user.avatar };
-
-    res.redirect('/dashboard.html');
-  } catch (err) {
-    console.error('Fehler im OAuth-Callback:', err);
-    res.redirect('/?error=auth_failed');
-  }
-});
-
-// Logout
-app.get('/auth/logout', (req, res) => {
-  req.session = null;
-  res.redirect('/');
-});
-
-// Middleware
+// Middleware: Authentifizierung prüfen
 function requireAuth(req, res, next) {
-  if (!req.session || !req.session.accessToken) {
-    return res.status(401).json({ error: 'not_authenticated' });
-  }
-  next();
+  if (req.isAuthenticated()) return next();
+  res.status(401).json({ error: 'Nicht angemeldet' });
 }
 
-// Bot Guild Cache
-let botGuildsCache = { ids: new Set(), fetchedAt: 0 };
-const BOT_CACHE_TTL = 60 * 1000;
+// ----------------- OAUTH ROUTES -----------------
 
-async function getBotGuildIds() {
-  if (Date.now() - botGuildsCache.fetchedAt < BOT_CACHE_TTL) {
-    return botGuildsCache.ids;
-  }
+app.get('/auth/discord', passport.authenticate('discord'));
 
-  const ids = new Set();
-  let after = '0';
-
-  while (true) {
-    const res = await fetch(`${DISCORD_API}/users/@me/guilds?limit=200&after=${after}`, {
-      headers: { Authorization: `Bot ${BOT_TOKEN}` }
-    });
-    if (!res.ok) break;
-    const page = await res.json();
-    page.forEach((g) => ids.add(g.id));
-    if (page.length < 200) break;
-    after = page[page.length - 1].id;
-  }
-
-  botGuildsCache = { ids, fetchedAt: Date.now() };
-  return ids;
-}
-
-// API: Server-Liste
-app.get('/api/guilds', requireAuth, async (req, res) => {
-  try {
-    const guildsRes = await fetch(`${DISCORD_API}/users/@me/guilds`, {
-      headers: { Authorization: `Bearer ${req.session.accessToken}` }
-    });
-
-    if (guildsRes.status === 401) {
-      req.session = null;
-      return res.status(401).json({ error: 'session_expired' });
-    }
-    if (!guildsRes.ok) return res.status(502).json({ error: 'discord_api_error' });
-
-    const guilds = await guildsRes.json();
-    const adminGuilds = guilds.filter((g) => {
-      const perms = BigInt(g.permissions ?? 0);
-      return g.owner === true || (perms & ADMINISTRATOR) === ADMINISTRATOR;
-    });
-
-    const botGuildIds = await getBotGuildIds();
-
-    const result = adminGuilds
-      .map((g) => ({
-        id: g.id,
-        name: g.name,
-        icon: g.icon ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png` : null,
-        botIstDrauf: botGuildIds.has(g.id)
-      }))
-      .sort((a, b) => Number(b.botIstDrauf) - Number(a.botIstDrauf) || a.name.localeCompare(b.name));
-
-    res.json({ user: req.session.user, guilds: result, clientId: CLIENT_ID });
-  } catch (err) {
-    res.status(500).json({ error: 'server_error' });
-  }
+app.get('/auth/discord/callback', passport.authenticate('discord', {
+  failureRedirect: '/'
+}), (req, res) => {
+  res.redirect('/dashboard.html');
 });
 
-// API: Einzelner Server Details
-app.get('/api/guild/:guildId', requireAuth, async (req, res) => {
-  const { guildId } = req.params;
-  try {
-    const guildRes = await fetch(`${DISCORD_API}/guilds/${guildId}?with_counts=true`, {
-      headers: { Authorization: `Bot ${BOT_TOKEN}` }
-    });
-
-    if (!guildRes.ok) return res.status(guildRes.status).json({ error: 'guild_not_found' });
-    const guildData = await guildRes.json();
-
-    res.json({
-      members: guildData.approximate_member_count ?? 0,
-      boosts: guildData.premium_subscription_count ?? 0
-    });
-  } catch (err) {
-    res.status(500).json({ error: 'server_error' });
-  }
-});
-
-// API: Willkommens-Einstellungen abrufen
-app.get('/api/guild/:guildId/welcome', requireAuth, (req, res) => {
-  const configs = getConfigs();
-  res.json(configs[req.params.guildId]?.welcome || { text: '', channelId: '' });
-});
-
-// API: Willkommens-Einstellungen speichern
-app.post('/api/guild/:guildId/welcome', requireAuth, (req, res) => {
-  const { text, channelId } = req.body;
-  const configs = getConfigs();
-
-  if (!configs[req.params.guildId]) {
-    configs[req.params.guildId] = {};
-  }
-
-  configs[req.params.guildId].welcome = { text, channelId };
-  saveConfigs(configs);
-
-  res.json({ success: true });
-});
-
-// API: User Info
-app.get('/api/me', requireAuth, (req, res) => {
-  res.json({ user: req.session.user });
-});
-
-module.exports = app;
-
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => {
-    console.log(`Apex Dashboard läuft auf http://localhost:${PORT}`);
+app.get('/auth/logout', (req, res) => {
+  req.logout(() => {
+    res.redirect('/');
   });
-}
+});
+
+// ----------------- USER & GUILD APIS -----------------
+
+// Aktuellen User abrufen
+app.get('/api/user', requireAuth, (req, res) => {
+  res.json(req.user);
+});
+
+// Serverliste des Users abrufen (nur Server mit Admin-Rechten)
+app.get('/api/guilds', requireAuth, (req, res) => {
+  const adminGuilds = req.user.guilds.filter(guild => (guild.permissions & 0x8) === 0x8);
+  res.json(adminGuilds);
+});
+
+// ----------------- CONFIGURATION APIS -----------------
+
+// Alle Konfigurationen eines bestimmten Guilds abrufen
+app.get('/api/guild/:guildId/config', requireAuth, (req, res) => {
+  const configs = getConfigs();
+  res.json(configs[req.params.guildId] || {});
+});
+
+// Einzelne Modul-Einstellungen speichern (Welcome, Leave, Tickets, Teamlist)
+app.post('/api/guild/:guildId/config/:module', requireAuth, (req, res) => {
+  const { guildId, module } = req.params;
+  const configs = getConfigs();
+
+  if (!configs[guildId]) {
+    configs[guildId] = {};
+  }
+
+  // Modul-Daten aktualisieren
+  configs[guildId][module] = req.body;
+
+  saveConfigs(configs);
+  res.json({ success: true, message: `${module} erfolgreich gespeichert!` });
+});
+
+// Frontend Route
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dashboard.html'));
+});
+
+// Server starten
+app.listen(PORT, () => {
+  console.log(`Server läuft auf http://localhost:${PORT}`);
+});
