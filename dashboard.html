@@ -4,9 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Apex Bot – Dashboard</title>
-
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='50' fill='%23000000'/><path d='M50 18 L22 75 L38 75 L50 48 L62 75 L78 75 Z' fill='%23FFFFFF'/><path d='M15 50 C20 25, 40 12, 68 12' stroke='%23FFFFFF' stroke-width='4' stroke-linecap='round' fill='none'/><path d='M85 50 C80 75, 60 88, 32 88' stroke='%23FFFFFF' stroke-width='4' stroke-linecap='round' fill='none'/><line x1='72' y1='20' x2='28' y2='80' stroke='%23FFFFFF' stroke-width='3' stroke-linecap='round'/></svg>">
-
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -23,550 +20,199 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background-color: var(--bg-base); color: var(--text-primary); font-family: 'Plus Jakarta Sans', sans-serif; min-height: 100vh; overflow-x: hidden; }
 
-    body {
-      background-color: var(--bg-base);
-      color: var(--text-primary);
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    .bg-grid {
-      position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-      background-size: 40px 40px;
-      z-index: -1;
-    }
-
-    /* Header */
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 20px 6%;
-      backdrop-filter: blur(12px);
-      background: rgba(0, 0, 0, 0.8);
-      border-bottom: 1px solid var(--border-subtle);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
+    header { display: flex; align-items: center; justify-content: space-between; padding: 20px 6%; backdrop-filter: blur(12px); background: rgba(0, 0, 0, 0.8); border-bottom: 1px solid var(--border-subtle); position: sticky; top: 0; z-index: 100; }
     .brand { display: flex; align-items: center; gap: 14px; text-decoration: none; color: var(--text-primary); }
-    .brand-logo {
-      width: 34px; height: 34px; background: #000; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      border: 1px solid rgba(255, 255, 255, 0.3);
-    }
-    .brand-name { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.02em; }
+    .brand-logo { width: 34px; height: 34px; background: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.3); }
+    .brand-name { font-size: 1.1rem; font-weight: 800; }
 
-    .nav-center {
-      display: flex;
-      align-items: center;
-      gap: 28px;
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-    }
-    .nav-link {
-      color: var(--text-muted);
-      text-decoration: none;
-      font-size: 0.9rem;
-      font-weight: 600;
-      transition: color 0.2s ease;
-    }
-    .nav-link:hover { color: var(--text-primary); }
+    .user-chip { display: flex; align-items: center; gap: 12px; background: rgba(255, 255, 255, 0.05); padding: 6px 12px; border-radius: 30px; border: 1px solid var(--border-subtle); }
+    .user-chip img { width: 30px; height: 30px; border-radius: 50%; }
 
-    .user-chip {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      background: rgba(255, 255, 255, 0.05);
-      padding: 6px 8px 6px 6px;
-      border-radius: 30px;
-      border: 1px solid var(--border-subtle);
-    }
-
-    .user-chip img {
-      width: 30px;
-      height: 30px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 1px solid var(--border-subtle);
-    }
-
-    #user-name { font-size: 0.88rem; font-weight: 600; padding-right: 2px; }
-
-    .logout-btn {
-      color: var(--text-muted);
-      text-decoration: none;
-      font-size: 0.78rem;
-      font-weight: 600;
-      padding: 6px 12px;
-      border-radius: 20px;
-      background: rgba(255, 255, 255, 0.05);
-      transition: all 0.2s ease;
-    }
-
-    .logout-btn:hover {
-      color: var(--text-primary);
-      background: rgba(255, 255, 255, 0.12);
-    }
-
-    /* Buttons */
-    .btn {
-      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-      padding: 10px 18px; border-radius: 10px; font-size: 0.88rem; font-weight: 600;
-      text-decoration: none; border: 1px solid transparent; cursor: pointer;
-      transition: all 0.2s ease; white-space: nowrap; font-family: inherit;
-    }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 18px; border-radius: 10px; font-size: 0.88rem; font-weight: 600; text-decoration: none; border: 1px solid transparent; cursor: pointer; transition: all 0.2s ease; font-family: inherit; }
     .btn-primary { background: #ffffff; color: #000000; }
-    .btn-primary:hover { background: #e4e4e7; transform: translateY(-2px); }
+    .btn-primary:hover { background: #e4e4e7; }
     .btn-secondary { background: rgba(255, 255, 255, 0.05); color: var(--text-primary); border-color: var(--border-subtle); }
-    .btn-secondary:hover { background: rgba(255, 255, 255, 0.12); border-color: var(--border-active); transform: translateY(-2px); }
 
-    /* Container / page heading */
-    .container {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 60px 24px 100px;
-      width: 100%;
-    }
+    .container { max-width: 1100px; margin: 0 auto; padding: 60px 24px; }
+    .guild-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+    .guild-card { background: var(--bg-surface); padding: 1.4rem; border-radius: 16px; border: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 18px; }
+    .guild-info { display: flex; align-items: center; gap: 14px; }
+    .guild-icon { width: 46px; height: 46px; border-radius: 50%; }
 
-    .page-heading { text-align: center; margin-bottom: 48px; }
-    .page-heading h2 { font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 10px; }
-    .page-subtitle { color: var(--text-muted); font-size: 0.95rem; }
+    /* Overlay Sidebar Layout */
+    .overlay { position: fixed; inset: 0; background: var(--bg-base); display: flex; z-index: 200; }
+    .sidebar { width: 270px; background: var(--bg-surface); border-right: 1px solid var(--border-subtle); padding: 1.75rem 1.1rem; display: flex; flex-direction: column; }
+    .sidebar-header { display: flex; align-items: center; gap: 12px; margin-bottom: 2rem; padding-bottom: 1.1rem; border-bottom: 1px solid var(--border-subtle); }
+    .sidebar-nav { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+    .tab-btn { background: transparent; border: none; color: var(--text-muted); padding: 11px 14px; border-radius: 10px; text-align: left; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+    .tab-btn.active { background: #ffffff; color: #000000; }
 
-    .state-box {
-      background: var(--bg-surface);
-      padding: 3rem;
-      border-radius: 16px;
-      text-align: center;
-      color: var(--text-muted);
-      border: 1px solid var(--border-subtle);
-      font-size: 0.95rem;
-    }
+    .content-area { flex: 1; padding: 2.75rem; overflow-y: auto; }
+    .card { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 1.5rem; margin-top: 1.5rem; }
+    .form-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+    .form-group label { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); }
+    .form-group input, .form-group textarea, .form-group select { width: 100%; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 11px; color: #fff; }
+    .checkbox-group { display: flex; align-items: center; gap: 10px; cursor: pointer; }
 
-    /* Guild Cards Grid — mehr Platz für Servernamen */
-    .guild-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 20px;
-    }
+    /* Toast Notification unten rechts */
+    #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 999; }
+    .toast { background: #ffffff; color: #000000; padding: 14px 22px; border-radius: 12px; font-weight: 700; font-size: 0.9rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5); opacity: 0; transform: translateY(20px); transition: all 0.3s ease; }
+    .toast.show { opacity: 1; transform: translateY(0); }
 
-    .guild-card {
-      background: var(--bg-surface);
-      padding: 1.4rem;
-      border-radius: 16px;
-      border: 1px solid var(--border-subtle);
-      display: flex;
-      flex-direction: column;
-      align-items: stretch;
-      gap: 18px;
-      transition: all 0.25s ease;
-    }
-
-    .guild-card:hover {
-      border-color: var(--border-active);
-      transform: translateY(-4px);
-    }
-
-    .guild-info {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      min-width: 0;
-      width: 100%;
-    }
-
-    .guild-icon {
-      width: 46px;
-      height: 46px;
-      border-radius: 50%;
-      object-fit: cover;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--border-subtle);
-      flex-shrink: 0;
-    }
-
-    /* Der Servername bekommt die gesamte verbleibende Breite der Karte,
-       da der Button in eine eigene Zeile darunter wandert. */
-    .guild-name {
-      flex: 1;
-      min-width: 0;
-      font-size: 1.02rem;
-      font-weight: 700;
-      line-height: 1.3;
-      color: var(--text-primary);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      white-space: normal;
-    }
-
-    /* Wrapper um den Verwalten-/Einladen-Button, den dashboard.js
-       je nach guild.botIstDrauf einfügt */
-    .guild-action {
-      width: 100%;
-    }
-
-    .guild-action .btn {
-      width: 100%;
-    }
-
-    /* Bot bereits auf dem Server -> weißer "Verwalten"-Button (btn-primary) */
-    .guild-action .btn-primary {
-      background: #ffffff;
-      color: #000000;
-    }
-
-    /* Bot noch nicht eingeladen -> gedämpfter "Bot einladen"-Button (btn-secondary) */
-    .guild-action .btn-secondary {
-      background: rgba(255, 255, 255, 0.05);
-      color: var(--text-primary);
-      border: 1px solid var(--border-subtle);
-    }
-
-    /* Overlay / Sidebar Dashboard */
-    .overlay {
-      position: fixed;
-      inset: 0;
-      background: var(--bg-base);
-      display: flex;
-      z-index: 200;
-    }
-
-    .sidebar {
-      width: 270px;
-      background: var(--bg-surface);
-      border-right: 1px solid var(--border-subtle);
-      padding: 1.75rem 1.1rem;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .sidebar-header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 2rem;
-      padding-bottom: 1.1rem;
-      border-bottom: 1px solid var(--border-subtle);
-    }
-
-    .guild-icon-small {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 1px solid var(--border-subtle);
-    }
-
-    #active-guild-name { font-weight: 700; font-size: 0.95rem; }
-
-    .sidebar-nav {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      flex: 1;
-    }
-
-    .tab-btn {
-      background: transparent;
-      border: none;
-      color: var(--text-muted);
-      padding: 11px 14px;
-      border-radius: 10px;
-      text-align: left;
-      font-size: 0.9rem;
-      font-weight: 600;
-      cursor: pointer;
-      font-family: inherit;
-      transition: all 0.2s ease;
-    }
-
-    .tab-btn:hover {
-      color: var(--text-primary);
-      background: rgba(255, 255, 255, 0.05);
-    }
-
-    .tab-btn.active {
-      background: #ffffff;
-      color: #000000;
-    }
-
-    .back-btn {
-      margin-top: auto;
-      width: 100%;
-      text-align: center;
-    }
-
-    .content-area {
-      flex: 1;
-      padding: 2.75rem;
-      overflow-y: auto;
-    }
-
-    .content-area h2 {
-      font-size: 1.6rem;
-      font-weight: 800;
-      letter-spacing: -0.01em;
-      margin-bottom: 8px;
-    }
-
-    .module-page > p {
-      color: var(--text-muted);
-      font-size: 0.92rem;
-    }
-
-    /* Cards & Forms */
-    .card {
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      border-radius: 16px;
-      padding: 1.5rem;
-    }
-
-    .card h3 {
-      font-size: 0.78rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--text-muted);
-      margin-bottom: 10px;
-    }
-
-    .card p {
-      font-size: 1.6rem;
-      font-weight: 800;
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 18px;
-      margin-top: 1.5rem;
-    }
-
-    .form-card {
-      margin-top: 1.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      max-width: 600px;
-    }
-
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .form-group label {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--text-muted);
-    }
-
-    .form-group input, .form-group textarea {
-      width: 100%;
-      background: var(--bg-base);
-      border: 1px solid var(--border-subtle);
-      border-radius: 10px;
-      padding: 11px 14px;
-      color: var(--text-primary);
-      outline: none;
-      font-family: inherit;
-      font-size: 0.9rem;
-      transition: border-color 0.2s ease;
-    }
-
-    .form-group input:focus, .form-group textarea:focus {
-      border-color: var(--border-active);
-    }
-
-    .form-group small {
-      color: var(--text-dim);
-      font-size: 0.75rem;
-    }
-
-    .form-action {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      margin-top: 4px;
-    }
-
-    .status-success {
-      color: var(--text-primary);
-      font-size: 0.85rem;
-      font-weight: 600;
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
-    .status-dot {
-      display: inline-block;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-    }
-
-    .status-dot.online {
-      background: #ffffff;
-      box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
-    }
-
-    footer {
-      text-align: center;
-      padding: 40px 24px;
-      border-top: 1px solid var(--border-subtle);
-      color: var(--text-dim);
-      font-size: 0.85rem;
-    }
-
-    @media (max-width: 768px) {
-      .nav-center { display: none; }
-      .stats-grid { grid-template-columns: 1fr; }
-    }
-
-    @media (max-width: 640px) {
-      .overlay { flex-direction: column; }
-      .sidebar {
-        width: 100%;
-        flex-direction: row;
-        align-items: center;
-        padding: 12px 16px;
-        overflow-x: auto;
-      }
-      .sidebar-header { margin-bottom: 0; padding-bottom: 0; border-bottom: none; margin-right: 14px; }
-      .sidebar-nav { flex-direction: row; flex: none; }
-      .back-btn { margin-top: 0; margin-left: auto; width: auto; }
-      .content-area { padding: 1.5rem; }
-    }
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
 
-  <div class="bg-grid"></div>
-
-  <!-- Top Navigation -->
   <header>
-    <a href="/" class="brand">
-      <div class="brand-logo">
-        <svg width="18" height="18" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M50 18 L22 75 L38 75 L50 48 L62 75 L78 75 Z" fill="#FFFFFF"/>
-          <path d="M15 50 C20 25, 40 12, 68 12" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
-          <path d="M85 50 C80 75, 60 88, 32 88" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
-          <line x1="72" y1="20" x2="28" y2="80" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
-        </svg>
-      </div>
-      <span class="brand-name">APEX<span>.</span></span>
-    </a>
-
-    <nav class="nav-center">
-      <a href="/" class="nav-link">Startseite</a>
-    </nav>
-
+    <a href="/" class="brand"><span class="brand-name">APEX BOT</span></a>
     <div id="user-chip" class="user-chip">
       <img id="user-avatar" src="" alt="Avatar">
       <span id="user-name">Laden...</span>
-      <a href="/auth/logout" class="logout-btn">Abmelden</a>
     </div>
   </header>
 
-  <!-- Server-Auswahl Bereich -->
   <main class="container">
-    <div class="page-heading">
-      <h2>Wähle einen Server</h2>
-      <p class="page-subtitle">Wähle einen Server aus, um Module zu konfigurieren und den Bot zu verwalten.</p>
-    </div>
-
-    <div id="loading-state" class="state-box">Lade deine Server...</div>
-    <div id="empty-state" class="state-box hidden">Keine verwalterbaren Server gefunden.</div>
-    <div id="error-state" class="state-box hidden">
-      <span id="error-message">Ein Fehler ist aufgetreten.</span>
-    </div>
-
-    <div id="guild-list" class="guild-grid hidden"></div>
+    <h2>Wähle einen Server</h2>
+    <div id="guild-list" class="guild-grid" style="margin-top: 20px;"></div>
   </main>
 
-  <!-- Server Management Overlay / Modal -->
+  <!-- Overlay Dashboard -->
   <div id="manage-overlay" class="overlay hidden">
     <div class="sidebar">
       <div class="sidebar-header">
-        <img id="active-guild-icon" src="" class="guild-icon-small">
-        <span id="active-guild-name">Server Name</span>
+        <img id="active-guild-icon" src="" style="width:36px;height:36px;border-radius:50%;">
+        <span id="active-guild-name">Server</span>
       </div>
       <nav class="sidebar-nav">
         <button class="tab-btn active" data-tab="overview" onclick="switchTab('overview')">Übersicht</button>
         <button class="tab-btn" data-tab="welcome" onclick="switchTab('welcome')">Willkommen</button>
+        <button class="tab-btn" data-tab="leave" onclick="switchTab('leave')">Leave / Verlassen</button>
+        <button class="tab-btn" data-tab="tickets" onclick="switchTab('tickets')">Ticket System</button>
+        <button class="tab-btn" data-tab="teamlist" onclick="switchTab('teamlist')">Teamliste</button>
       </nav>
-      <button class="btn btn-secondary back-btn" onclick="closeManagement()">← Server wechseln</button>
+      <button class="btn btn-secondary" onclick="closeManagement()">← Server wechseln</button>
     </div>
 
     <div class="content-area">
 
       <!-- Übersicht Tab -->
       <div id="mod-overview" class="module-page">
-        <h2>Übersicht</h2>
-        <p>Statistiken und allgemeiner Status des Bots auf deinem Server.</p>
-
-        <div class="stats-grid">
-          <div class="card">
-            <h3>Mitglieder</h3>
-            <p id="overview-members">N/A</p>
-          </div>
-          <div class="card">
-            <h3>Server Boosts</h3>
-            <p id="overview-boosts">N/A</p>
-          </div>
-          <div class="card">
-            <h3>Bot Status</h3>
-            <p style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1rem; font-weight: 600; display:flex; align-items:center; gap:8px;"><span class="status-dot online"></span> Online</p>
-          </div>
+        <h2>Server Übersicht</h2>
+        <div style="display:flex; gap:20px; margin-top:20px;">
+          <div class="card" style="flex:1;"><h3>Mitglieder</h3><p id="overview-members" style="font-size:1.8rem; font-weight:800;">0</p></div>
+          <div class="card" style="flex:1;"><h3>Boosts</h3><p id="overview-boosts" style="font-size:1.8rem; font-weight:800;">0</p></div>
         </div>
       </div>
 
       <!-- Willkommen Tab -->
       <div id="mod-welcome" class="module-page hidden">
-        <h2>Willkommen</h2>
-        <p>Begrüße neue Mitglieder automatisch beim Beitreten.</p>
-
-        <div class="card form-card">
+        <h2>Willkommens-System</h2>
+        <div class="card">
           <div class="form-group">
-            <label for="welcome-text">Willkommens-Text</label>
-            <textarea id="welcome-text" rows="4" placeholder="Willkommen {user} auf {server}!"></textarea>
-            <small>Nutze <code>{user}</code> um den User zu erwähnen und <code>{server}</code> für den Servernamen.</small>
+            <label>Willkommens-Kanal ID</label>
+            <input type="text" id="welcome-channel">
           </div>
-
           <div class="form-group">
-            <label for="welcome-channel">Willkommens-Kanal (Channel ID)</label>
-            <input type="text" id="welcome-channel" placeholder="z.B. 123456789012345678">
+            <label>Nachricht / Embed-Text</label>
+            <textarea id="welcome-text" rows="3" placeholder="Willkommen {user} auf {server}!"></textarea>
           </div>
+          <div class="form-group">
+            <label>Embed Farbe (Hex)</label>
+            <input type="color" id="welcome-color" value="#5865F2">
+          </div>
+          <div class="form-group">
+            <label>Bild URL (Großes Bild)</label>
+            <input type="text" id="welcome-image" placeholder="https://beispiel.de/bild.png">
+          </div>
+          <div class="form-group checkbox-group">
+            <input type="checkbox" id="welcome-avatar-thumbnail">
+            <label for="welcome-avatar-thumbnail">Profilbild des Users als Thumbnail anzeigen</label>
+          </div>
+          <div class="form-group">
+            <label>Auto-Rollen IDs (Kommagetrennt)</label>
+            <input type="text" id="welcome-autoroles" placeholder="123456789,987654321">
+          </div>
+          <button class="btn btn-primary" onclick="saveModuleSettings('welcome')">Einstellungen speichern</button>
+        </div>
+      </div>
 
-          <div class="form-action">
-            <button class="btn btn-primary" onclick="saveWelcomeSettings()">Einstellungen speichern</button>
-            <span id="welcome-status" class="status-success hidden">✓ Erfolgreich gespeichert!</span>
+      <!-- Leave Tab -->
+      <div id="mod-leave" class="module-page hidden">
+        <h2>Verlassen-System (Leave)</h2>
+        <div class="card">
+          <div class="form-group">
+            <label>Leave-Kanal ID</label>
+            <input type="text" id="leave-channel">
           </div>
+          <div class="form-group">
+            <label>Nachricht / Embed-Text</label>
+            <textarea id="leave-text" rows="3" placeholder="{user} hat den Server verlassen."></textarea>
+          </div>
+          <div class="form-group">
+            <label>Embed Farbe (Hex)</label>
+            <input type="color" id="leave-color" value="#ED4245">
+          </div>
+          <div class="form-group">
+            <label>Bild URL</label>
+            <input type="text" id="leave-image">
+          </div>
+          <div class="form-group checkbox-group">
+            <input type="checkbox" id="leave-avatar-thumbnail">
+            <label for="leave-avatar-thumbnail">Profilbild des Users als Thumbnail anzeigen</label>
+          </div>
+          <button class="btn btn-primary" onclick="saveModuleSettings('leave')">Einstellungen speichern</button>
+        </div>
+      </div>
+
+      <!-- Tickets Tab -->
+      <div id="mod-tickets" class="module-page hidden">
+        <h2>Ticket System</h2>
+        <div class="card">
+          <div class="form-group">
+            <label>Kanal ID für das Embed (wo User Tickets öffnen)</label>
+            <input type="text" id="ticket-embed-channel">
+          </div>
+          <div class="form-group">
+            <label>Embed Nachricht / Titel</label>
+            <input type="text" id="ticket-embed-text" value="Klicke unten, um ein Ticket zu erstellen!">
+          </div>
+          <div class="form-group">
+            <label>Kategorie ID (wo erstelle Tickets landen)</label>
+            <input type="text" id="ticket-category">
+          </div>
+          <div class="form-group">
+            <label>Willkommens-Nachricht im neuen Ticket</label>
+            <textarea id="ticket-welcome-msg" rows="3" placeholder="Hallo {user}, ein Supporter wird sich gleich um dich kümmern."></textarea>
+          </div>
+          <button class="btn btn-primary" onclick="saveModuleSettings('tickets')">Einstellungen speichern</button>
+        </div>
+      </div>
+
+      <!-- Teamliste Tab -->
+      <div id="mod-teamlist" class="module-page hidden">
+        <h2>Teamliste System</h2>
+        <div class="card">
+          <div class="form-group">
+            <label>Kanal ID für die Teamliste</label>
+            <input type="text" id="teamlist-channel">
+          </div>
+          <div class="form-group">
+            <label>Rollen IDs (Kommagetrennt, in Reihenfolge)</label>
+            <input type="text" id="teamlist-roles" placeholder="RoleID1, RoleID2, RoleID3...">
+            <small>Füge unendlich viele Rollen-IDs mit Komma getrennt ein.</small>
+          </div>
+          <button class="btn btn-primary" onclick="saveModuleSettings('teamlist')">Einstellungen speichern</button>
         </div>
       </div>
 
     </div>
   </div>
 
-  <footer>
-    <p>&copy; 2026 APEX BOT SYSTEM. All rights reserved.</p>
-  </footer>
+  <!-- Toast Element -->
+  <div id="toast-container"><div id="toast" class="toast">✓ Einstellungen erfolgreich gespeichert!</div></div>
 
   <script src="/dashboard.js"></script>
 </body>
