@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Apex – Moderation & Community Bot</title>
 
-<!-- Favicon: Gleiches Logo wie im Header oben links -->
+<!-- Favicon -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='50' fill='%23000000'/><path d='M50 18 L22 75 L38 75 L50 48 L62 75 L78 75 Z' fill='%23FFFFFF'/><path d='M15 50 C20 25, 40 12, 68 12' stroke='%23FFFFFF' stroke-width='4' stroke-linecap='round' fill='none'/><path d='M85 50 C80 75, 60 88, 32 88' stroke='%23FFFFFF' stroke-width='4' stroke-linecap='round' fill='none'/><line x1='72' y1='20' x2='28' y2='80' stroke='%23FFFFFF' stroke-width='3' stroke-linecap='round'/></svg>">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -81,9 +81,7 @@
     font-weight: 600;
     transition: color 0.2s ease;
   }
-  .nav-link:hover {
-    color: var(--text-primary);
-  }
+  .nav-link:hover { color: var(--text-primary); }
 
   .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
@@ -98,7 +96,7 @@
 
   /* HERO SECTION */
   .hero {
-    max-width: 1100px; margin: 0 auto; padding: 100px 24px 60px; text-align: center;
+    max-width: 1100px; margin: 0 auto; padding: 90px 24px 50px; text-align: center;
   }
   .hero-badge {
     display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px;
@@ -110,35 +108,49 @@
   .hero-subtitle { font-size: 1.1rem; color: var(--text-muted); max-width: 650px; margin: 0 auto 36px; line-height: 1.6; }
   .hero-buttons { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; }
 
-  /* DEMO TERMINAL */
-  .demo-section {
-    max-width: 900px; margin: 40px auto 100px; padding: 0 24px;
+  /* NEUES MITTEL-ELEMENT: STATS & HIGHLIGHT CARD */
+  .showcase-section {
+    max-width: 950px; margin: 20px auto 90px; padding: 0 24px;
   }
-  .terminal-window {
-    background: var(--bg-surface); border: 1px solid var(--border-subtle);
-    border-radius: 16px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+  .showcase-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 20px;
+    padding: 36px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
   }
-  .terminal-header {
-    background: rgba(255, 255, 255, 0.03); padding: 12px 18px;
-    display: flex; align-items: center; justify-content: space-between;
+  .showcase-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
     border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: 28px;
   }
-  .dots { display: flex; gap: 8px; }
-  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border-subtle); }
-  .terminal-title { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--text-dim); }
-  
-  .terminal-body { padding: 24px; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; min-height: 180px; }
-  .cmd-line { margin-bottom: 12px; display: flex; gap: 10px; color: var(--text-muted); }
-  .cmd-line .prefix { color: #ffffff; font-weight: bold; }
-  .cmd-output { color: var(--text-primary); background: rgba(255, 255, 255, 0.03); padding: 12px; border-radius: 8px; border-left: 2px solid var(--text-primary); margin-bottom: 16px; }
+  .stat-item { text-align: center; }
+  .stat-value { font-size: 1.8rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; }
+  .stat-label { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }
 
-  .demo-controls { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 24px 24px; }
-  .demo-btn {
-    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-subtle);
-    color: var(--text-primary); padding: 6px 12px; border-radius: 6px; font-size: 0.75rem;
-    font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.2s ease;
+  .showcase-highlights {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 24px;
   }
-  .demo-btn:hover { background: #fff; color: #000; }
+  .highlight-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .highlight-icon {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-subtle);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .highlight-icon svg { width: 18px; height: 18px; stroke: #fff; fill: none; stroke-width: 2; }
+  .highlight-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 4px; }
+  .highlight-desc { font-size: 0.82rem; color: var(--text-muted); line-height: 1.4; }
 
   /* MODULE GRID */
   .modules-section { max-width: 1100px; margin: 0 auto; padding: 0 24px 12px; }
@@ -220,24 +232,54 @@
     </div>
   </section>
 
-  <!-- INTERAKTIVES TERMINAL -->
-  <section class="demo-section">
-    <div class="terminal-window">
-      <div class="terminal-header">
-        <div class="dots">
-          <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+  <!-- NEUE SHOWCASE CARD STATT TERMINAL -->
+  <section class="showcase-section">
+    <div class="showcase-card">
+      <div class="showcase-stats">
+        <div class="stat-item">
+          <div class="stat-value">99.9%</div>
+          <div class="stat-label">Uptime Garantie</div>
         </div>
-        <div class="terminal-title">APEX_INTERACTIVE_SIMULATOR.EXE</div>
+        <div class="stat-item">
+          <div class="stat-value">&lt; 15ms</div>
+          <div class="stat-label">Reaktionszeit</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">10+</div>
+          <div class="stat-label">Integrierte Module</div>
+        </div>
       </div>
-      <div class="terminal-body" id="terminal-body">
-        <div class="cmd-line"><span class="prefix">User:</span> /antinuke status</div>
-        <div class="cmd-output">🛡️ [Anti-Nuke] Aktiviert. Max Channel Löschungen: 2/Min. Auto-Ban: AN.</div>
-      </div>
-      <div class="demo-controls">
-        <button class="demo-btn" onclick="runDemo('antinuke')">/antinuke status</button>
-        <button class="demo-btn" onclick="runDemo('ticket')">/ticket panel create</button>
-        <button class="demo-btn" onclick="runDemo('verify')">/verify send</button>
-        <button class="demo-btn" onclick="runDemo('stats')">/stats create-voice</button>
+
+      <div class="showcase-highlights">
+        <div class="highlight-box">
+          <div class="highlight-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <div>
+            <div class="highlight-title">Anti-Nuke & Moderation</div>
+            <div class="highlight-desc">Automatischer Schutz vor Raids, Spam und unbefugtem Rechte-Missbrauch.</div>
+          </div>
+        </div>
+
+        <div class="highlight-box">
+          <div class="highlight-icon">
+            <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </div>
+          <div>
+            <div class="highlight-title">Blitzschnell & Modular</div>
+            <div class="highlight-desc">Aktiviere nur die Module, die dein Server auch wirklich benötigt.</div>
+          </div>
+        </div>
+
+        <div class="highlight-box">
+          <div class="highlight-icon">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </div>
+          <div>
+            <div class="highlight-title">Einfache Konfiguration</div>
+            <div class="highlight-desc">Verwalte alle Einstellungen direkt über ein übersichtliches Web-Dashboard.</div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -349,31 +391,5 @@
   <p>&copy; 2026 APEX BOT SYSTEM. All rights reserved.</p>
 </footer>
 
-<script>
-  function runDemo(type) {
-    const body = document.getElementById('terminal-body');
-    if(type === 'antinuke') {
-      body.innerHTML = `
-        <div class="cmd-line"><span class="prefix">User:</span> /antinuke status</div>
-        <div class="cmd-output">🛡️ [Anti-Nuke Protection]<br>• Status: Aktiviert<br>• Limit Channel-Delete: 2/Min<br>• Action: Quarantäne & Auto-Ban</div>
-      `;
-    } else if(type === 'ticket') {
-      body.innerHTML = `
-        <div class="cmd-line"><span class="prefix">User:</span> /ticket panel create name:Support</div>
-        <div class="cmd-output">🎫 [Ticket System]<br>Panel "Support" erfolgreich in #support-tickets gesendet. Buttons: [📩 Ticket Öffnen]</div>
-      `;
-    } else if(type === 'verify') {
-      body.innerHTML = `
-        <div class="cmd-line"><span class="prefix">User:</span> /verify send channel:#regelwerk</div>
-        <div class="cmd-output">✅ [Verifizierung]<br>Verifizierungs-Embed versendet. Neue User müssen erst klicken um Freischaltung zu erhalten.</div>
-      `;
-    } else if(type === 'stats') {
-      body.innerHTML = `
-        <div class="cmd-line"><span class="prefix">User:</span> /stats create-voice type:members</div>
-        <div class="cmd-output">📊 [Kanal Statistiken]<br>Sprachkanal "👥 Mitglieder: 1.420" erfolgreich erstellt und wird automatisch aktualisiert.</div>
-      `;
-    }
-  }
-</script>
 </body>
 </html>
