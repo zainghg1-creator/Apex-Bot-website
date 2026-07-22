@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cookieSession = require('cookie-session');
 const path = require('path');
-const fs = require('fs');
+const mongoose = require('mongoose');
 
 const {
   CLIENT_ID,
@@ -10,11 +10,12 @@ const {
   BOT_TOKEN,
   REDIRECT_URI,
   SESSION_SECRET,
+  MONGODB_URI,
   PORT = 3000
 } = process.env;
 
 // Pflicht-Variablen prüfen
-['CLIENT_ID', 'CLIENT_SECRET', 'BOT_TOKEN', 'REDIRECT_URI', 'SESSION_SECRET'].forEach((key) => {
+['CLIENT_ID', 'CLIENT_SECRET', 'BOT_TOKEN', 'REDIRECT_URI', 'SESSION_SECRET', 'MONGODB_URI'].forEach((key) => {
   if (!process.env[key]) {
     console.warn(`[WARNUNG] Umgebungsvariable ${key} ist nicht gesetzt (siehe .env.example)`);
   }
@@ -22,7 +23,6 @@ const {
 
 const DISCORD_API = 'https://discord.com/api/v10';
 const ADMINISTRATOR = 0x8n;
-const CONFIG_FILE = path.join(__dirname, 'guild_configs.json');
 
 const app = express();
 
@@ -42,18 +42,68 @@ app.use(
   })
 );
 
-// Hilfsfunktionen für Config-Datenbank
-function getConfigs() {
-  if (!fs.existsSync(CONFIG_FILE)) return {};
-  try {
-    return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
-  } catch (e) {
-    return {};
-  }
+// ---------------------------------------------------------------------------
+// MongoDB Verbindung (mit Caching, damit auf Vercel nicht bei jedem
+// Funktionsaufruf eine neue Verbindung aufgebaut wird)
+// ---------------------------------------------------------------------------
+
+let cachedConnection = global._apexMongooseConnection;
+if (!cachedConnection) {
+  cachedConnection = global._apexMongooseConnection = { conn: null, promise: null };
 }
 
-function saveConfigs(data) {
-  fs.writeFileSync(CONFIG_FILE, JSON.stringify(data, null, 2), 'utf-8');
+async function connectToDatabase() {
+  if (cachedConnection.conn) return cachedConnection.conn;
+
+  if (!MONGODB_URI) {
+    throw new Error('MONGODB_URI ist nicht gesetzt. Bitte in der .env / den Vercel-Umgebungsvariablen hinterlegen.');
+  }
+
+  if (!cachedConnection.promise) {
+    cachedConnection.promise = mongoose
+      .connect(MONGODB_URI, { dbName: 'apex' })
+      .then((m) => m);
+  }
+
+  cachedConnection.conn = await cachedConnection.promise;
+  return cachedConnection.conn;
+}
+
+// Middleware: stellt vor jeder Anfrage sicher, dass die DB-Verbindung steht
+app.use(async (req, res, next) => {
+  try {
+    await connectToDatabase();
+    next();
+  } catch (err) {
+    console.error('MongoDB Verbindungsfehler:', err);
+    res.status(500).json({ error: 'database_unavailable' });
+  }
+});
+
+// Ein Dokument pro Server (guildId). "data" enthält die Module beliebig
+// verschachtelt (welcome, tickets, teamliste, ...) — daher Mixed/Schemalos.
+const guildConfigSchema = new mongoose.Schema(
+  {
+    guildId: { type: String, required: true, unique: true, index: true },
+    data: { type: mongoose.Schema.Types.Mixed, default: {} }
+  },
+  { timestamps: true }
+);
+
+const GuildConfig = mongoose.models.GuildConfig || mongoose.model('GuildConfig', guildConfigSchema);
+
+// Hilfsfunktionen für Config-Datenbank (jetzt MongoDB statt lokaler Datei)
+async function getGuildConfig(guildId) {
+  const doc = await GuildConfig.findOne({ guildId }).lean();
+  return doc?.data || {};
+}
+
+async function saveModuleConfig(guildId, moduleName, moduleData) {
+  await GuildConfig.findOneAndUpdate(
+    { guildId },
+    { $set: { [`data.${moduleName}`]: moduleData } },
+    { upsert: true, new: true }
+  );
 }
 
 // Landingpage
@@ -214,27 +264,32 @@ const MODULE_NAMES = [
 ];
 
 // API: Komplette Modul-Konfiguration eines Servers abrufen (für das Dashboard)
-app.get('/api/guild/:guildId/config', requireAuth, (req, res) => {
-  const configs = getConfigs();
-  res.json(configs[req.params.guildId] || {});
+app.get('/api/guild/:guildId/config', requireAuth, async (req, res) => {
+  try {
+    const config = await getGuildConfig(req.params.guildId);
+    res.json(config);
+  } catch (err) {
+    console.error('Fehler beim Laden der Konfiguration:', err);
+    res.status(500).json({ error: 'server_error' });
+  }
 });
 
 // API: Einstellungen eines einzelnen Moduls speichern
 // z.B. POST /api/guild/123/config/welcome  { join: {...}, leave: {...} }
-app.post('/api/guild/:guildId/config/:module', requireAuth, (req, res) => {
+app.post('/api/guild/:guildId/config/:module', requireAuth, async (req, res) => {
   const { guildId, module } = req.params;
 
   if (!MODULE_NAMES.includes(module)) {
     return res.status(400).json({ error: 'unknown_module' });
   }
 
-  const configs = getConfigs();
-  if (!configs[guildId]) configs[guildId] = {};
-
-  configs[guildId][module] = req.body;
-  saveConfigs(configs);
-
-  res.json({ success: true });
+  try {
+    await saveModuleConfig(guildId, module, req.body);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Fehler beim Speichern der Konfiguration:', err);
+    res.status(500).json({ error: 'server_error' });
+  }
 });
 
 // API: Rollen eines Servers abrufen (für Rollen-Auswahl im Dashboard)
@@ -286,7 +341,14 @@ app.get('/api/me', requireAuth, (req, res) => {
 module.exports = app;
 
 if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => {
-    console.log(`Apex Dashboard läuft auf http://localhost:${PORT}`);
-  });
+  connectToDatabase()
+    .then(() => {
+      app.listen(PORT, () => {
+        console.log(`Apex Dashboard läuft auf http://localhost:${PORT}`);
+      });
+    })
+    .catch((err) => {
+      console.error('Konnte keine Verbindung zu MongoDB herstellen:', err);
+      process.exit(1);
+    });
 }
