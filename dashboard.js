@@ -14,6 +14,14 @@ const manageOverlay = document.getElementById('manage-overlay');
 const activeGuildName = document.getElementById('active-guild-name');
 const activeGuildIcon = document.getElementById('active-guild-icon');
 
+// Übersicht Elements
+const overviewServerName = document.getElementById('overview-server-name');
+const overviewServerIcon = document.getElementById('overview-server-icon');
+const overviewServerId = document.getElementById('overview-server-id');
+const overviewMembers = document.getElementById('overview-members');
+const overviewBoosts = document.getElementById('overview-boosts');
+const overviewCreated = document.getElementById('overview-created');
+
 function showState(state) {
   [loadingState, emptyState, errorState, guildListEl].forEach((el) => el?.classList.add('hidden'));
   state?.classList.remove('hidden');
@@ -116,23 +124,69 @@ async function loadDashboard() {
   }
 }
 
-// MANAGEMENT OVERLAY LOGIK
-function openManagement(guildId, name, iconUrl) {
+// BERECHNUNG DES DISCORD CREATION DATES AUS DER SNOWFLAKE ID
+function getGuildCreatedAt(guildId) {
+  try {
+    const discordEpoch = 1420070400000n;
+    const timestamp = (BigInt(guildId) >> 22n) + discordEpoch;
+    return new Date(Number(timestamp)).toLocaleDateString('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  } catch (e) {
+    return 'Unbekannt';
+  }
+}
+
+// MANAGEMENT OVERLAY LOGIK MIT SERVER-DETAILS
+async function openManagement(guildId, name, iconUrl) {
+  // 1. Grunddaten sofort setzen
   if (activeGuildName) activeGuildName.textContent = name;
+  if (overviewServerName) overviewServerName.textContent = name;
+  if (overviewServerId) overviewServerId.textContent = guildId;
+
+  const defaultIcon = 'https://cdn.discordapp.com/embed/avatars/0.png';
+  const finalIcon = iconUrl || defaultIcon;
 
   if (activeGuildIcon) {
-    if (iconUrl) {
-      activeGuildIcon.src = iconUrl;
-      activeGuildIcon.classList.remove('hidden');
-    } else {
-      activeGuildIcon.classList.add('hidden');
-    }
+    activeGuildIcon.src = finalIcon;
+    activeGuildIcon.classList.remove('hidden');
+  }
+  if (overviewServerIcon) {
+    overviewServerIcon.src = finalIcon;
   }
 
-  // Erstes Modul (Übersicht) aktivieren
+  // Erstellungsdatum aus der Snowflake-ID berechnen
+  if (overviewCreated) {
+    overviewCreated.textContent = getGuildCreatedAt(guildId);
+  }
+
+  // Werte für Mitglieder & Boosts zurücksetzen
+  if (overviewMembers) overviewMembers.textContent = 'Lädt...';
+  if (overviewBoosts) overviewBoosts.textContent = 'Lädt...';
+
+  // Erstes Modul (Übersicht) aktivieren und Modal anzeigen
   const firstBtn = document.querySelector('.module-menu .menu-item');
   showModule('overview', firstBtn);
   manageOverlay?.classList.remove('hidden');
+
+  // 2. Erweiterte Serverdaten aus dem Backend abrufen
+  try {
+    const res = await fetch(`/api/guild/${guildId}`);
+    if (res.ok) {
+      const guildData = await res.json();
+      if (overviewMembers) overviewMembers.textContent = guildData.members ?? '--';
+      if (overviewBoosts) overviewBoosts.textContent = guildData.boosts ?? '0';
+    } else {
+      if (overviewMembers) overviewMembers.textContent = 'N/A';
+      if (overviewBoosts) overviewBoosts.textContent = 'N/A';
+    }
+  } catch (err) {
+    console.error('Fehler beim Laden der Serverdetails:', err);
+    if (overviewMembers) overviewMembers.textContent = 'N/A';
+    if (overviewBoosts) overviewBoosts.textContent = 'N/A';
+  }
 }
 
 function closeManagement() {
