@@ -649,15 +649,16 @@
       </div>
       <nav class="sidebar-nav">
         <button class="tab-btn active" data-tab="overview" onclick="switchTab('overview')"><span class="tab-emoji">📊</span> Übersicht</button>
-        <button class="tab-btn" data-tab="welcome" onclick="switchTab('welcome')"><span class="tab-emoji">👋</span> Willkommen</button>
+        <button class="tab-btn" data-tab="welcome" onclick="switchTab('welcome')"><span class="tab-emoji">👋</span> Willkommens System</button>
         <button class="tab-btn" data-tab="tickets" onclick="switchTab('tickets')"><span class="tab-emoji">🎫</span> Ticket System</button>
-        <button class="tab-btn" data-tab="teamliste" onclick="switchTab('teamliste')"><span class="tab-emoji">👥</span> Teamliste</button>
-        <button class="tab-btn" data-tab="support" onclick="switchTab('support')"><span class="tab-emoji">❓</span> Support &amp; FAQ</button>
-        <button class="tab-btn" data-tab="moderation" onclick="switchTab('moderation')"><span class="tab-emoji">🛡️</span> Moderation</button>
-        <button class="tab-btn" data-tab="teamupdate" onclick="switchTab('teamupdate')"><span class="tab-emoji">📝</span> Teamupdate Log</button>
+        <button class="tab-btn" data-tab="teamliste" onclick="switchTab('teamliste')"><span class="tab-emoji">📋</span> Teamliste</button>
+        <button class="tab-btn" data-tab="support" onclick="switchTab('support')"><span class="tab-emoji">🆘</span> Support &amp; FAQ</button>
+        <button class="tab-btn" data-tab="moderation" onclick="switchTab('moderation')"><span class="tab-emoji">🛡️</span> Moderations System</button>
+        <button class="tab-btn" data-tab="teamupdate" 
+
         <button class="tab-btn" data-tab="stats" onclick="switchTab('stats')"><span class="tab-emoji">📈</span> Kanal Statistiken</button>
         <button class="tab-btn" data-tab="verification" onclick="switchTab('verification')"><span class="tab-emoji">✅</span> Verifizierungs System</button>
-        <button class="tab-btn" data-tab="antinuke" onclick="switchTab('antinuke')"><span class="tab-emoji">🔒</span> Anti Nuke Schutz</button>
+        <button class="tab-btn" data-tab="antinuke" onclick="switchTab('antinuke')"><span class="tab-emoji">🔒</span> Anti Nuke System</button>
       </nav>
       <button class="btn btn-secondary back-btn" onclick="closeManagement()">← Server wechseln</button>
     </div>
@@ -687,8 +688,7 @@
 
       <!-- Willkommen Tab -->
       <div id="mod-welcome" class="module-page hidden">
-        <h2>👋 Willkommen</h2>
-        <p>Begrüße neue Mitglieder automatisch beim Beitreten und verabschiede sie beim Verlassen.</p>
+        <h2>👋 Lass den Bot autoamtisch Nachrichten versenden und Rollen vergeben wenn ein Member beitritt oder verlässt.</p>
 
         <div class="subtabs">
           <button class="subtab-btn active" data-sub="join" onclick="switchSubtab('welcome','join')">Beitritt</button>
