@@ -1,175 +1,127 @@
-const CLIENT_ID = '1525613011262377994';
-const BOT_PERMISSIONS = '8';
-
-const loadingState = document.getElementById('loading-state');
-const emptyState = document.getElementById('empty-state');
-const errorState = document.getElementById('error-state');
-const errorMessage = document.getElementById('error-message');
-const guildListEl = document.getElementById('guild-list');
-const userChip = document.getElementById('user-chip');
-const userAvatar = document.getElementById('user-avatar');
-const userName = document.getElementById('user-name');
-
-const manageOverlay = document.getElementById('manage-overlay');
-const activeGuildName = document.getElementById('active-guild-name');
-const activeGuildIcon = document.getElementById('active-guild-icon');
-
-const overviewMembers = document.getElementById('overview-members');
-const overviewBoosts = document.getElementById('overview-boosts');
-
 let activeGuildId = null;
 
-function showState(state) {
-  [loadingState, emptyState, errorState, guildListEl].forEach((el) => el?.classList.add('hidden'));
-  state?.classList.remove('hidden');
+function showToast(message = '✓ Erfolgreich gespeichert!') {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.classList.add('show');
+  setTimeout(() => {
+    toast.classList.remove('show');
+  }, 3000); // Geht nach 3 Sekunden automatisch weg
 }
 
-async function loadDashboard() {
-  showState(loadingState);
-  try {
-    const res = await fetch('/api/guilds');
-    if (!res.ok) {
-      if (res.status === 401) return (window.location.href = '/');
-      throw new Error('Fehler beim Laden');
-    }
-    const data = await res.json();
-    renderUser(data.user);
-    renderGuilds(data.guilds, data.clientId || CLIENT_ID);
-  } catch (err) {
-    if (errorMessage) errorMessage.textContent = err.message;
-    showState(errorState);
-  }
-}
-
-function renderUser(user) {
-  if (!user) return;
-  if (userName) userName.textContent = user.username;
-  if (userAvatar) {
-    userAvatar.src = user.avatar
-      ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
-      : 'https://cdn.discordapp.com/embed/avatars/0.png';
-  }
-}
-
-function renderGuilds(guilds, clientId) {
-  if (!guilds || guilds.length === 0) return showState(emptyState);
-
-  guildListEl.innerHTML = '';
-  guilds.forEach((guild) => {
-    const card = document.createElement('div');
-    card.className = 'guild-card';
-
-    const iconSrc = guild.icon || 'https://cdn.discordapp.com/embed/avatars/0.png';
-
-    card.innerHTML = `
-      <div class="guild-info">
-        <img src="${iconSrc}" class="guild-icon" alt="${guild.name}">
-        <span class="guild-name">${guild.name}</span>
-      </div>
-      <div class="guild-action">
-        ${
-          guild.botIstDrauf
-            ? `<button class="btn btn-primary" onclick="openManagement('${guild.id}', '${escapeHtml(guild.name)}', '${iconSrc}')">Verwalten</button>`
-            : `<a href="https://discord.com/api/oauth2/authorize?client_id=${clientId}&scope=bot&permissions=${BOT_PERMISSIONS}&guild_id=${guild.id}" target="_blank" class="btn btn-secondary">Bot einladen</a>`
-        }
-      </div>
-    `;
-    guildListEl.appendChild(card);
-  });
-
-  showState(guildListEl);
-}
-
-function escapeHtml(str) {
-  return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-}
-
-async function openManagement(guildId, name, iconUrl) {
-  activeGuildId = guildId;
-  if (activeGuildName) activeGuildName.textContent = name;
-  if (activeGuildIcon) activeGuildIcon.src = iconUrl;
-
-  if (overviewMembers) overviewMembers.textContent = '...';
-  if (overviewBoosts) overviewBoosts.textContent = '...';
-
-  manageOverlay?.classList.remove('hidden');
-
-  // Lade Serverdetails & Willkommens-Einstellungen
-  loadGuildDetails(guildId);
-  loadWelcomeSettings(guildId);
-}
-
-function closeManagement() {
-  activeGuildId = null;
-  manageOverlay?.classList.add('hidden');
-}
-
-async function loadGuildDetails(guildId) {
-  try {
-    const res = await fetch(`/api/guild/${guildId}`);
-    if (res.ok) {
-      const data = await res.json();
-      if (overviewMembers) overviewMembers.textContent = data.members ?? '0';
-      if (overviewBoosts) overviewBoosts.textContent = data.boosts ?? '0';
-    } else {
-      if (overviewMembers) overviewMembers.textContent = 'N/A';
-      if (overviewBoosts) overviewBoosts.textContent = 'N/A';
-    }
-  } catch (err) {
-    if (overviewMembers) overviewMembers.textContent = 'N/A';
-    if (overviewBoosts) overviewBoosts.textContent = 'N/A';
-  }
-}
-
-// Module Tabs wechseln
 function switchTab(tabName) {
   document.querySelectorAll('.tab-btn').forEach((btn) => btn.classList.remove('active'));
   document.querySelectorAll('.module-page').forEach((page) => page.classList.add('hidden'));
 
-  const activeBtn = document.querySelector(`[data-tab="${tabName}"]`);
-  const activePage = document.getElementById(`mod-${tabName}`);
-
-  if (activeBtn) activeBtn.classList.add('active');
-  if (activePage) activePage.classList.remove('hidden');
+  document.querySelector(`[data-tab="${tabName}"]`)?.classList.add('active');
+  document.getElementById(`mod-${tabName}`)?.classList.remove('hidden');
 }
 
-// Willkommens-Modul Logik
-async function loadWelcomeSettings(guildId) {
+async function openManagement(guildId, name, iconUrl) {
+  activeGuildId = guildId;
+  document.getElementById('active-guild-name').textContent = name;
+  document.getElementById('active-guild-icon').src = iconUrl;
+  document.getElementById('manage-overlay').classList.remove('hidden');
+
+  loadSettings(guildId);
+}
+
+function closeManagement() {
+  activeGuildId = null;
+  document.getElementById('manage-overlay').classList.add('hidden');
+}
+
+async function loadSettings(guildId) {
   try {
-    const res = await fetch(`/api/guild/${guildId}/welcome`);
+    const res = await fetch(`/api/guild/${guildId}/config`);
     if (res.ok) {
       const data = await res.json();
-      const txt = document.getElementById('welcome-text');
-      const ch = document.getElementById('welcome-channel');
-      if (txt) txt.value = data.text || '';
-      if (ch) ch.value = data.channelId || '';
+      
+      // Willkommen
+      if(data.welcome) {
+        document.getElementById('welcome-channel').value = data.welcome.channelId || '';
+        document.getElementById('welcome-text').value = data.welcome.text || '';
+        document.getElementById('welcome-color').value = data.welcome.color || '#5865F2';
+        document.getElementById('welcome-image').value = data.welcome.image || '';
+        document.getElementById('welcome-avatar-thumbnail').checked = !!data.welcome.avatarThumbnail;
+        document.getElementById('welcome-autoroles').value = (data.welcome.autoroles || []).join(',');
+      }
+
+      // Leave
+      if(data.leave) {
+        document.getElementById('leave-channel').value = data.leave.channelId || '';
+        document.getElementById('leave-text').value = data.leave.text || '';
+        document.getElementById('leave-color').value = data.leave.color || '#ED4245';
+        document.getElementById('leave-image').value = data.leave.image || '';
+        document.getElementById('leave-avatar-thumbnail').checked = !!data.leave.avatarThumbnail;
+      }
+
+      // Tickets
+      if(data.tickets) {
+        document.getElementById('ticket-embed-channel').value = data.tickets.embedChannel || '';
+        document.getElementById('ticket-embed-text').value = data.tickets.embedText || '';
+        document.getElementById('ticket-category').value = data.tickets.category || '';
+        document.getElementById('ticket-welcome-msg').value = data.tickets.welcomeMsg || '';
+      }
+
+      // Teamliste
+      if(data.teamlist) {
+        document.getElementById('teamlist-channel').value = data.teamlist.channelId || '';
+        document.getElementById('teamlist-roles').value = (data.teamlist.roles || []).join(',');
+      }
     }
   } catch (err) {
-    console.error('Fehler beim Laden der Willkommen-Settings:', err);
+    console.error('Fehler beim Laden der Config:', err);
   }
 }
 
-async function saveWelcomeSettings() {
+async function saveModuleSettings(moduleType) {
   if (!activeGuildId) return;
 
-  const text = document.getElementById('welcome-text').value;
-  const channelId = document.getElementById('welcome-channel').value;
-  const statusEl = document.getElementById('welcome-status');
+  let bodyData = {};
+
+  if (moduleType === 'welcome') {
+    bodyData = {
+      channelId: document.getElementById('welcome-channel').value,
+      text: document.getElementById('welcome-text').value,
+      color: document.getElementById('welcome-color').value,
+      image: document.getElementById('welcome-image').value,
+      avatarThumbnail: document.getElementById('welcome-avatar-thumbnail').checked,
+      autoroles: document.getElementById('welcome-autoroles').value.split(',').map(s => s.trim()).filter(Boolean)
+    };
+  } else if (moduleType === 'leave') {
+    bodyData = {
+      channelId: document.getElementById('leave-channel').value,
+      text: document.getElementById('leave-text').value,
+      color: document.getElementById('leave-color').value,
+      image: document.getElementById('leave-image').value,
+      avatarThumbnail: document.getElementById('leave-avatar-thumbnail').checked
+    };
+  } else if (moduleType === 'tickets') {
+    bodyData = {
+      embedChannel: document.getElementById('ticket-embed-channel').value,
+      embedText: document.getElementById('ticket-embed-text').value,
+      category: document.getElementById('ticket-category').value,
+      welcomeMsg: document.getElementById('ticket-welcome-msg').value
+    };
+  } else if (moduleType === 'teamlist') {
+    bodyData = {
+      channelId: document.getElementById('teamlist-channel').value,
+      roles: document.getElementById('teamlist-roles').value.split(',').map(s => s.trim()).filter(Boolean)
+    };
+  }
 
   try {
-    const res = await fetch(`/api/guild/${activeGuildId}/welcome`, {
+    const res = await fetch(`/api/guild/${activeGuildId}/config/${moduleType}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, channelId })
+      body: JSON.stringify(bodyData)
     });
 
-    if (res.ok && statusEl) {
-      statusEl.classList.remove('hidden');
-      setTimeout(() => statusEl.classList.add('hidden'), 3000);
+    if (res.ok) {
+      showToast(); // Toast-Animation auslösen
     }
   } catch (err) {
     console.error('Fehler beim Speichern:', err);
   }
 }
-
-document.addEventListener('DOMContentLoaded', loadDashboard);
