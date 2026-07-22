@@ -195,7 +195,7 @@
 
     /* Der Servername bekommt die gesamte verbleibende Breite der Karte,
        da der Button in eine eigene Zeile darunter wandert. */
-    .guild-info > *:not(img) {
+    .guild-name {
       flex: 1;
       min-width: 0;
       font-size: 1.02rem;
@@ -210,9 +210,27 @@
       white-space: normal;
     }
 
-    .guild-card .btn,
-    .guild-card > a.btn {
+    /* Wrapper um den Verwalten-/Einladen-Button, den dashboard.js
+       je nach guild.botIstDrauf einfügt */
+    .guild-action {
       width: 100%;
+    }
+
+    .guild-action .btn {
+      width: 100%;
+    }
+
+    /* Bot bereits auf dem Server -> weißer "Verwalten"-Button (btn-primary) */
+    .guild-action .btn-primary {
+      background: #ffffff;
+      color: #000000;
+    }
+
+    /* Bot noch nicht eingeladen -> gedämpfter "Bot einladen"-Button (btn-secondary) */
+    .guild-action .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-primary);
+      border: 1px solid var(--border-subtle);
     }
 
     /* Overlay / Sidebar Dashboard */
