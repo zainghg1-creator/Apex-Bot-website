@@ -113,8 +113,8 @@
 
   <div class="content-area">
 
-    <!-- ===== ÜBERSICHT (KEIN hidden) ===== -->
-    <div id="mod-overview" class="module-page">
+    <!-- ===== ÜBERSICHT ===== -->
+    <div id="mod-overview" class="module-page" style="display:block;">
       <h2>Übersicht</h2>
       <p>Statistiken und allgemeiner Status des Bots auf deinem Server.</p>
       <div class="stats-grid">
@@ -124,14 +124,16 @@
       </div>
     </div>
 
-    <!-- ===== WILLKOMMEN (hidden) ===== -->
-    <div id="mod-welcome" class="module-page hidden">
+    <!-- ===== WILLKOMMEN ===== -->
+    <div id="mod-welcome" class="module-page" style="display:none;">
       <h2>👋 Willkommen</h2>
       <p>Lass den Bot automatisch Nachrichten versenden und Rollen verwalten, wenn ein Member beitritt oder verlässt.</p>
       <div class="subtabs" role="tablist">
         <button class="subtab-btn active" data-sub="join" onclick="switchSubtab('welcome','join')" role="tab">Beitritt</button>
         <button class="subtab-btn" data-sub="leave" onclick="switchSubtab('welcome','leave')" role="tab">Verlassen</button>
       </div>
+      
+      <!-- JOIN -->
       <div id="welcome-join-page" class="subpage" role="tabpanel">
         <div class="card form-card" style="max-width:100%;display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start;">
           <div class="form-card" style="max-width:none;">
@@ -152,6 +154,8 @@
           </div>
         </div>
       </div>
+      
+      <!-- LEAVE -->
       <div id="welcome-leave-page" class="subpage hidden" role="tabpanel">
         <div class="card form-card" style="max-width:100%;display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start;">
           <div class="form-card" style="max-width:none;">
@@ -173,8 +177,8 @@
       </div>
     </div>
 
-    <!-- ===== TICKETS (hidden) ===== -->
-    <div id="mod-tickets" class="module-page hidden">
+    <!-- ===== TICKETS ===== -->
+    <div id="mod-tickets" class="module-page" style="display:none;">
       <h2>🎫 Ticket System</h2>
       <p>Erstelle ein Dropdown-Panel, über das Mitglieder Tickets öffnen können.</p>
       <div class="card form-card" style="max-width:100%;display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start;">
@@ -195,8 +199,8 @@
       </div>
     </div>
 
-    <!-- ===== TEAM (hidden) ===== -->
-    <div id="mod-teamliste" class="module-page hidden">
+    <!-- ===== TEAM ===== -->
+    <div id="mod-teamliste" class="module-page" style="display:none;">
       <h2>👥 Team Liste</h2>
       <p>Zeige eine Liste deines Teams an.</p>
       <div class="card form-card">
@@ -206,8 +210,8 @@
       </div>
     </div>
 
-    <!-- ===== SUPPORT (hidden) ===== -->
-    <div id="mod-support" class="module-page hidden">
+    <!-- ===== SUPPORT ===== -->
+    <div id="mod-support" class="module-page" style="display:none;">
       <h2>💬 Support System</h2>
       <p>Konfiguriere das Support-System für deinen Server.</p>
       <div class="card form-card">
@@ -217,8 +221,8 @@
       </div>
     </div>
 
-    <!-- ===== MODERATION (hidden) ===== -->
-    <div id="mod-moderation" class="module-page hidden">
+    <!-- ===== MODERATION ===== -->
+    <div id="mod-moderation" class="module-page" style="display:none;">
       <h2>🛡️ Moderations System</h2>
       <p>Konfiguriere das Moderations-System für deinen Server.</p>
       <div class="card form-card">
@@ -228,8 +232,8 @@
       </div>
     </div>
 
-    <!-- ===== TEAM UPDATE (hidden) ===== -->
-    <div id="mod-teamupdate" class="module-page hidden">
+    <!-- ===== TEAM UPDATE ===== -->
+    <div id="mod-teamupdate" class="module-page" style="display:none;">
       <h2>📢 Team Update</h2>
       <p>Sende automatisch Team-Updates.</p>
       <div class="card form-card">
@@ -239,8 +243,8 @@
       </div>
     </div>
 
-    <!-- ===== STATISTIKEN (hidden) ===== -->
-    <div id="mod-stats" class="module-page hidden">
+    <!-- ===== STATISTIKEN ===== -->
+    <div id="mod-stats" class="module-page" style="display:none;">
       <h2>📊 Kanal Statistiken</h2>
       <p>Zeige Statistiken der Kanäle an.</p>
       <div class="card form-card">
@@ -249,8 +253,8 @@
       </div>
     </div>
 
-    <!-- ===== VERIFIZIERUNG (hidden) ===== -->
-    <div id="mod-verification" class="module-page hidden">
+    <!-- ===== VERIFIZIERUNG ===== -->
+    <div id="mod-verification" class="module-page" style="display:none;">
       <h2>✅ Verifizierungs System</h2>
       <p>Konfiguriere das Verifizierungs-System.</p>
       <div class="card form-card">
@@ -260,8 +264,8 @@
       </div>
     </div>
 
-    <!-- ===== ANTI NUKE (hidden) ===== -->
-    <div id="mod-antinuke" class="module-page hidden">
+    <!-- ===== ANTI NUKE ===== -->
+    <div id="mod-antinuke" class="module-page" style="display:none;">
       <h2>🔒 Anti Nuke System</h2>
       <p>Schütze deinen Server vor Angriffen.</p>
       <div class="card form-card">
