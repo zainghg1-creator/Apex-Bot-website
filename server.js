@@ -1,130 +1,178 @@
-const express = require('express');
-const session = require('express-session');
-const passport = require('passport');
-const { Strategy } = require('passport-discord');
-const fs = require('fs');
-const path = require('path');
+require('dotenv').config(); //[cite: 2]
+const express = require('express'); //[cite: 2]
+const cookieSession = require('cookie-session'); //[cite: 2]
+const path = require('path'); //[cite: 2]
+const fs = require('fs'); //[cite: 2]
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+const {
+  CLIENT_ID,
+  CLIENT_SECRET,
+  BOT_TOKEN,
+  REDIRECT_URI,
+  SESSION_SECRET,
+  PORT = 3000
+} = process.env; //[cite: 2]
 
-// Discord OAuth2 Konfiguration
-// ERSETZE DIESE WERTE MIT DEINEN ANGABEN AUS DEM DISCORD DEVELOPER PORTAL
-const CLIENT_ID = 'DEINE_DISCORD_CLIENT_ID';
-const CLIENT_SECRET = 'DEIN_DISCORD_CLIENT_SECRET';
-const CALLBACK_URL = 'http://localhost:3000/auth/discord/callback';
+const DISCORD_API = 'https://discord.com/api/v10'; //[cite: 2]
+const ADMINISTRATOR = 0x8n; //[cite: 2]
+// Vercel erlaubt Schreibzugriff NUR im /tmp-Ordner!
+const CONFIG_FILE = process.env.VERCEL ? '/tmp/guild_configs.json' : path.join(__dirname, 'guild_configs.json'); //[cite: 2]
 
-const CONFIG_FILE = path.join(__dirname, 'guild_configs.json');
+const app = express(); //[cite: 2]
 
-// Helper-Funktionen für JSON Speicherung
+app.set('trust proxy', 1); //[cite: 2]
+app.use(express.static(__dirname)); //[cite: 2]
+app.use(express.json()); //[cite: 2]
+
+app.use(
+  cookieSession({
+    name: 'apex_session',
+    keys: [SESSION_SECRET || 'apex-secret-key-12345'],
+    maxAge: 24 * 60 * 60 * 1000,
+    secure: true,
+    sameSite: 'lax',
+    httpOnly: true
+  })
+); //[cite: 2]
+
+// Hilfsfunktionen für Config-Datenbank
 function getConfigs() {
-  if (!fs.existsSync(CONFIG_FILE)) {
-    fs.writeFileSync(CONFIG_FILE, JSON.stringify({}), 'utf-8');
-  }
+  if (!fs.existsSync(CONFIG_FILE)) return {}; //[cite: 2]
   try {
-    const data = fs.readFileSync(CONFIG_FILE, 'utf-8');
-    return JSON.parse(data);
-  } catch (err) {
-    return {};
+    return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8')); //[cite: 2]
+  } catch (e) {
+    return {}; //[cite: 2]
   }
 }
 
-function saveConfigs(configs) {
-  fs.writeFileSync(CONFIG_FILE, JSON.stringify(configs, null, 2), 'utf-8');
+function saveConfigs(data) {
+  try {
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(data, null, 2), 'utf-8'); //[cite: 2]
+  } catch (e) {
+    console.error('Fehler beim Speichern der Config:', e);
+  }
 }
 
-// Passport Session Setup
-passport.serializeUser((user, done) => done(null, user));
-passport.deserializeUser((obj, done) => done(null, obj));
-
-passport.use(new Strategy({
-  clientID: CLIENT_ID,
-  clientSecret: CLIENT_SECRET,
-  callbackURL: CALLBACK_URL,
-  scope: ['identify', 'guilds']
-}, (accessToken, refreshToken, profile, done) => {
-  process.nextTick(() => done(null, profile));
-}));
-
-// Express Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public'))); // Stelle sicher, dass html/js in 'public' liegen oder passe den Pfad an
-
-app.use(session({
-  secret: 'apex_super_secret_key_change_me',
-  resave: false,
-  saveUninitialized: false
-}));
-
-app.use(passport.initialize());
-app.use(passport.session());
-
-// Middleware: Authentifizierung prüfen
-function requireAuth(req, res, next) {
-  if (req.isAuthenticated()) return next();
-  res.status(401).json({ error: 'Nicht angemeldet' });
-}
-
-// ----------------- OAUTH ROUTES -----------------
-
-app.get('/auth/discord', passport.authenticate('discord'));
-
-app.get('/auth/discord/callback', passport.authenticate('discord', {
-  failureRedirect: '/'
-}), (req, res) => {
-  res.redirect('/dashboard.html');
+// Routes
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html')); //[cite: 2]
 });
 
+// OAuth2 Login
+app.get('/auth/discord/login', (req, res) => {
+  const params = new URLSearchParams({
+    client_id: CLIENT_ID,
+    redirect_uri: REDIRECT_URI,
+    response_type: 'code',
+    scope: 'identify guilds',
+    prompt: 'consent'
+  }); //[cite: 2]
+  res.redirect(`https://discord.com/api/oauth2/authorize?${params.toString()}`); //[cite: 2]
+});
+
+// OAuth2 Callback
+app.get('/auth/discord/callback', async (req, res) => {
+  const { code } = req.query; //[cite: 2]
+  if (!code) return res.redirect('/?error=missing_code'); //[cite: 2]
+
+  try {
+    const tokenRes = await fetch(`${DISCORD_API}/oauth2/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET,
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: REDIRECT_URI
+      })
+    }); //[cite: 2]
+
+    if (!tokenRes.ok) return res.redirect('/?error=auth_failed'); //[cite: 2]
+    const tokenData = await tokenRes.json(); //[cite: 2]
+
+    const userRes = await fetch(`${DISCORD_API}/users/@me`, {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` }
+    }); //[cite: 2]
+    if (!userRes.ok) return res.redirect('/?error=auth_failed'); //[cite: 2]
+    const user = await userRes.json(); //[cite: 2]
+
+    req.session.accessToken = tokenData.access_token; //[cite: 2]
+    req.session.user = { id: user.id, username: user.username, avatar: user.avatar }; //[cite: 2]
+
+    res.redirect('/dashboard.html'); //[cite: 2]
+  } catch (err) {
+    console.error('Fehler im OAuth-Callback:', err); //[cite: 2]
+    res.redirect('/?error=auth_failed'); //[cite: 2]
+  }
+});
+
+// Logout
 app.get('/auth/logout', (req, res) => {
-  req.logout(() => {
-    res.redirect('/');
-  });
+  req.session = null; //[cite: 2]
+  res.redirect('/'); //[cite: 2]
 });
 
-// ----------------- USER & GUILD APIS -----------------
+function requireAuth(req, res, next) {
+  if (!req.session || !req.session.accessToken) {
+    return res.status(401).json({ error: 'not_authenticated' }); //[cite: 2]
+  }
+  next(); //[cite: 2]
+}
 
-// Aktuellen User abrufen
-app.get('/api/user', requireAuth, (req, res) => {
-  res.json(req.user);
+// API: Server-Liste
+app.get('/api/guilds', requireAuth, async (req, res) => {
+  try {
+    const guildsRes = await fetch(`${DISCORD_API}/users/@me/guilds`, {
+      headers: { Authorization: `Bearer ${req.session.accessToken}` }
+    }); //[cite: 2]
+
+    if (guildsRes.status === 401) {
+      req.session = null; //[cite: 2]
+      return res.status(401).json({ error: 'session_expired' }); //[cite: 2]
+    }
+    if (!guildsRes.ok) return res.status(502).json({ error: 'discord_api_error' }); //[cite: 2]
+
+    const guilds = await guildsRes.json(); //[cite: 2]
+    const adminGuilds = guilds.filter((g) => {
+      const perms = BigInt(g.permissions ?? 0);
+      return g.owner === true || (perms & ADMINISTRATOR) === ADMINISTRATOR;
+    }); //[cite: 2]
+
+    const result = adminGuilds.map((g) => ({
+      id: g.id,
+      name: g.name,
+      icon: g.icon ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png` : null,
+      botIstDrauf: true
+    })); //[cite: 2]
+
+    res.json({ user: req.session.user, guilds: result, clientId: CLIENT_ID }); //[cite: 2]
+  } catch (err) {
+    res.status(500).json({ error: 'server_error' }); //[cite: 2]
+  }
 });
 
-// Serverliste des Users abrufen (nur Server mit Admin-Rechten)
-app.get('/api/guilds', requireAuth, (req, res) => {
-  const adminGuilds = req.user.guilds.filter(guild => (guild.permissions & 0x8) === 0x8);
-  res.json(adminGuilds);
-});
-
-// ----------------- CONFIGURATION APIS -----------------
-
-// Alle Konfigurationen eines bestimmten Guilds abrufen
+// API Config abrufen
 app.get('/api/guild/:guildId/config', requireAuth, (req, res) => {
   const configs = getConfigs();
   res.json(configs[req.params.guildId] || {});
 });
 
-// Einzelne Modul-Einstellungen speichern (Welcome, Leave, Tickets, Teamlist)
+// API Config speichern
 app.post('/api/guild/:guildId/config/:module', requireAuth, (req, res) => {
   const { guildId, module } = req.params;
   const configs = getConfigs();
-
-  if (!configs[guildId]) {
-    configs[guildId] = {};
-  }
-
-  // Modul-Daten aktualisieren
+  if (!configs[guildId]) configs[guildId] = {};
   configs[guildId][module] = req.body;
-
   saveConfigs(configs);
-  res.json({ success: true, message: `${module} erfolgreich gespeichert!` });
+  res.json({ success: true });
 });
 
-// Frontend Route
-app.get('/dashboard', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dashboard.html'));
-});
+// WICHTIG FÜR VERCEL SERVERLESS: Exportieren statt app.listen!
+module.exports = app; //[cite: 2]
 
-// Server starten
-app.listen(PORT, () => {
-  console.log(`Server läuft auf http://localhost:${PORT}`);
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Lokal gestartet auf http://localhost:${PORT}`);
+  });
+}
