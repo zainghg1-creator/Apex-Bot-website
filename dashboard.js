@@ -1,6 +1,5 @@
-// Gleiche Client-ID wie im Einladungslink auf der Startseite -> öffentlich, kein Geheimnis
 const CLIENT_ID = '1525613011262377994';
-const BOT_PERMISSIONS = '8'; // Administrator, wie im bestehenden Einladungslink
+const BOT_PERMISSIONS = '8';
 
 const loadingState = document.getElementById('loading-state');
 const emptyState = document.getElementById('empty-state');
@@ -11,7 +10,6 @@ const userChip = document.getElementById('user-chip');
 const userAvatar = document.getElementById('user-avatar');
 const userName = document.getElementById('user-name');
 
-// Management Overlay & Sidebar Elemente
 const manageOverlay = document.getElementById('manage-overlay');
 const activeGuildName = document.getElementById('active-guild-name');
 const activeGuildIcon = document.getElementById('active-guild-icon');
@@ -53,7 +51,6 @@ function renderGuilds(guilds) {
         ? `<img class="guild-icon" src="${g.icon}" alt="">`
         : `<div class="guild-icon">${initials(g.name)}</div>`;
 
-      // Bei "Verwalten" rufen wir jetzt openManagement auf
       const actionHtml = g.botIstDrauf
         ? `<button onclick="openManagement('${g.id}', '${escapeJsString(g.name)}', '${g.icon || ''}')" class="btn btn-secondary">Verwalten</button>`
         : `<a href="${inviteUrl(g.id)}" target="_blank" rel="noopener noreferrer" class="btn btn-primary">Bot einladen</a>`;
@@ -78,14 +75,12 @@ function renderGuilds(guilds) {
   showState(guildListEl);
 }
 
-// Escaping für HTML
 function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
 }
 
-// Escaping für JavaScript-Strings in onclick-Attributen
 function escapeJsString(str) {
   return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
 }
@@ -121,9 +116,7 @@ async function loadDashboard() {
   }
 }
 
-// ---------------- SERVER MANAGEMENT & MODUL-SIDEBAR STEUERUNG ----------------
-
-// Öffnet die Modul-Verwaltung für den gewählten Server
+// MANAGEMENT OVERLAY LOGIK
 function openManagement(guildId, name, iconUrl) {
   if (activeGuildName) activeGuildName.textContent = name;
 
@@ -136,32 +129,31 @@ function openManagement(guildId, name, iconUrl) {
     }
   }
 
-  showModule('overview');
+  // Erstes Modul (Übersicht) aktivieren
+  const firstBtn = document.querySelector('.module-menu .menu-item');
+  showModule('overview', firstBtn);
   manageOverlay?.classList.remove('hidden');
 }
 
-// Schließt das Verwalten-Overlay
 function closeManagement() {
   manageOverlay?.classList.add('hidden');
 }
 
-// Modul-Wechsel in der Sidebar
-function showModule(modName) {
-  // Alle Modul-Seiten im rechten Bereich verstecken
+function showModule(modName, btnElement) {
+  // Alle Modul-Seiten ausblenden
   document.querySelectorAll('.module-page').forEach((page) => page.classList.add('hidden'));
 
   // Highlight von allen Menü-Buttons entfernen
   document.querySelectorAll('.menu-item').forEach((btn) => btn.classList.remove('active'));
 
-  // Das gewünschte Modul einblenden
+  // Ziel-Modul einblenden
   const targetPage = document.getElementById(`mod-${modName}`);
   if (targetPage) targetPage.classList.remove('hidden');
 
-  // Klick-Event auswerten & aktiven Button hervorheben
-  if (window.event && window.event.currentTarget) {
-    window.event.currentTarget.classList.add('active');
+  // Geklickten Button hervorheben
+  if (btnElement) {
+    btnElement.classList.add('active');
   }
 }
 
-// Startet den Fetch direkt beim Laden
 loadDashboard();
