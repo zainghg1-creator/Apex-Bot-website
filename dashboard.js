@@ -14,200 +14,162 @@ const manageOverlay = document.getElementById('manage-overlay');
 const activeGuildName = document.getElementById('active-guild-name');
 const activeGuildIcon = document.getElementById('active-guild-icon');
 
-// Übersicht Elements
-const overviewServerName = document.getElementById('overview-server-name');
-const overviewServerIcon = document.getElementById('overview-server-icon');
-const overviewServerId = document.getElementById('overview-server-id');
 const overviewMembers = document.getElementById('overview-members');
 const overviewBoosts = document.getElementById('overview-boosts');
-const overviewCreated = document.getElementById('overview-created');
+
+let activeGuildId = null;
 
 function showState(state) {
   [loadingState, emptyState, errorState, guildListEl].forEach((el) => el?.classList.add('hidden'));
   state?.classList.remove('hidden');
 }
 
-function inviteUrl(guildId) {
-  const params = new URLSearchParams({
-    client_id: CLIENT_ID,
-    scope: 'bot applications.commands',
-    permissions: BOT_PERMISSIONS,
-    guild_id: guildId,
-    disable_guild_select: 'true'
-  });
-  return `https://discord.com/api/oauth2/authorize?${params.toString()}`;
-}
-
-function initials(name) {
-  return name
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-}
-
-function renderGuilds(guilds) {
-  if (guilds.length === 0) {
-    showState(emptyState);
-    return;
+async function loadDashboard() {
+  showState(loadingState);
+  try {
+    const res = await fetch('/api/guilds');
+    if (!res.ok) {
+      if (res.status === 401) return (window.location.href = '/');
+      throw new Error('Fehler beim Laden');
+    }
+    const data = await res.json();
+    renderUser(data.user);
+    renderGuilds(data.guilds, data.clientId || CLIENT_ID);
+  } catch (err) {
+    if (errorMessage) errorMessage.textContent = err.message;
+    showState(errorState);
   }
+}
 
-  guildListEl.innerHTML = guilds
-    .map((g) => {
-      const iconHtml = g.icon
-        ? `<img class="guild-icon" src="${g.icon}" alt="">`
-        : `<div class="guild-icon">${initials(g.name)}</div>`;
+function renderUser(user) {
+  if (!user) return;
+  if (userName) userName.textContent = user.username;
+  if (userAvatar) {
+    userAvatar.src = user.avatar
+      ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
+      : 'https://cdn.discordapp.com/embed/avatars/0.png';
+  }
+}
 
-      const actionHtml = g.botIstDrauf
-        ? `<button onclick="openManagement('${g.id}', '${escapeJsString(g.name)}', '${g.icon || ''}')" class="btn btn-secondary">Verwalten</button>`
-        : `<a href="${inviteUrl(g.id)}" target="_blank" rel="noopener noreferrer" class="btn btn-primary">Bot einladen</a>`;
+function renderGuilds(guilds, clientId) {
+  if (!guilds || guilds.length === 0) return showState(emptyState);
 
-      const statusHtml = g.botIstDrauf
-        ? `<span class="guild-status status-active">● Apex ist aktiv</span>`
-        : `<span class="guild-status status-missing">○ Apex ist nicht auf diesem Server</span>`;
+  guildListEl.innerHTML = '';
+  guilds.forEach((guild) => {
+    const card = document.createElement('div');
+    card.className = 'guild-card';
 
-      return `
-        <div class="guild-row">
-          ${iconHtml}
-          <div class="guild-info">
-            <div class="guild-name">${escapeHtml(g.name)}</div>
-            ${statusHtml}
-          </div>
-          ${actionHtml}
-        </div>
-      `;
-    })
-    .join('');
+    const iconSrc = guild.icon || 'https://cdn.discordapp.com/embed/avatars/0.png';
+
+    card.innerHTML = `
+      <div class="guild-info">
+        <img src="${iconSrc}" class="guild-icon" alt="${guild.name}">
+        <span class="guild-name">${guild.name}</span>
+      </div>
+      <div class="guild-action">
+        ${
+          guild.botIstDrauf
+            ? `<button class="btn btn-primary" onclick="openManagement('${guild.id}', '${escapeHtml(guild.name)}', '${iconSrc}')">Verwalten</button>`
+            : `<a href="https://discord.com/api/oauth2/authorize?client_id=${clientId}&scope=bot&permissions=${BOT_PERMISSIONS}&guild_id=${guild.id}" target="_blank" class="btn btn-secondary">Bot einladen</a>`
+        }
+      </div>
+    `;
+    guildListEl.appendChild(card);
+  });
 
   showState(guildListEl);
 }
 
 function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
-
-function escapeJsString(str) {
   return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
 }
 
-async function loadDashboard() {
-  try {
-    const res = await fetch('/api/guilds');
-
-    if (res.status === 401) {
-      window.location.href = '/auth/discord/login';
-      return;
-    }
-
-    if (!res.ok) {
-      errorMessage.textContent = 'Deine Server konnten nicht geladen werden. Bitte versuch es erneut.';
-      showState(errorState);
-      return;
-    }
-
-    const data = await res.json();
-
-    userAvatar.src = data.user.avatar
-      ? `https://cdn.discordapp.com/avatars/${data.user.id}/${data.user.avatar}.png`
-      : 'https://cdn.discordapp.com/embed/avatars/0.png';
-    userName.textContent = data.user.username;
-    userChip.classList.remove('hidden');
-
-    renderGuilds(data.guilds);
-  } catch (err) {
-    console.error(err);
-    errorMessage.textContent = 'Verbindung zum Server fehlgeschlagen.';
-    showState(errorState);
-  }
-}
-
-// BERECHNUNG DES DISCORD CREATION DATES AUS DER SNOWFLAKE ID
-function getGuildCreatedAt(guildId) {
-  try {
-    const discordEpoch = 1420070400000n;
-    const timestamp = (BigInt(guildId) >> 22n) + discordEpoch;
-    return new Date(Number(timestamp)).toLocaleDateString('de-DE', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  } catch (e) {
-    return 'Unbekannt';
-  }
-}
-
-// MANAGEMENT OVERLAY LOGIK MIT SERVER-DETAILS
 async function openManagement(guildId, name, iconUrl) {
-  // 1. Grunddaten sofort setzen
+  activeGuildId = guildId;
   if (activeGuildName) activeGuildName.textContent = name;
-  if (overviewServerName) overviewServerName.textContent = name;
-  if (overviewServerId) overviewServerId.textContent = guildId;
+  if (activeGuildIcon) activeGuildIcon.src = iconUrl;
 
-  const defaultIcon = 'https://cdn.discordapp.com/embed/avatars/0.png';
-  const finalIcon = iconUrl || defaultIcon;
+  if (overviewMembers) overviewMembers.textContent = '...';
+  if (overviewBoosts) overviewBoosts.textContent = '...';
 
-  if (activeGuildIcon) {
-    activeGuildIcon.src = finalIcon;
-    activeGuildIcon.classList.remove('hidden');
-  }
-  if (overviewServerIcon) {
-    overviewServerIcon.src = finalIcon;
-  }
-
-  // Erstellungsdatum aus der Snowflake-ID berechnen
-  if (overviewCreated) {
-    overviewCreated.textContent = getGuildCreatedAt(guildId);
-  }
-
-  // Werte für Mitglieder & Boosts zurücksetzen
-  if (overviewMembers) overviewMembers.textContent = 'Lädt...';
-  if (overviewBoosts) overviewBoosts.textContent = 'Lädt...';
-
-  // Erstes Modul (Übersicht) aktivieren und Modal anzeigen
-  const firstBtn = document.querySelector('.module-menu .menu-item');
-  showModule('overview', firstBtn);
   manageOverlay?.classList.remove('hidden');
 
-  // 2. Erweiterte Serverdaten aus dem Backend abrufen
+  // Lade Serverdetails & Willkommens-Einstellungen
+  loadGuildDetails(guildId);
+  loadWelcomeSettings(guildId);
+}
+
+function closeManagement() {
+  activeGuildId = null;
+  manageOverlay?.classList.add('hidden');
+}
+
+async function loadGuildDetails(guildId) {
   try {
     const res = await fetch(`/api/guild/${guildId}`);
     if (res.ok) {
-      const guildData = await res.json();
-      if (overviewMembers) overviewMembers.textContent = guildData.members ?? '--';
-      if (overviewBoosts) overviewBoosts.textContent = guildData.boosts ?? '0';
+      const data = await res.json();
+      if (overviewMembers) overviewMembers.textContent = data.members ?? '0';
+      if (overviewBoosts) overviewBoosts.textContent = data.boosts ?? '0';
     } else {
       if (overviewMembers) overviewMembers.textContent = 'N/A';
       if (overviewBoosts) overviewBoosts.textContent = 'N/A';
     }
   } catch (err) {
-    console.error('Fehler beim Laden der Serverdetails:', err);
     if (overviewMembers) overviewMembers.textContent = 'N/A';
     if (overviewBoosts) overviewBoosts.textContent = 'N/A';
   }
 }
 
-function closeManagement() {
-  manageOverlay?.classList.add('hidden');
-}
-
-function showModule(modName, btnElement) {
-  // Alle Modul-Seiten ausblenden
+// Module Tabs wechseln
+function switchTab(tabName) {
+  document.querySelectorAll('.tab-btn').forEach((btn) => btn.classList.remove('active'));
   document.querySelectorAll('.module-page').forEach((page) => page.classList.add('hidden'));
 
-  // Highlight von allen Menü-Buttons entfernen
-  document.querySelectorAll('.menu-item').forEach((btn) => btn.classList.remove('active'));
+  const activeBtn = document.querySelector(`[data-tab="${tabName}"]`);
+  const activePage = document.getElementById(`mod-${tabName}`);
 
-  // Ziel-Modul einblenden
-  const targetPage = document.getElementById(`mod-${modName}`);
-  if (targetPage) targetPage.classList.remove('hidden');
+  if (activeBtn) activeBtn.classList.add('active');
+  if (activePage) activePage.classList.remove('hidden');
+}
 
-  // Geklickten Button hervorheben
-  if (btnElement) {
-    btnElement.classList.add('active');
+// Willkommens-Modul Logik
+async function loadWelcomeSettings(guildId) {
+  try {
+    const res = await fetch(`/api/guild/${guildId}/welcome`);
+    if (res.ok) {
+      const data = await res.json();
+      const txt = document.getElementById('welcome-text');
+      const ch = document.getElementById('welcome-channel');
+      if (txt) txt.value = data.text || '';
+      if (ch) ch.value = data.channelId || '';
+    }
+  } catch (err) {
+    console.error('Fehler beim Laden der Willkommen-Settings:', err);
   }
 }
 
-loadDashboard();
+async function saveWelcomeSettings() {
+  if (!activeGuildId) return;
+
+  const text = document.getElementById('welcome-text').value;
+  const channelId = document.getElementById('welcome-channel').value;
+  const statusEl = document.getElementById('welcome-status');
+
+  try {
+    const res = await fetch(`/api/guild/${activeGuildId}/welcome`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, channelId })
+    });
+
+    if (res.ok && statusEl) {
+      statusEl.classList.remove('hidden');
+      setTimeout(() => statusEl.classList.add('hidden'), 3000);
+    }
+  } catch (err) {
+    console.error('Fehler beim Speichern:', err);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadDashboard);
