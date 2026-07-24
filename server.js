@@ -254,6 +254,59 @@ app.get('/api/guilds', requireAuth, async (req, res) => {
 });
 
 // ============================================================
+// GUILD OWNER
+// ============================================================
+async function fetchGuildOwner(ownerId) {
+  if (!ownerId) return null;
+  try {
+    const res = await fetch(`${DISCORD_API}/users/${ownerId}`, {
+      headers: { Authorization: `Bot ${BOT_TOKEN}` }
+    });
+    if (!res.ok) return null;
+    const user = await res.json();
+    return {
+      id: user.id,
+      username: user.global_name || user.username,
+      avatar: user.avatar
+    };
+  } catch (err) {
+    console.error('Fehler beim Laden des Server-Owners:', err);
+    return null;
+  }
+}
+
+// ============================================================
+// BOT-ANZAHL (zählt Mitglieder mit user.bot === true)
+// ============================================================
+async function countGuildBots(guildId) {
+  let count = 0;
+  let after = '0';
+  const MAX_PAGES = 10; // Sicherheitslimit, deckt bis zu 10.000 Mitglieder ab
+
+  try {
+    for (let page = 0; page < MAX_PAGES; page++) {
+      const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members?limit=1000&after=${after}`, {
+        headers: { Authorization: `Bot ${BOT_TOKEN}` }
+      });
+      if (!res.ok) {
+        // z.B. wenn das "Server Members Intent" im Dev-Portal nicht aktiviert ist
+        if (page === 0) return null;
+        break;
+      }
+      const members = await res.json();
+      count += members.filter(m => m.user?.bot).length;
+      if (members.length < 1000) break;
+      after = members[members.length - 1].user.id;
+    }
+  } catch (err) {
+    console.error('Fehler beim Zählen der Bots:', err);
+    return null;
+  }
+
+  return count;
+}
+
+// ============================================================
 // API: GUILD DETAILS
 // ============================================================
 app.get('/api/guild/:guildId', requireAuth, async (req, res) => {
@@ -263,9 +316,17 @@ app.get('/api/guild/:guildId', requireAuth, async (req, res) => {
     });
     if (!guildRes.ok) return res.status(guildRes.status).json({ error: 'guild_not_found' });
     const guildData = await guildRes.json();
+
+    const [owner, botCount] = await Promise.all([
+      fetchGuildOwner(guildData.owner_id),
+      countGuildBots(req.params.guildId)
+    ]);
+
     res.json({
       members: guildData.approximate_member_count ?? 0,
-      boosts: guildData.premium_subscription_count ?? 0
+      boosts: guildData.premium_subscription_count ?? 0,
+      botCount,
+      owner
     });
   } catch (err) {
     console.error('API /guild/:id Fehler:', err);
