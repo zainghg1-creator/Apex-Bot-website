@@ -65,8 +65,7 @@ async function connectToDatabase() {
       serverSelectionTimeoutMS: 15000,
       socketTimeoutMS: 60000,
       tls: true,
-      retryWrites: true,
-      w: majority
+      retryWrites: true
     }).then(m => m);
   }
   cachedConnection.conn = await cachedConnection.promise;
