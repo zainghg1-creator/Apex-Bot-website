@@ -159,7 +159,6 @@
       font-size: 0.95rem;
     }
 
-    /* Guild Cards Grid — mehr Platz für Servernamen */
     .guild-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -405,7 +404,7 @@
       display: flex;
       flex-direction: column;
       gap: 20px;
-      max-width: 100%; /* volle Breite */
+      max-width: 100%;
     }
 
     .form-group {
@@ -519,7 +518,6 @@
     .sidebar-nav::-webkit-scrollbar { width: 5px; }
     .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
 
-    /* Sub tabs */
     .subtabs {
       display: flex;
       gap: 8px;
@@ -542,7 +540,6 @@
     .subtab-btn.active { color: var(--text-primary); border-bottom-color: #ffffff; }
     .subpage.hidden { display: none; }
 
-    /* Color picker row */
     .color-row { display: flex; align-items: center; gap: 12px; }
     .color-row input[type="color"] {
       width: 44px; height: 38px; padding: 0; border: 1px solid var(--border-subtle);
@@ -550,7 +547,6 @@
     }
     .color-row input[type="text"] { max-width: 140px; font-family: 'JetBrains Mono', monospace; }
 
-    /* Toggle switch */
     .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     .switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
     .switch input { opacity: 0; width: 0; height: 0; }
@@ -565,7 +561,6 @@
     .switch input:checked + .switch-slider { background: #ffffff; }
     .switch input:checked + .switch-slider::before { background: #000000; transform: translateX(20px); }
 
-    /* Image upload */
     .image-upload {
       display: flex; align-items: center; gap: 16px;
     }
@@ -575,7 +570,6 @@
     }
     .upload-btn-wrap input[type="file"] { display: none; }
 
-    /* Role / multi-select chips */
     .chip-select {
       display: flex; flex-wrap: wrap; gap: 8px;
       background: var(--bg-base); border: 1px solid var(--border-subtle);
@@ -613,7 +607,6 @@
     }
     .chip-empty { color: var(--text-dim); font-size: 0.85rem; padding: 6px 4px; }
 
-    /* Ticket category rows */
     .option-row {
       display: flex; gap: 10px; align-items: center;
       background: var(--bg-base); border: 1px solid var(--border-subtle);
@@ -634,7 +627,6 @@
     }
     .add-option-btn:hover { color: var(--text-primary); border-color: var(--border-active); }
 
-    /* Embed live preview */
     .embed-preview-wrap { max-width: 100%; }
     .discord-embed {
       background: #2b2d31; border-left: 4px solid #ffffff; border-radius: 6px;
@@ -654,14 +646,12 @@
     }
     .discord-embed-footer img { width: 18px; height: 18px; border-radius: 50%; }
 
-    /* Placeholder / coming-soon module cards */
     .soon-badge {
       display: inline-block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em;
       text-transform: uppercase; color: var(--text-dim); background: rgba(255,255,255,0.06);
       border: 1px solid var(--border-subtle); padding: 3px 9px; border-radius: 20px; margin-left: 10px;
     }
 
-    /* Toast */
     #toast-container {
       position: fixed; bottom: 24px; right: 24px; z-index: 999;
       display: flex; flex-direction: column; gap: 10px;
@@ -1017,101 +1007,119 @@
       </div>
 
       <!-- ========================================================= -->
-      <!-- TICKET SYSTEM – BREIT & EINSPALTIG                       -->
+      <!-- TICKET SYSTEM – IM STIL VON TICKETY, ABER EIGENSTÄNDIG   -->
       <!-- ========================================================= -->
       <div id="mod-tickets" class="module-page hidden">
         <h2>🎫 Ticket System</h2>
-        <p>Erstelle ein Dropdown-Panel, über das Mitglieder Tickets öffnen können.</p>
+        <p>Konfiguriere dein Ticket-Panel – von der Optik bis zur Logik.</p>
 
         <div class="card form-card" style="max-width:100%;">
-          <!-- ALLE EINSTELLUNGEN UNTEREINANDER, VOLLE BREITE -->
 
-          <!-- NEUE FELDER (oben) -->
+          <!-- ====== ALLGEMEIN ====== -->
           <div style="border-bottom:1px solid var(--border-subtle); padding-bottom:16px; margin-bottom:8px;">
-            <h3 style="font-size:0.85rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Panel Einstellungen</h3>
+            <h3 style="font-size:0.85rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Allgemein</h3>
           </div>
 
           <div class="form-group">
             <div class="switch-row">
-              <label style="margin:0;">Panel aktiv</label>
+              <label style="margin:0;">Ticket-System aktivieren</label>
               <label class="switch"><input type="checkbox" id="ticket-panel-enabled" checked><span class="switch-slider"></span></label>
             </div>
           </div>
 
           <div class="form-group">
-            <label for="ticket-panel-name">Panel-Name</label>
-            <input type="text" id="ticket-panel-name" placeholder="Leitungs Ticket" value="Leitungs Ticket">
+            <label for="ticket-panel-name">Panel-Bezeichnung</label>
+            <input type="text" id="ticket-panel-name" placeholder="Support" value="Support">
           </div>
 
           <div class="form-group">
-            <label for="ticket-panel-channel">Kanal für das Ticket-Panel</label>
+            <label for="ticket-panel-channel">Ausgabekanal für das Panel</label>
             <select id="ticket-panel-channel"></select>
           </div>
 
-          <div class="form-group">
-            <label>Support-Rollen (wer Tickets sehen/verwalten darf)</label>
-            <div id="ticket-support-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span></div>
+          <!-- ====== BEREchtIGUNGEN ====== -->
+          <div style="border-bottom:1px solid var(--border-subtle); padding-bottom:16px; margin:16px 0 8px;">
+            <h3 style="font-size:0.85rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Berechtigungen</h3>
           </div>
 
           <div class="form-group">
-            <label for="ticket-location-category">Kategorie für Tickets</label>
+            <label>Support-Team (Rollen mit Zugriff)</label>
+            <div id="ticket-support-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span></div>
+          </div>
+
+          <!-- ====== KATEGORIEN & THREADS ====== -->
+          <div style="border-bottom:1px solid var(--border-subtle); padding-bottom:16px; margin:16px 0 8px;">
+            <h3 style="font-size:0.85rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Kategorien & Kanäle</h3>
+          </div>
+
+          <div class="form-group">
+            <label for="ticket-location-category">Haupt-Kategorie für Tickets</label>
             <select id="ticket-location-category"></select>
           </div>
 
           <div class="form-group">
-            <label for="ticket-overflow-categories">Überlauf-Kategorien (optional)</label>
+            <label for="ticket-overflow-categories">Ausweich-Kategorien (optional)</label>
             <select id="ticket-overflow-categories" multiple style="height:auto; min-height:80px;"></select>
-            <small>Halte Strg (Cmd) gedrückt, um mehrere auszuwählen.</small>
+            <small>Mehrfachauswahl mit Strg (Cmd) möglich.</small>
           </div>
 
           <div class="form-group">
-            <label for="ticket-thread-mode">Thread-Modus</label>
+            <label for="ticket-thread-mode">Unterhaltungsmodus</label>
             <select id="ticket-thread-mode">
-              <option value="none">Kein Thread</option>
-              <option value="thread">Thread pro Ticket</option>
+              <option value="none">Keine Threads</option>
+              <option value="thread">Öffentliche Threads</option>
               <option value="private">Private Threads</option>
             </select>
           </div>
 
+          <!-- ====== TRANSCRIPTE ====== -->
+          <div style="border-bottom:1px solid var(--border-subtle); padding-bottom:16px; margin:16px 0 8px;">
+            <h3 style="font-size:0.85rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Transkripte</h3>
+          </div>
+
           <div class="form-group">
-            <label style="font-weight:700;">Transcript-Einstellungen</label>
             <div class="switch-row">
-              <label style="margin:0;">Transcripts speichern</label>
+              <label style="margin:0;">Transkripte automatisch speichern</label>
               <label class="switch"><input type="checkbox" id="ticket-save-transcripts"><span class="switch-slider"></span></label>
             </div>
             <div class="switch-row">
-              <label style="margin:0;">Bilder in Transcripts speichern</label>
+              <label style="margin:0;">Bilder in Transkripte einbetten</label>
               <label class="switch"><input type="checkbox" id="ticket-save-images"><span class="switch-slider"></span></label>
             </div>
             <div class="switch-row">
-              <label style="margin:0;">Private Transcripts</label>
+              <label style="margin:0;">Transkripte nur für Team sichtbar</label>
               <label class="switch"><input type="checkbox" id="ticket-private-transcripts"><span class="switch-slider"></span></label>
             </div>
           </div>
 
+          <!-- ====== KANALNAMEN ====== -->
+          <div style="border-bottom:1px solid var(--border-subtle); padding-bottom:16px; margin:16px 0 8px;">
+            <h3 style="font-size:0.85rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Kanalbenennung</h3>
+          </div>
+
           <div class="form-group">
-            <label for="ticket-channel-name-template">Kanalnamen-Vorlage</label>
+            <label for="ticket-channel-name-template">Vorlage für Ticket-Kanäle</label>
             <input type="text" id="ticket-channel-name-template" placeholder="{panel.name}-{ticket.creator.username}" value="{panel.name}-{ticket.creator.username}">
             <small>Platzhalter: <code>{panel.name}</code>, <code>{ticket.creator.username}</code>, <code>{ticket.id}</code></small>
           </div>
 
-          <!-- ALTE FELDER (Embed) -->
+          <!-- ====== EMBED & NACHRICHT ====== -->
           <div style="border-bottom:1px solid var(--border-subtle); padding-bottom:16px; margin:16px 0 8px;">
-            <h3 style="font-size:0.85rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Embed & Nachrichten</h3>
+            <h3 style="font-size:0.85rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Panel-Design & Nachricht</h3>
           </div>
 
           <div class="form-group">
-            <label for="ticket-panel-title">Panel Embed-Titel</label>
-            <input type="text" id="ticket-panel-title" placeholder="Tickets" oninput="updateEmbedPreview('ticket')">
+            <label for="ticket-panel-title">Titel des Panels</label>
+            <input type="text" id="ticket-panel-title" placeholder="Support Center" oninput="updateEmbedPreview('ticket')">
           </div>
 
           <div class="form-group">
-            <label for="ticket-panel-desc">Panel Embed-Beschreibung</label>
-            <textarea id="ticket-panel-desc" rows="3" placeholder="Wähle unten eine Kategorie aus, um ein Ticket zu eröffnen." oninput="updateEmbedPreview('ticket')"></textarea>
+            <label for="ticket-panel-desc">Beschreibungstext</label>
+            <textarea id="ticket-panel-desc" rows="3" placeholder="Wähle eine Kategorie, um ein Ticket zu öffnen." oninput="updateEmbedPreview('ticket')"></textarea>
           </div>
 
           <div class="form-group">
-            <label>Panel Embed-Bild</label>
+            <label>Panel-Bild (optional)</label>
             <div class="image-upload">
               <img id="ticket-image-preview" class="image-preview" src="" alt="">
               <div class="upload-btn-wrap">
@@ -1123,7 +1131,7 @@
           </div>
 
           <div class="form-group">
-            <label>Embed-Farbe</label>
+            <label>Akzentfarbe (Embed)</label>
             <div class="color-row">
               <input type="color" id="ticket-color" value="#ffffff" oninput="syncColor('ticket')">
               <input type="text" id="ticket-color-hex" value="#ffffff" oninput="syncColorHex('ticket')">
@@ -1131,25 +1139,26 @@
           </div>
 
           <div class="form-group">
-            <label for="ticket-create-msg">Nachricht bei Ticket-Erstellung</label>
-            <textarea id="ticket-create-msg" rows="3" placeholder="Hallo {user}, ein Teammitglied kümmert sich gleich um dein Anliegen."></textarea>
-            <small>Wird als erste Nachricht im neu erstellten Ticket-Kanal gepostet.</small>
+            <label for="ticket-create-msg">Begrüßungsnachricht im Ticket</label>
+            <textarea id="ticket-create-msg" rows="3" placeholder="Hallo {user}, wir kümmern uns um dein Anliegen."></textarea>
+            <small>Wird automatisch im neuen Ticket-Kanal gesendet.</small>
           </div>
 
+          <!-- ====== SPEICHERN ====== -->
           <div class="form-action">
-            <button class="btn btn-primary" onclick="saveModuleSettings('tickets')">Einstellungen speichern</button>
+            <button class="btn btn-primary" onclick="saveModuleSettings('tickets')">Alle Einstellungen speichern</button>
             <span id="ticket-save-status" class="hidden status-success"></span>
           </div>
         </div>
 
-        <!-- VORSCHAU & KATEGORIEN (volle Breite, unter den Einstellungen) -->
+        <!-- ====== VORSCHAU & KATEGORIEN ====== -->
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:28px; margin-top:28px;">
           <div class="embed-preview-wrap">
             <label style="font-size:0.85rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:10px;">Live-Vorschau</label>
             <div class="discord-embed" id="ticket-preview" style="border-left-color:#ffffff;">
               <div class="discord-embed-body">
                 <div class="discord-embed-title" id="ticket-preview-title">Support Center</div>
-                <div class="discord-embed-desc" id="ticket-preview-desc">Wähle unten eine Kategorie aus, um ein Ticket zu eröffnen.</div>
+                <div class="discord-embed-desc" id="ticket-preview-desc">Wähle eine Kategorie, um ein Ticket zu öffnen.</div>
                 <img id="ticket-preview-image" class="discord-embed-image hidden" src="">
                 <div class="discord-embed-footer">
                   <img src="apex_logo.png">
@@ -1160,9 +1169,9 @@
           </div>
 
           <div class="form-group">
-            <label style="font-weight:700;">Ticket-Kategorien (Dropdown-Optionen)</label>
+            <label style="font-weight:700;">Dropdown-Optionen (Kategorien)</label>
             <div id="ticket-options-list" style="display:flex; flex-direction:column; gap:10px;"></div>
-            <button type="button" class="add-option-btn" onclick="addTicketOption()">+ Kategorie hinzufügen</button>
+            <button type="button" class="add-option-btn" onclick="addTicketOption()">+ Option hinzufügen</button>
           </div>
         </div>
       </div>
