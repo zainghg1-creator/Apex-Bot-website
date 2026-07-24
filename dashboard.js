@@ -39,10 +39,9 @@ const DOM = {
 // ============================================================
 let state = {
   activeGuildId: null,
-  guildRoles: [],          // einmal geladen und gecacht
-  guildChannels: [],       // einmal geladen und gecacht
+  guildRoles: [],
+  guildChannels: [],
   ticketOptionCount: 0,
-  // Cache für Ticket-Config
   ticketConfigCache: null,
   ticketConfigCacheGuildId: null
 };
@@ -146,14 +145,12 @@ async function apiFetch(endpoint, options = {}) {
 async function getCachedTicketConfig(forceRefresh = false) {
   if (!state.activeGuildId) return null;
   
-  // Cache verwenden, wenn vorhanden und nicht veraltet
   if (!forceRefresh && 
       state.ticketConfigCache && 
       state.ticketConfigCacheGuildId === state.activeGuildId) {
     return state.ticketConfigCache;
   }
   
-  // Neu laden
   try {
     const config = await apiFetch(`/guild/${state.activeGuildId}/config`);
     state.ticketConfigCache = config.tickets || {};
@@ -165,7 +162,6 @@ async function getCachedTicketConfig(forceRefresh = false) {
   }
 }
 
-// Cache zurücksetzen (nach Speichern)
 function invalidateTicketCache() {
   state.ticketConfigCache = null;
   state.ticketConfigCacheGuildId = null;
@@ -246,7 +242,6 @@ async function openManagement(guildId, name, iconUrl) {
   DOM.manageOverlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
   
-  // Reset stats
   DOM.overviewMembers.textContent = '...';
   DOM.overviewBoosts.textContent = '...';
   DOM.overviewBots.textContent = '...';
@@ -258,22 +253,15 @@ async function openManagement(guildId, name, iconUrl) {
   
   DOM.overviewCreated.textContent = formatGuildCreatedDate(guildId);
   
-  // Rollen & Kanäle nur laden, wenn sie noch nicht gecacht sind
   if (state.guildRoles.length === 0 || state.guildChannels.length === 0) {
     await loadRolesAndChannels(guildId);
   } else {
-    // Bereits vorhanden – nur die Dropdowns aktualisieren
     renderAllSelects();
     renderCategorySelects();
   }
   
-  // Ticket-Config laden (cached)
-  await getCachedTicketConfig(true); // frisch laden beim ersten Öffnen
-  
-  // Übersichts-Statistiken laden
+  await getCachedTicketConfig(true);
   await loadGuildDetails(guildId);
-  
-  // Alle Moduleinstellungen laden (für die anderen Tabs)
   await loadAllModuleSettings(guildId);
 }
 
@@ -435,7 +423,6 @@ function getSelectedRoleIds(containerId) {
 // TABS & SUBTABS
 // ============================================================
 function switchTab(tabName) {
-  // Tabs
   document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
   document.querySelectorAll('.module-page').forEach(page => page.classList.add('hidden'));
   
@@ -445,7 +432,6 @@ function switchTab(tabName) {
   if (activeBtn) activeBtn.classList.add('active');
   if (activePage) activePage.classList.remove('hidden');
 
-  // Wenn Ticket-Tab, lade die Übersicht (nutzt Cache)
   if (tabName === 'tickets' && state.activeGuildId) {
     setTimeout(() => renderTicketOverview(), 50);
   }
@@ -525,7 +511,7 @@ function clearImage(prefix) {
 }
 
 // ============================================================
-// EMBED PREVIEW (debounced) – wird noch für Willkommen genutzt
+// EMBED PREVIEW
 // ============================================================
 const updateEmbedPreview = debounce((prefix) => {
   const titleEl = document.getElementById(`${prefix}-title`) || document.getElementById(`${prefix}-panel-title`);
@@ -561,7 +547,7 @@ const updateEmbedPreview = debounce((prefix) => {
 }, 200);
 
 // ============================================================
-// TICKET OPTIONS (Dropdown-Liste für das Modal – wird nicht mehr im Tab angezeigt, aber fürs Modal benötigt)
+// TICKET OPTIONS
 // ============================================================
 function addTicketOption(data = null) {
   state.ticketOptionCount++;
@@ -625,7 +611,6 @@ function applyWelcomeConfig(cfg) {
   const j = cfg.join || {};
   const l = cfg.leave || {};
   
-  // Join
   setChecked('join-enabled', j.enabled ?? true);
   setSelectValue('join-mode', j.mode || 'embed');
   setValue('join-title', j.title || '');
@@ -636,7 +621,6 @@ function applyWelcomeConfig(cfg) {
   setSelectValue('join-channel', j.channelId || '');
   renderRoleChips('join-roles', j.roles || []);
   
-  // Leave
   setChecked('leave-enabled', l.enabled ?? false);
   setSelectValue('leave-mode', l.mode || 'embed');
   setValue('leave-title', l.title || '');
@@ -650,11 +634,7 @@ function applyWelcomeConfig(cfg) {
   updateEmbedPreview('leave');
 }
 
-// ============================================================
-// ERWEITERTE TICKET-CONFIG (wird für die anderen Felder benötigt, auch wenn sie im Tab nicht mehr sichtbar sind)
-// ============================================================
 function applyTicketConfig(cfg) {
-  // Alte Felder – werden weiterhin geladen/gespeichert, falls sie woanders gebraucht werden
   setSelectValue('ticket-panel-channel', cfg.panelChannelId || '');
   setValue('ticket-panel-title', cfg.title || '');
   setValue('ticket-panel-desc', cfg.description || '');
@@ -662,13 +642,11 @@ function applyTicketConfig(cfg) {
   setValue('ticket-create-msg', cfg.creationMessage || '');
   setImage('ticket', cfg.image);
 
-  // Ticket-Optionen (Dropdown-Kategorien) – nur für das Modal
   document.getElementById('ticket-options-list').innerHTML = '';
   state.ticketOptionCount = 0;
   const options = cfg.options?.length ? cfg.options : [{ label: 'Allgemeiner Support', emoji: '🎫', categoryId: '' }];
   options.forEach(opt => addTicketOption(opt));
 
-  // NEUE erweiterte Felder (werden gespeichert, auch wenn nicht im Tab sichtbar)
   setChecked('ticket-panel-enabled', cfg.enabled ?? true);
   setValue('ticket-panel-name', cfg.panelName || '');
   renderRoleChips('ticket-support-roles', cfg.supportRoles || []);
@@ -683,9 +661,6 @@ function applyTicketConfig(cfg) {
   updateEmbedPreview('ticket');
 }
 
-// ============================================================
-// HELPER FÜR MEHRFACHAUSWAHL
-// ============================================================
 function getSelectedOptions(selectId) {
   const el = document.getElementById(selectId);
   if (!el) return [];
@@ -700,9 +675,6 @@ function setSelectMultiple(selectId, values) {
   });
 }
 
-// ============================================================
-// WEITERE KONFIG-APPLIER
-// ============================================================
 function applyTeamlisteConfig(cfg) {
   setSelectValue('teamliste-channel', cfg.channelId || '');
   renderRoleChips('teamliste-roles', cfg.roles || []);
@@ -720,7 +692,6 @@ function applySimpleConfig(prefix, cfg) {
   if (el) setSelectValue(el.id, channelId);
 }
 
-// Helper
 function setValue(id, val) {
   const el = document.getElementById(id);
   if (el) el.value = val;
@@ -753,7 +724,7 @@ function setImage(prefix, url) {
 }
 
 // ============================================================
-// SAVE SETTINGS (inkl. erweiterter Tickets)
+// SAVE SETTINGS
 // ============================================================
 async function saveModuleSettings(moduleName) {
   const saveStatus = document.getElementById(`${moduleName}-save-status`);
@@ -802,7 +773,6 @@ async function saveModuleSettings(moduleName) {
           image: document.getElementById('ticket-image-input')?.dataset.value || '',
           creationMessage: document.getElementById('ticket-create-msg').value,
           options: collectTicketOptions().filter(opt => opt.label.trim()),
-          // NEUE Felder:
           enabled: document.getElementById('ticket-panel-enabled').checked,
           panelName: document.getElementById('ticket-panel-name').value,
           supportRoles: getSelectedRoleIds('ticket-support-roles'),
@@ -814,7 +784,6 @@ async function saveModuleSettings(moduleName) {
           privateTranscripts: document.getElementById('ticket-private-transcripts').checked,
           channelNameTemplate: document.getElementById('ticket-channel-name-template').value
         };
-        // Cache ungültig machen, da sich die Config geändert hat
         invalidateTicketCache();
         break;
         
@@ -882,17 +851,32 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ============================================================
-// NEUE FUNKTIONEN FÜR DIE TICKET-ÜBERSICHT (Kartenansicht + Bearbeitungsansicht) – optimiert mit Cache
+// TICKET ÜBERSICHT & BEARBEITUNGSANSICHT MIT TABS
 // ============================================================
 
-// ------ Globale Referenzen für die Ticket-Übersicht ------
 const ticketGrid = document.getElementById('ticket-overview-grid');
 const editContainer = document.getElementById('ticket-edit-container');
 const editContent = document.getElementById('ticket-edit-content');
 let editingIndex = null;
 let isEditViewOpen = false;
+let buttonCounter = 0;
 
-// ------ Hilfsfunktion: Kategorien für Dropdowns füllen (nutzt state.guildChannels) ------
+// ------ Tab-Navigation für die Bearbeitungsansicht ------
+function switchEditTab(tabName) {
+  // Alle Tab-Buttons deaktivieren
+  document.querySelectorAll('.edit-tab-btn').forEach(btn => btn.classList.remove('active'));
+  // Alle Tab-Inhalte ausblenden
+  document.querySelectorAll('.edit-tab-content').forEach(el => el.classList.add('hidden'));
+  
+  // Aktiven Button und Inhalt aktivieren
+  const activeBtn = document.querySelector(`.edit-tab-btn[data-edit-tab="${tabName}"]`);
+  const activeContent = document.getElementById(`edit-tab-${tabName}`);
+  
+  if (activeBtn) activeBtn.classList.add('active');
+  if (activeContent) activeContent.classList.remove('hidden');
+}
+
+// ------ Hilfsfunktionen für die Bearbeitungsansicht ------
 function populateCategorySelects() {
   const ids = ['edit-ticket-category', 'edit-ticket-overflow'];
   ids.forEach(id => {
@@ -905,7 +889,6 @@ function populateCategorySelects() {
   });
 }
 
-// ------ Hilfsfunktion: Rollen-Chips in der Bearbeitungsansicht rendern ------
 function renderEditRoleChips(containerId, selectedIds = [], singleSelect = false) {
   const el = document.getElementById(containerId);
   if (!el) return;
@@ -927,7 +910,6 @@ function renderEditRoleChips(containerId, selectedIds = [], singleSelect = false
     .join('');
 }
 
-// ------ Toggle für Rollen-Chips in der Bearbeitungsansicht ------
 window.toggleEditRoleChip = function(containerId, roleId, singleSelect) {
   const el = document.getElementById(containerId);
   const chip = el.querySelector(`[data-role-id="${roleId}"]`);
@@ -940,16 +922,12 @@ window.toggleEditRoleChip = function(containerId, roleId, singleSelect) {
   }
 };
 
-// ------ Werte aus den Chips sammeln ------
 function getEditSelectedRoles(containerId) {
   const el = document.getElementById(containerId);
   if (!el) return [];
   return Array.from(el.querySelectorAll('.role-chip.selected'))
     .map(c => c.dataset.roleId);
 }
-
-// ------ Buttons (für Panel) ------
-let buttonCounter = 0;
 
 window.addButtonRow = function(data = null) {
   const container = document.getElementById('edit-button-list');
@@ -978,7 +956,7 @@ function collectButtons() {
   }));
 }
 
-// ------ Übersicht rendern (Karten) – nutzt gecachte Config ------
+// ------ Übersicht rendern ------
 async function renderTicketOverview() {
   if (!ticketGrid) return;
   if (!state.activeGuildId) {
@@ -986,11 +964,9 @@ async function renderTicketOverview() {
     return;
   }
 
-  // Ladezustand anzeigen
   ticketGrid.innerHTML = `<div class="state-box" style="grid-column:1/-1;"><span class="loading-spinner"></span> Lade Ticket-Kategorien...</div>`;
 
   try {
-    // Config aus dem Cache holen (oder neu laden, falls nicht vorhanden)
     const tickets = await getCachedTicketConfig();
     if (!tickets) {
       ticketGrid.innerHTML = `<div class="state-box error" style="grid-column:1/-1;">Fehler beim Laden der Konfiguration.</div>`;
@@ -1046,29 +1022,25 @@ async function renderTicketOverview() {
   }
 }
 
-// ------ Neues Ticket hinzufügen ------
+// ------ Neues Ticket / Bearbeiten ------
 window.openAddTicket = function() {
   editingIndex = null;
   showEditView(null);
 };
 
-// ------ Vorhandenes Ticket bearbeiten ------
 window.openEditView = function(index) {
   editingIndex = index;
   showEditView(index);
 };
 
-// ------ Bearbeitungsansicht anzeigen und befüllen (mit Lade-Indikator) ------
+// ------ Bearbeitungsansicht mit Tabs ------
 async function showEditView(index) {
-  // Übersicht ausblenden, Bearbeitungsansicht einblenden
   document.getElementById('ticket-overview-container').classList.add('hidden');
   editContainer.classList.remove('hidden');
   isEditViewOpen = true;
 
-  // Ladezustand anzeigen
   editContent.innerHTML = `<div style="text-align:center;padding:3rem;"><span class="loading-spinner"></span> Lade Ticket-Einstellungen...</div>`;
 
-  // Config aus dem Cache holen
   const tickets = await getCachedTicketConfig();
   if (!tickets) {
     editContent.innerHTML = `<div class="state-box error">Fehler beim Laden der Konfiguration.</div>`;
@@ -1080,7 +1052,6 @@ async function showEditView(index) {
   if (index !== null && options[index]) {
     data = options[index];
   } else {
-    // neues Ticket – Standardwerte
     data = {
       enabled: true,
       panelName: 'Neues Ticket',
@@ -1101,122 +1072,154 @@ async function showEditView(index) {
     };
   }
 
-  // HTML für die Bearbeitungsansicht generieren
+  // HTML mit Tab-Navigation
   let html = `
     <div class="card form-card" style="max-width:100%;">
       <h3 style="font-size:1rem; font-weight:700; margin-bottom:0.5rem;">${index !== null ? 'Ticket bearbeiten' : 'Neues Ticket hinzufügen'}</h3>
 
-      <!-- Panel aktiv -->
-      <div class="form-group">
-        <div class="switch-row">
-          <label style="margin:0;">Panel aktiv</label>
-          <label class="switch"><input type="checkbox" id="edit-panel-enabled" ${data.enabled ? 'checked' : ''}><span class="switch-slider"></span></label>
+      <!-- Tab Navigation -->
+      <div style="display:flex; gap:4px; border-bottom:1px solid var(--border-subtle); margin-bottom:1.5rem; flex-wrap:wrap;">
+        <button class="edit-tab-btn active" data-edit-tab="general" onclick="switchEditTab('general')" style="background:transparent;border:none;color:var(--text-muted);padding:10px 16px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.85rem;">Allgemein</button>
+        <button class="edit-tab-btn" data-edit-tab="embed" onclick="switchEditTab('embed')" style="background:transparent;border:none;color:var(--text-muted);padding:10px 16px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.85rem;">Embed</button>
+        <button class="edit-tab-btn" data-edit-tab="messages" onclick="switchEditTab('messages')" style="background:transparent;border:none;color:var(--text-muted);padding:10px 16px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.85rem;">Nachrichten</button>
+        <button class="edit-tab-btn" data-edit-tab="roles" onclick="switchEditTab('roles')" style="background:transparent;border:none;color:var(--text-muted);padding:10px 16px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.85rem;">Berechtigungen</button>
+        <button class="edit-tab-btn" data-edit-tab="advanced" onclick="switchEditTab('advanced')" style="background:transparent;border:none;color:var(--text-muted);padding:10px 16px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.85rem;">Fortgeschritten</button>
+      </div>
+
+      <!-- Tab: Allgemein -->
+      <div id="edit-tab-general" class="edit-tab-content">
+        <div class="form-group">
+          <div class="switch-row">
+            <label style="margin:0;">Panel aktiv</label>
+            <label class="switch"><input type="checkbox" id="edit-panel-enabled" ${data.enabled ? 'checked' : ''}><span class="switch-slider"></span></label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="edit-panel-name">Panel-Name</label>
+          <input type="text" id="edit-panel-name" value="${escapeHtml(data.panelName || '')}" placeholder="Support">
+        </div>
+        <div class="form-group">
+          <label>Support-Rollen (Zugriff)</label>
+          <div id="edit-support-roles" class="chip-select"></div>
+        </div>
+        <div class="form-group">
+          <label for="edit-ticket-category">Kategorie für Tickets</label>
+          <select id="edit-ticket-category"></select>
         </div>
       </div>
 
-      <!-- Panel Name -->
-      <div class="form-group">
-        <label for="edit-panel-name">Panel-Name</label>
-        <input type="text" id="edit-panel-name" value="${escapeHtml(data.panelName || '')}" placeholder="Support">
-      </div>
-
-      <!-- Support Rollen -->
-      <div class="form-group">
-        <label>Support-Rollen (Zugriff)</label>
-        <div id="edit-support-roles" class="chip-select"></div>
-      </div>
-
-      <!-- Kategorie -->
-      <div class="form-group">
-        <label for="edit-ticket-category">Kategorie für Tickets</label>
-        <select id="edit-ticket-category"></select>
-      </div>
-
-      <!-- Overflow aktiv -->
-      <div class="form-group">
-        <div class="switch-row">
-          <label style="margin:0;">Überlauf-Kategorien aktivieren</label>
-          <label class="switch"><input type="checkbox" id="edit-overflow-enabled" ${data.overflowEnabled ? 'checked' : ''}><span class="switch-slider"></span></label>
+      <!-- Tab: Embed -->
+      <div id="edit-tab-embed" class="edit-tab-content hidden">
+        <div class="form-group">
+          <label for="edit-panel-title">Panel-Titel</label>
+          <input type="text" id="edit-panel-title" value="${escapeHtml(data.title || 'Support Center')}" placeholder="Support Center">
+        </div>
+        <div class="form-group">
+          <label for="edit-panel-desc">Panel-Beschreibung</label>
+          <textarea id="edit-panel-desc" rows="3" placeholder="Wähle eine Kategorie, um ein Ticket zu öffnen.">${escapeHtml(data.description || '')}</textarea>
+        </div>
+        <div class="form-group">
+          <label>Panel-Bild (optional)</label>
+          <div class="image-upload">
+            <img id="edit-image-preview" class="image-preview" src="${data.image || ''}" alt="">
+            <div class="upload-btn-wrap">
+              <label class="btn btn-secondary" for="edit-image-input">Bild hochladen</label>
+              <input type="file" id="edit-image-input" accept="image/*" onchange="handleEditImageUpload(this)">
+            </div>
+            <button class="btn btn-secondary" onclick="clearEditImage()" type="button">Entfernen</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Akzentfarbe (Embed)</label>
+          <div class="color-row">
+            <input type="color" id="edit-panel-color" value="${data.color || '#ffffff'}" oninput="document.getElementById('edit-panel-color-hex').value = this.value">
+            <input type="text" id="edit-panel-color-hex" value="${data.color || '#ffffff'}" oninput="document.getElementById('edit-panel-color').value = this.value">
+          </div>
         </div>
       </div>
 
-      <!-- Overflow Kategorien -->
-      <div class="form-group" id="edit-overflow-group" style="${data.overflowEnabled ? '' : 'display:none;'}">
-        <label for="edit-ticket-overflow">Überlauf-Kategorien (mehrfach)</label>
-        <select id="edit-ticket-overflow" multiple style="height:auto;min-height:80px;"></select>
-        <small>Halte Strg (Cmd) gedrückt, um mehrere auszuwählen.</small>
-      </div>
-
-      <!-- Threading Modus -->
-      <div class="form-group">
-        <label for="edit-thread-mode">Thread-Modus</label>
-        <select id="edit-thread-mode">
-          <option value="none" ${data.threadMode === 'none' ? 'selected' : ''}>Keine Threads</option>
-          <option value="thread" ${data.threadMode === 'thread' ? 'selected' : ''}>Öffentliche Threads</option>
-          <option value="private" ${data.threadMode === 'private' ? 'selected' : ''}>Private Threads</option>
-        </select>
-      </div>
-
-      <!-- Transkript Einstellungen -->
-      <div class="form-group">
-        <label style="font-weight:700;">Transkript-Einstellungen</label>
-        <div class="switch-row">
-          <label style="margin:0;">Transkripte speichern</label>
-          <label class="switch"><input type="checkbox" id="edit-save-transcripts" ${data.saveTranscripts ? 'checked' : ''}><span class="switch-slider"></span></label>
+      <!-- Tab: Nachrichten -->
+      <div id="edit-tab-messages" class="edit-tab-content hidden">
+        <div class="form-group">
+          <label for="edit-create-msg">Begrüßungsnachricht im Ticket</label>
+          <textarea id="edit-create-msg" rows="3" placeholder="Hallo {user}, wir kümmern uns um dein Anliegen.">${escapeHtml(data.creationMessage || '')}</textarea>
+          <small>Platzhalter: <code>{user}</code>, <code>{username}</code></small>
         </div>
-        <div class="switch-row">
-          <label style="margin:0;">Bilder in Transkripten</label>
-          <label class="switch"><input type="checkbox" id="edit-save-images" ${data.saveImages ? 'checked' : ''}><span class="switch-slider"></span></label>
-        </div>
-        <div class="switch-row">
-          <label style="margin:0;">Private Transkripte</label>
-          <label class="switch"><input type="checkbox" id="edit-private-transcripts" ${data.privateTranscripts ? 'checked' : ''}><span class="switch-slider"></span></label>
+        <div class="form-group">
+          <label for="edit-channel-template">Kanalnamen-Vorlage</label>
+          <input type="text" id="edit-channel-template" value="${escapeHtml(data.channelNameTemplate || '{panel.name}-{ticket.creator.username}')}" placeholder="{panel.name}-{ticket.creator.username}">
+          <small>Platzhalter: <code>{panel.name}</code>, <code>{ticket.creator.username}</code>, <code>{ticket.id}</code></small>
         </div>
       </div>
 
-      <!-- Kanalnamen Vorlage -->
-      <div class="form-group">
-        <label for="edit-channel-template">Kanalnamen-Vorlage</label>
-        <input type="text" id="edit-channel-template" value="${escapeHtml(data.channelNameTemplate || '{panel.name}-{ticket.creator.username}')}" placeholder="{panel.name}-{ticket.creator.username}">
-        <small>Platzhalter: <code>{panel.name}</code>, <code>{ticket.creator.username}</code>, <code>{ticket.id}</code></small>
-      </div>
-
-      <!-- Rollen, die öffnen dürfen -->
-      <div class="form-group">
-        <label>Rollen, die ein Ticket öffnen dürfen (optional)</label>
-        <div id="edit-allowed-roles" class="chip-select"></div>
-        <small>Leer lassen = jeder darf öffnen.</small>
-      </div>
-
-      <!-- Rollen, die nicht öffnen dürfen -->
-      <div class="form-group">
-        <label>Rollen, die kein Ticket öffnen dürfen (optional)</label>
-        <div id="edit-denied-roles" class="chip-select"></div>
-      </div>
-
-      <!-- Maximale Tickets pro User -->
-      <div class="form-group">
-        <label for="edit-max-tickets">Maximale Tickets pro Benutzer</label>
-        <input type="number" id="edit-max-tickets" value="${data.maxTickets || 1}" min="1" step="1">
-      </div>
-
-      <!-- Claim System -->
-      <div class="form-group">
-        <div class="switch-row">
-          <label style="margin:0;">Claim-System aktivieren</label>
-          <label class="switch"><input type="checkbox" id="edit-claim-enabled" ${data.claimEnabled ? 'checked' : ''}><span class="switch-slider"></span></label>
+      <!-- Tab: Berechtigungen -->
+      <div id="edit-tab-roles" class="edit-tab-content hidden">
+        <div class="form-group">
+          <label>Rollen, die ein Ticket öffnen dürfen (optional)</label>
+          <div id="edit-allowed-roles" class="chip-select"></div>
+          <small>Leer lassen = jeder darf öffnen.</small>
+        </div>
+        <div class="form-group">
+          <label>Rollen, die kein Ticket öffnen dürfen (optional)</label>
+          <div id="edit-denied-roles" class="chip-select"></div>
+        </div>
+        <div class="form-group">
+          <label for="edit-max-tickets">Maximale Tickets pro Benutzer</label>
+          <input type="number" id="edit-max-tickets" value="${data.maxTickets || 1}" min="1" step="1">
         </div>
       </div>
 
-      <!-- Buttons -->
-      <div class="form-group">
-        <label style="font-weight:700;">Buttons (für das Panel)</label>
-        <div id="edit-button-list"></div>
-        <button type="button" class="add-button-btn" onclick="window.addButtonRow()">+ Button hinzufügen</button>
+      <!-- Tab: Fortgeschritten -->
+      <div id="edit-tab-advanced" class="edit-tab-content hidden">
+        <div class="form-group">
+          <div class="switch-row">
+            <label style="margin:0;">Überlauf-Kategorien aktivieren</label>
+            <label class="switch"><input type="checkbox" id="edit-overflow-enabled" ${data.overflowEnabled ? 'checked' : ''}><span class="switch-slider"></span></label>
+          </div>
+        </div>
+        <div class="form-group" id="edit-overflow-group" style="${data.overflowEnabled ? '' : 'display:none;'}">
+          <label for="edit-ticket-overflow">Überlauf-Kategorien (mehrfach)</label>
+          <select id="edit-ticket-overflow" multiple style="height:auto;min-height:80px;"></select>
+          <small>Halte Strg (Cmd) gedrückt, um mehrere auszuwählen.</small>
+        </div>
+        <div class="form-group">
+          <label for="edit-thread-mode">Thread-Modus</label>
+          <select id="edit-thread-mode">
+            <option value="none" ${data.threadMode === 'none' ? 'selected' : ''}>Keine Threads</option>
+            <option value="thread" ${data.threadMode === 'thread' ? 'selected' : ''}>Öffentliche Threads</option>
+            <option value="private" ${data.threadMode === 'private' ? 'selected' : ''}>Private Threads</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label style="font-weight:700;">Transkript-Einstellungen</label>
+          <div class="switch-row">
+            <label style="margin:0;">Transkripte speichern</label>
+            <label class="switch"><input type="checkbox" id="edit-save-transcripts" ${data.saveTranscripts ? 'checked' : ''}><span class="switch-slider"></span></label>
+          </div>
+          <div class="switch-row">
+            <label style="margin:0;">Bilder in Transkripten</label>
+            <label class="switch"><input type="checkbox" id="edit-save-images" ${data.saveImages ? 'checked' : ''}><span class="switch-slider"></span></label>
+          </div>
+          <div class="switch-row">
+            <label style="margin:0;">Private Transkripte</label>
+            <label class="switch"><input type="checkbox" id="edit-private-transcripts" ${data.privateTranscripts ? 'checked' : ''}><span class="switch-slider"></span></label>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="switch-row">
+            <label style="margin:0;">Claim-System aktivieren</label>
+            <label class="switch"><input type="checkbox" id="edit-claim-enabled" ${data.claimEnabled ? 'checked' : ''}><span class="switch-slider"></span></label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label style="font-weight:700;">Buttons (für das Panel)</label>
+          <div id="edit-button-list"></div>
+          <button type="button" class="add-button-btn" onclick="window.addButtonRow()">+ Button hinzufügen</button>
+        </div>
       </div>
 
       <!-- Speichern -->
-      <div class="form-action">
+      <div class="form-action" style="margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid var(--border-subtle);">
         <button class="btn btn-primary" onclick="saveEditView()">Speichern</button>
         <button class="btn btn-secondary" onclick="closeEditView()">Abbrechen</button>
         <span id="edit-save-status" class="hidden status-success"></span>
@@ -1226,15 +1229,14 @@ async function showEditView(index) {
 
   editContent.innerHTML = html;
 
-  // Kategorien befüllen (nutzt state.guildChannels)
+  // Kategorien befüllen
   populateCategorySelects();
   // Rollen-Chips rendern
   renderEditRoleChips('edit-support-roles', data.supportRoles || []);
   renderEditRoleChips('edit-allowed-roles', data.allowedRoles || []);
   renderEditRoleChips('edit-denied-roles', data.deniedRoles || []);
-  // Ausgewählte Kategorie setzen
+  
   if (data.categoryId) document.getElementById('edit-ticket-category').value = data.categoryId;
-  // Mehrfachauswahl für Overflow setzen
   if (data.overflowCategories) {
     const overflowSelect = document.getElementById('edit-ticket-overflow');
     if (overflowSelect) {
@@ -1254,10 +1256,40 @@ async function showEditView(index) {
   if (data.buttons && data.buttons.length) {
     data.buttons.forEach(btn => window.addButtonRow(btn));
   } else {
-    // Standard-Button
     window.addButtonRow({ label: 'Ticket öffnen', emoji: '🎫', color: '#ffffff', action: 'open' });
   }
+
+  // Aktiven Tab setzen
+  switchEditTab('general');
 }
+
+// ------ Hilfsfunktionen für Bild-Upload in der Bearbeitungsansicht ------
+window.handleEditImageUpload = function(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) {
+    showToast('Bild ist zu groß (max. 5MB)', 'error');
+    input.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const preview = document.getElementById('edit-image-preview');
+    if (preview) preview.src = e.target.result;
+    input.dataset.value = e.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+
+window.clearEditImage = function() {
+  const input = document.getElementById('edit-image-input');
+  if (input) {
+    input.value = '';
+    input.dataset.value = '';
+  }
+  const preview = document.getElementById('edit-image-preview');
+  if (preview) preview.src = '';
+};
 
 // ------ Bearbeitungsansicht schließen ------
 window.closeEditView = function() {
@@ -1269,7 +1301,7 @@ window.closeEditView = function() {
   renderTicketOverview();
 };
 
-// ------ Speichern der Bearbeitung (mit Cache-Invalidierung) ------
+// ------ Speichern der Bearbeitung ------
 window.saveEditView = async function() {
   const saveStatus = document.getElementById('edit-save-status');
   if (saveStatus) {
@@ -1277,11 +1309,29 @@ window.saveEditView = async function() {
     saveStatus.textContent = '⏳ Speichern...';
   }
 
-  // Daten sammeln
+  // Daten aus allen Tabs sammeln
   const enabled = document.getElementById('edit-panel-enabled').checked;
   const panelName = document.getElementById('edit-panel-name').value.trim();
   const supportRoles = getEditSelectedRoles('edit-support-roles');
   const categoryId = document.getElementById('edit-ticket-category').value;
+  
+  // Embed
+  const title = document.getElementById('edit-panel-title').value.trim();
+  const description = document.getElementById('edit-panel-desc').value.trim();
+  const color = document.getElementById('edit-panel-color').value;
+  const imageInput = document.getElementById('edit-image-input');
+  const image = imageInput?.dataset.value || '';
+  
+  // Nachrichten
+  const creationMessage = document.getElementById('edit-create-msg').value.trim();
+  const channelNameTemplate = document.getElementById('edit-channel-template').value.trim() || '{panel.name}-{ticket.creator.username}';
+  
+  // Berechtigungen
+  const allowedRoles = getEditSelectedRoles('edit-allowed-roles');
+  const deniedRoles = getEditSelectedRoles('edit-denied-roles');
+  const maxTickets = parseInt(document.getElementById('edit-max-tickets').value) || 1;
+  
+  // Fortgeschritten
   const overflowEnabled = document.getElementById('edit-overflow-enabled').checked;
   const overflowSelect = document.getElementById('edit-ticket-overflow');
   const overflowCategories = overflowSelect ? Array.from(overflowSelect.selectedOptions).map(o => o.value) : [];
@@ -1289,10 +1339,6 @@ window.saveEditView = async function() {
   const saveTranscripts = document.getElementById('edit-save-transcripts').checked;
   const saveImages = document.getElementById('edit-save-images').checked;
   const privateTranscripts = document.getElementById('edit-private-transcripts').checked;
-  const channelNameTemplate = document.getElementById('edit-channel-template').value.trim() || '{panel.name}-{ticket.creator.username}';
-  const allowedRoles = getEditSelectedRoles('edit-allowed-roles');
-  const deniedRoles = getEditSelectedRoles('edit-denied-roles');
-  const maxTickets = parseInt(document.getElementById('edit-max-tickets').value) || 1;
   const claimEnabled = document.getElementById('edit-claim-enabled').checked;
   const buttons = collectButtons().filter(b => b.label.trim());
 
@@ -1303,7 +1349,6 @@ window.saveEditView = async function() {
   }
 
   try {
-    // Aktuelle Config laden (vom Server, um Konflikte zu vermeiden)
     const config = await apiFetch(`/guild/${state.activeGuildId}/config`);
     if (!config.tickets) config.tickets = {};
     if (!config.tickets.options) config.tickets.options = [];
@@ -1313,16 +1358,21 @@ window.saveEditView = async function() {
       panelName,
       supportRoles,
       categoryId,
+      title,
+      description,
+      color,
+      image,
+      creationMessage,
+      channelNameTemplate,
+      allowedRoles,
+      deniedRoles,
+      maxTickets,
       overflowEnabled,
       overflowCategories,
       threadMode,
       saveTranscripts,
       saveImages,
       privateTranscripts,
-      channelNameTemplate,
-      allowedRoles,
-      deniedRoles,
-      maxTickets,
       claimEnabled,
       buttons
     };
@@ -1338,9 +1388,7 @@ window.saveEditView = async function() {
       body: JSON.stringify(config.tickets)
     });
 
-    // Cache ungültig machen, damit die Änderungen sichtbar werden
     invalidateTicketCache();
-
     showToast(editingIndex !== null ? 'Ticket aktualisiert!' : 'Ticket hinzugefügt!', 'success');
     if (saveStatus) saveStatus.textContent = '✓ Gespeichert';
     closeEditView();
@@ -1350,7 +1398,7 @@ window.saveEditView = async function() {
   }
 };
 
-// ------ Ticket löschen (mit Cache-Invalidierung) ------
+// ------ Ticket löschen ------
 window.deleteTicketOption = async function(index) {
   if (!confirm('Möchtest du dieses Ticket wirklich löschen?')) return;
   try {
@@ -1369,7 +1417,7 @@ window.deleteTicketOption = async function(index) {
   }
 };
 
-// ------ Event Listener für Ticket-Tab (mit Cache) ------
+// ------ Event Listener für Ticket-Tab ------
 document.addEventListener('DOMContentLoaded', function() {
   const ticketTabBtn = document.querySelector('[data-tab="tickets"]');
   if (ticketTabBtn) {
@@ -1395,3 +1443,6 @@ document.addEventListener('DOMContentLoaded', function() {
 // INIT
 // ============================================================
 document.addEventListener('DOMContentLoaded', loadDashboard);
+
+// SwitchEditTab global verfügbar machen
+window.switchEditTab = switchEditTab;
