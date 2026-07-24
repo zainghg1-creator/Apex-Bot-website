@@ -322,7 +322,7 @@ function renderChannelSelect(selectId, filterType) {
 }
 
 function renderCategorySelects() {
-  const ids = ['ticket-location-category', 'ticket-overflow-categories'];
+  const ids = ['ticket-location-category', 'ticket-overflow-categories', 'ticket-modal-category'];
   ids.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -399,6 +399,11 @@ function switchTab(tabName) {
   
   if (activeBtn) activeBtn.classList.add('active');
   if (activePage) activePage.classList.remove('hidden');
+
+  // Wenn Ticket-Tab, lade die Übersicht
+  if (tabName === 'tickets' && state.activeGuildId) {
+    setTimeout(() => renderTicketOverview(), 50);
+  }
 }
 
 function switchSubtab(moduleName, subName) {
@@ -445,7 +450,6 @@ function handleImageUpload(input, prefix) {
   const file = input.files?.[0];
   if (!file) return;
   
-  // Validate file size (max 5MB)
   if (file.size > 5 * 1024 * 1024) {
     showToast('Bild ist zu groß (max. 5MB)', 'error');
     input.value = '';
@@ -476,7 +480,7 @@ function clearImage(prefix) {
 }
 
 // ============================================================
-// EMBED PREVIEW (debounced)
+// EMBED PREVIEW (debounced) – wird noch für Willkommen genutzt
 // ============================================================
 const updateEmbedPreview = debounce((prefix) => {
   const titleEl = document.getElementById(`${prefix}-title`) || document.getElementById(`${prefix}-panel-title`);
@@ -512,7 +516,7 @@ const updateEmbedPreview = debounce((prefix) => {
 }, 200);
 
 // ============================================================
-// TICKET OPTIONS
+// TICKET OPTIONS (Dropdown-Liste für das Modal – wird nicht mehr im Tab angezeigt, aber fürs Modal benötigt)
 // ============================================================
 function addTicketOption(data = null) {
   state.ticketOptionCount++;
@@ -602,10 +606,10 @@ function applyWelcomeConfig(cfg) {
 }
 
 // ============================================================
-// ERWEITERTE TICKET-CONFIG (alte + neue Felder)
+// ERWEITERTE TICKET-CONFIG (wird für die anderen Felder benötigt, auch wenn sie im Tab nicht mehr sichtbar sind)
 // ============================================================
 function applyTicketConfig(cfg) {
-  // Alte Felder
+  // Alte Felder – werden weiterhin geladen/gespeichert, falls sie woanders gebraucht werden
   setSelectValue('ticket-panel-channel', cfg.panelChannelId || '');
   setValue('ticket-panel-title', cfg.title || '');
   setValue('ticket-panel-desc', cfg.description || '');
@@ -613,13 +617,13 @@ function applyTicketConfig(cfg) {
   setValue('ticket-create-msg', cfg.creationMessage || '');
   setImage('ticket', cfg.image);
 
-  // Ticket-Optionen (Dropdown-Kategorien)
+  // Ticket-Optionen (Dropdown-Kategorien) – nur für das Modal
   document.getElementById('ticket-options-list').innerHTML = '';
   state.ticketOptionCount = 0;
   const options = cfg.options?.length ? cfg.options : [{ label: 'Allgemeiner Support', emoji: '🎫', categoryId: '' }];
   options.forEach(opt => addTicketOption(opt));
 
-  // NEUE erweiterte Felder
+  // NEUE erweiterte Felder (werden gespeichert, auch wenn nicht im Tab sichtbar)
   setChecked('ticket-panel-enabled', cfg.enabled ?? true);
   setValue('ticket-panel-name', cfg.panelName || '');
   renderRoleChips('ticket-support-roles', cfg.supportRoles || []);
@@ -827,6 +831,199 @@ document.addEventListener('keydown', (e) => {
       const moduleName = activeTab.dataset.tab;
       if (moduleName) saveModuleSettings(moduleName);
     }
+  }
+});
+
+// ============================================================
+// NEUE FUNKTIONEN FÜR DIE TICKET-ÜBERSICHT (Kartenansicht)
+// ============================================================
+
+/**
+ * Lädt die Ticket-Config und rendert die Übersicht.
+ * Wird automatisch aufgerufen, wenn der Ticket-Tab sichtbar wird.
+ */
+async function renderTicketOverview() {
+  const grid = document.getElementById('ticket-overview-grid');
+  if (!grid) return;
+
+  if (!state.activeGuildId) {
+    grid.innerHTML = `<div class="state-box" style="grid-column:1/-1;">Bitte wähle zuerst einen Server aus.</div>`;
+    return;
+  }
+
+  try {
+    const config = await apiFetch(`/guild/${state.activeGuildId}/config`);
+    const tickets = config.tickets || {};
+    const options = tickets.options || [];
+
+    if (options.length === 0) {
+      grid.innerHTML = `
+        <div class="guild-card add-card" onclick="openAddTicketModal()" style="cursor:pointer;">
+          <div style="font-size:3rem; line-height:1;">＋</div>
+          <div style="font-weight:700; font-size:1.1rem; margin-top:6px;">Neues Ticket hinzufügen</div>
+          <div style="color:var(--text-muted); font-size:0.85rem;">Klicke hier, um eine neue Kategorie zu erstellen.</div>
+        </div>
+      `;
+      return;
+    }
+
+    let html = '';
+    options.forEach((opt, index) => {
+      const emoji = opt.emoji || '🎫';
+      const label = opt.label || 'Unbenannt';
+      const categoryName = state.guildChannels.find(c => c.id === opt.categoryId)?.name || 'Keine Kategorie';
+
+      html += `
+        <div class="guild-card">
+          <div class="guild-info">
+            <div class="guild-icon">${escapeHtml(emoji)}</div>
+            <span class="guild-name">${escapeHtml(label)}</span>
+          </div>
+          <div class="guild-detail">
+            <span>📂 Kategorie: ${escapeHtml(categoryName)}</span>
+          </div>
+          <div class="guild-action">
+            <button class="btn btn-secondary" onclick="openEditTicketModal(${index})">Bearbeiten</button>
+            <button class="btn btn-danger" onclick="deleteTicketOption(${index})">Löschen</button>
+          </div>
+        </div>
+      `;
+    });
+
+    html += `
+      <div class="guild-card add-card" onclick="openAddTicketModal()" style="cursor:pointer;">
+        <div style="font-size:3rem; line-height:1;">＋</div>
+        <div style="font-weight:700; font-size:1.1rem; margin-top:6px;">Neues Ticket hinzufügen</div>
+        <div style="color:var(--text-muted); font-size:0.85rem;">Klicke hier, um eine weitere Kategorie zu erstellen.</div>
+      </div>
+    `;
+
+    grid.innerHTML = html;
+  } catch (err) {
+    grid.innerHTML = `<div class="state-box error" style="grid-column:1/-1;">Fehler beim Laden: ${err.message}</div>`;
+  }
+}
+
+// ------ Modal-Funktionen (global) ------
+let editingTicketIndex = null;
+
+window.openAddTicketModal = function() {
+  editingTicketIndex = null;
+  document.getElementById('ticket-modal-title').textContent = 'Neues Ticket hinzufügen';
+  document.getElementById('ticket-modal-label').value = '';
+  document.getElementById('ticket-modal-emoji').value = '🎫';
+  populateModalCategories();
+  document.getElementById('ticket-modal').classList.remove('hidden');
+  document.getElementById('ticket-modal-label').focus();
+};
+
+window.openEditTicketModal = async function(index) {
+  try {
+    const config = await apiFetch(`/guild/${state.activeGuildId}/config`);
+    const options = (config.tickets && config.tickets.options) || [];
+    if (!options[index]) return;
+    const opt = options[index];
+    editingTicketIndex = index;
+    document.getElementById('ticket-modal-title').textContent = 'Ticket bearbeiten';
+    document.getElementById('ticket-modal-label').value = opt.label || '';
+    document.getElementById('ticket-modal-emoji').value = opt.emoji || '🎫';
+    populateModalCategories();
+    if (opt.categoryId) document.getElementById('ticket-modal-category').value = opt.categoryId;
+    document.getElementById('ticket-modal').classList.remove('hidden');
+    document.getElementById('ticket-modal-label').focus();
+  } catch (err) {
+    showToast('Fehler beim Laden der Daten.', 'error');
+  }
+};
+
+window.closeTicketModal = function() {
+  document.getElementById('ticket-modal').classList.add('hidden');
+  editingTicketIndex = null;
+};
+
+window.saveTicketModal = async function() {
+  const label = document.getElementById('ticket-modal-label').value.trim();
+  const emoji = document.getElementById('ticket-modal-emoji').value.trim() || '🎫';
+  const categoryId = document.getElementById('ticket-modal-category').value;
+
+  if (!label) {
+    showToast('Bitte gib eine Bezeichnung ein.', 'error');
+    return;
+  }
+
+  try {
+    const config = await apiFetch(`/guild/${state.activeGuildId}/config`);
+    if (!config.tickets) config.tickets = {};
+    if (!config.tickets.options) config.tickets.options = [];
+
+    if (editingTicketIndex !== null) {
+      config.tickets.options[editingTicketIndex] = { label, emoji, categoryId };
+    } else {
+      config.tickets.options.push({ label, emoji, categoryId });
+    }
+
+    await apiFetch(`/guild/${state.activeGuildId}/config/tickets`, {
+      method: 'POST',
+      body: JSON.stringify(config.tickets)
+    });
+
+    showToast(editingTicketIndex !== null ? 'Ticket aktualisiert!' : 'Ticket hinzugefügt!', 'success');
+    closeTicketModal();
+    renderTicketOverview();
+  } catch (err) {
+    showToast(`Fehler: ${err.message}`, 'error');
+  }
+};
+
+window.deleteTicketOption = async function(index) {
+  if (!confirm('Möchtest du dieses Ticket wirklich löschen?')) return;
+
+  try {
+    const config = await apiFetch(`/guild/${state.activeGuildId}/config`);
+    if (!config.tickets || !config.tickets.options || !config.tickets.options[index]) return;
+    config.tickets.options.splice(index, 1);
+
+    await apiFetch(`/guild/${state.activeGuildId}/config/tickets`, {
+      method: 'POST',
+      body: JSON.stringify(config.tickets)
+    });
+
+    showToast('Ticket gelöscht.', 'success');
+    renderTicketOverview();
+  } catch (err) {
+    showToast(`Fehler beim Löschen: ${err.message}`, 'error');
+  }
+};
+
+function populateModalCategories() {
+  const select = document.getElementById('ticket-modal-category');
+  if (!select) return;
+  const categories = state.guildChannels.filter(c => c.type === 4);
+  select.innerHTML = categories.length
+    ? categories.map(c => `<option value="${c.id}">📁 ${escapeHtml(c.name)}</option>`).join('')
+    : `<option value="">Keine Kategorien gefunden</option>`;
+}
+
+// Automatisch rendern, wenn der Ticket-Tab sichtbar wird
+document.addEventListener('DOMContentLoaded', function() {
+  const ticketTabBtn = document.querySelector('[data-tab="tickets"]');
+  if (ticketTabBtn) {
+    ticketTabBtn.addEventListener('click', function() {
+      setTimeout(() => {
+        if (state.activeGuildId) renderTicketOverview();
+      }, 50);
+    });
+  }
+
+  const overlay = document.getElementById('manage-overlay');
+  if (overlay) {
+    const observer = new MutationObserver(() => {
+      if (!overlay.classList.contains('hidden')) {
+        const activeTab = document.querySelector('.tab-btn.active[data-tab="tickets"]');
+        if (activeTab && state.activeGuildId) renderTicketOverview();
+      }
+    });
+    observer.observe(overlay, { attributes: true, attributeFilter: ['class'] });
   }
 });
 
