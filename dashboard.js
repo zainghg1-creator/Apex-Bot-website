@@ -94,9 +94,6 @@ function debounce(fn, delay = 300) {
 // ============================================================
 // DISCORD SNOWFLAKE HELPERS
 // ============================================================
-// Discord-IDs (Snowflakes) codieren einen Zeitstempel. So lässt sich
-// das Erstellungsdatum eines Servers direkt aus seiner ID berechnen,
-// ganz ohne zusätzlichen API-Call.
 const DISCORD_EPOCH = 1420070400000n;
 
 function snowflakeToDate(id) {
@@ -295,6 +292,7 @@ async function loadRolesAndChannels(guildId) {
   DOM.overviewChannels.textContent = state.guildChannels.length;
   
   renderAllSelects();
+  renderCategorySelects(); // neue Kategorie-Dropdowns
 }
 
 function renderAllSelects() {
@@ -321,6 +319,20 @@ function renderChannelSelect(selectId, filterType) {
   el.innerHTML = relevant
     .map(c => `<option value="${c.id}"># ${escapeHtml(c.name)}</option>`)
     .join('');
+}
+
+function renderCategorySelects() {
+  const ids = ['ticket-location-category', 'ticket-overflow-categories'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const categories = state.guildChannels.filter(c => c.type === 4);
+    if (categories.length === 0) {
+      el.innerHTML = `<option value="">Keine Kategorien gefunden</option>`;
+      return;
+    }
+    el.innerHTML = categories.map(c => `<option value="${c.id}">📁 ${escapeHtml(c.name)}</option>`).join('');
+  });
 }
 
 function renderRoleChips(containerId, selectedIds = [], singleSelect = false) {
@@ -589,23 +601,59 @@ function applyWelcomeConfig(cfg) {
   updateEmbedPreview('leave');
 }
 
+// ============================================================
+// NEUE ERWEITERTE TICKET-CONFIG (ersetzt die alte)
+// ============================================================
 function applyTicketConfig(cfg) {
+  // Bestehende Felder
   setSelectValue('ticket-panel-channel', cfg.panelChannelId || '');
   setValue('ticket-panel-title', cfg.title || '');
   setValue('ticket-panel-desc', cfg.description || '');
   setColor('ticket', cfg.color || '#ffffff');
   setValue('ticket-create-msg', cfg.creationMessage || '');
   setImage('ticket', cfg.image);
-  
+
+  // Ticket-Optionen (Dropdown-Kategorien)
   document.getElementById('ticket-options-list').innerHTML = '';
   state.ticketOptionCount = 0;
-  
   const options = cfg.options?.length ? cfg.options : [{ label: 'Allgemeiner Support', emoji: '🎫', categoryId: '' }];
   options.forEach(opt => addTicketOption(opt));
-  
+
+  // NEUE erweiterte Felder
+  setChecked('ticket-panel-enabled', cfg.enabled ?? true);
+  setValue('ticket-panel-name', cfg.panelName || '');
+  renderRoleChips('ticket-support-roles', cfg.supportRoles || []);
+  setSelectValue('ticket-location-category', cfg.locationCategory || '');
+  setSelectMultiple('ticket-overflow-categories', cfg.overflowCategories || []);
+  setSelectValue('ticket-thread-mode', cfg.threadMode || 'none');
+  setChecked('ticket-save-transcripts', cfg.saveTranscripts ?? false);
+  setChecked('ticket-save-images', cfg.saveImages ?? false);
+  setChecked('ticket-private-transcripts', cfg.privateTranscripts ?? false);
+  setValue('ticket-channel-name-template', cfg.channelNameTemplate || '{panel.name}-{ticket.creator.username}');
+
   updateEmbedPreview('ticket');
 }
 
+// ============================================================
+// NEUE HELPER FÜR MEHRFACHAUSWAHL
+// ============================================================
+function getSelectedOptions(selectId) {
+  const el = document.getElementById(selectId);
+  if (!el) return [];
+  return Array.from(el.selectedOptions).map(opt => opt.value);
+}
+
+function setSelectMultiple(selectId, values) {
+  const el = document.getElementById(selectId);
+  if (!el) return;
+  Array.from(el.options).forEach(opt => {
+    opt.selected = values.includes(opt.value);
+  });
+}
+
+// ============================================================
+// WEITERE KONFIG-APPLIER
+// ============================================================
 function applyTeamlisteConfig(cfg) {
   setSelectValue('teamliste-channel', cfg.channelId || '');
   renderRoleChips('teamliste-roles', cfg.roles || []);
@@ -656,7 +704,7 @@ function setImage(prefix, url) {
 }
 
 // ============================================================
-// SAVE SETTINGS
+// SAVE SETTINGS (inkl. erweiterter Tickets)
 // ============================================================
 async function saveModuleSettings(moduleName) {
   const saveStatus = document.getElementById(`${moduleName}-save-status`);
@@ -704,7 +752,18 @@ async function saveModuleSettings(moduleName) {
           color: document.getElementById('ticket-color').value,
           image: document.getElementById('ticket-image-input')?.dataset.value || '',
           creationMessage: document.getElementById('ticket-create-msg').value,
-          options: collectTicketOptions().filter(opt => opt.label.trim())
+          options: collectTicketOptions().filter(opt => opt.label.trim()),
+          // NEUE Felder:
+          enabled: document.getElementById('ticket-panel-enabled').checked,
+          panelName: document.getElementById('ticket-panel-name').value,
+          supportRoles: getSelectedRoleIds('ticket-support-roles'),
+          locationCategory: document.getElementById('ticket-location-category').value,
+          overflowCategories: getSelectedOptions('ticket-overflow-categories'),
+          threadMode: document.getElementById('ticket-thread-mode').value,
+          saveTranscripts: document.getElementById('ticket-save-transcripts').checked,
+          saveImages: document.getElementById('ticket-save-images').checked,
+          privateTranscripts: document.getElementById('ticket-private-transcripts').checked,
+          channelNameTemplate: document.getElementById('ticket-channel-name-template').value
         };
         break;
         
