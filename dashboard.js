@@ -292,7 +292,7 @@ async function loadRolesAndChannels(guildId) {
   DOM.overviewChannels.textContent = state.guildChannels.length;
   
   renderAllSelects();
-  renderCategorySelects(); // neue Kategorie-Dropdowns
+  renderCategorySelects();
 }
 
 function renderAllSelects() {
@@ -602,10 +602,10 @@ function applyWelcomeConfig(cfg) {
 }
 
 // ============================================================
-// NEUE ERWEITERTE TICKET-CONFIG (ersetzt die alte)
+// ERWEITERTE TICKET-CONFIG (alte + neue Felder)
 // ============================================================
 function applyTicketConfig(cfg) {
-  // Bestehende Felder
+  // Alte Felder
   setSelectValue('ticket-panel-channel', cfg.panelChannelId || '');
   setValue('ticket-panel-title', cfg.title || '');
   setValue('ticket-panel-desc', cfg.description || '');
@@ -635,7 +635,7 @@ function applyTicketConfig(cfg) {
 }
 
 // ============================================================
-// NEUE HELPER FÜR MEHRFACHAUSWAHL
+// HELPER FÜR MEHRFACHAUSWAHL
 // ============================================================
 function getSelectedOptions(selectId) {
   const el = document.getElementById(selectId);
@@ -671,7 +671,7 @@ function applySimpleConfig(prefix, cfg) {
   if (el) setSelectValue(el.id, channelId);
 }
 
-// Helper for config loading
+// Helper
 function setValue(id, val) {
   const el = document.getElementById(id);
   if (el) el.value = val;
@@ -817,12 +817,10 @@ async function saveModuleSettings(moduleName) {
 // KEYBOARD SUPPORT
 // ============================================================
 document.addEventListener('keydown', (e) => {
-  // ESC schließt das Overlay
   if (e.key === 'Escape' && !DOM.manageOverlay.classList.contains('hidden')) {
     closeManagement();
   }
   
-  // Strg+Enter speichert im aktuellen Tab
   if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
     const activeTab = document.querySelector('.tab-btn.active');
     if (activeTab) {
