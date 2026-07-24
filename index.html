@@ -13,11 +13,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style> 
   :root {
-    --bg-base: #000000;
-    --bg-surface: #0a0a0a;
-    --bg-card: rgba(18, 18, 18, 0.7);
-    --border-subtle: rgba(255, 255, 255, 0.12);
-    --border-active: rgba(255, 255, 255, 0.4);
+    --bg-base: #050508;
+    --bg-surface: #0e0e12;
+    --bg-card: rgba(20, 20, 26, 0.7);
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --border-active: rgba(99, 102, 241, 0.4); /* Subtiler Accent-Kontrast */
+    --accent-glow: rgba(99, 102, 241, 0.15); /* ~10% Indigo Glow */
     --accent-monochrome: #ffffff;
     --text-primary: #ffffff;
     --text-muted: #a1a1aa;
@@ -52,14 +53,13 @@
     display: block;
   }
 
-
   header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 20px 6%;
     backdrop-filter: blur(12px);
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(5, 5, 8, 0.85);
     border-bottom: 1px solid var(--border-subtle);
     position: sticky;
     top: 0;
@@ -71,8 +71,10 @@
     width: 34px; height: 34px; background: #000; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.1);
   }
   .brand-name { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.02em; }
+  .brand-name span { color: #6366f1; } /* 10% Farb-Akzent am Punkt */
 
   /* ZENTRIERTE NAVIGATION IN DER MITTE */
   .nav-center {
@@ -98,10 +100,10 @@
     text-decoration: none; border: 1px solid transparent; cursor: pointer;
     transition: all 0.2s ease; white-space: nowrap;
   }
-  .btn-primary { background: #ffffff; color: #000000; }
-  .btn-primary:hover { background: #e4e4e7; transform: translateY(-2px); }
-  .btn-secondary { background: rgba(255, 255, 255, 0.05); color: var(--text-primary); border-color: var(--border-subtle); }
-  .btn-secondary:hover { background: rgba(255, 255, 255, 0.12); border-color: var(--border-active); transform: translateY(-2px); }
+  .btn-primary { background: #ffffff; color: #000000; box-shadow: 0 4px 14px rgba(255, 255, 255, 0.15); }
+  .btn-primary:hover { background: #e4e4e7; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255, 255, 255, 0.25); }
+  .btn-secondary { background: rgba(255, 255, 255, 0.04); color: var(--text-primary); border-color: var(--border-subtle); }
+  .btn-secondary:hover { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.3); transform: translateY(-2px); }
 
   /* HERO SECTION */
   .hero {
@@ -109,15 +111,19 @@
   }
   .hero-badge {
     display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px;
-    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-subtle);
+    background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25);
     border-radius: 20px; font-size: 0.8rem; font-family: 'JetBrains Mono', monospace;
-    color: var(--text-muted); margin-bottom: 24px;
+    color: #a5b4fc; margin-bottom: 24px;
+  }
+  .status-dot {
+    width: 6px; height: 6px; background-color: #22c55e; border-radius: 50%;
+    box-shadow: 0 0 8px #22c55e;
   }
   .hero-title { font-size: 3.2rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 20px; }
   .hero-subtitle { font-size: 1.1rem; color: var(--text-muted); max-width: 650px; margin: 0 auto 36px; line-height: 1.6; }
   .hero-buttons { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; }
 
-  /* NEUES MITTEL-ELEMENT: STATS & HIGHLIGHT CARD */
+  /* SHOWCASE CARD */
   .showcase-section {
     max-width: 950px; margin: 20px auto 90px; padding: 0 24px;
   }
@@ -129,7 +135,7 @@
     display: flex;
     flex-direction: column;
     gap: 32px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 40px rgba(99, 102, 241, 0.03);
   }
   .showcase-stats {
     display: grid;
@@ -139,7 +145,12 @@
     padding-bottom: 28px;
   }
   .stat-item { text-align: center; }
-  .stat-value { font-size: 1.8rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; }
+  .stat-value { 
+    font-size: 1.8rem; font-weight: 800; font-family: 'JetBrains Mono', monospace;
+    background: linear-gradient(180deg, #ffffff 0%, #a1a1aa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
   .stat-label { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }
 
   .showcase-highlights {
@@ -154,7 +165,7 @@
   }
   .highlight-icon {
     width: 36px; height: 36px; border-radius: 8px;
-    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-subtle);
+    background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-subtle);
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   }
   .highlight-icon svg { width: 18px; height: 18px; stroke: #fff; fill: none; stroke-width: 2; }
@@ -173,14 +184,23 @@
 
   .module-card {
     background: var(--bg-surface); border: 1px solid var(--border-subtle);
-    border-radius: 16px; padding: 28px; transition: all 0.3s ease; display: flex;
-    flex-direction: column; gap: 16px;
+    border-radius: 16px; padding: 28px; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); display: flex;
+    flex-direction: column; gap: 16px; position: relative; overflow: hidden;
   }
-  .module-card:hover { border-color: var(--border-active); transform: translateY(-4px); }
+  .module-card:hover { 
+    border-color: var(--border-active); 
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), 0 0 20px var(--accent-glow);
+  }
+  .module-card:hover .module-icon-wrap {
+    background: rgba(99, 102, 241, 0.1);
+    border-color: rgba(99, 102, 241, 0.3);
+  }
 
   .module-icon-wrap {
-    width: 44px; height: 44px; border-radius: 10px; background: rgba(255, 255, 255, 0.05);
+    width: 44px; height: 44px; border-radius: 10px; background: rgba(255, 255, 255, 0.04);
     border: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: center;
+    transition: all 0.3s ease;
   }
   .module-icon-wrap svg {
     width: 22px; height: 22px; stroke: #ffffff; fill: none; stroke-width: 2;
@@ -233,7 +253,9 @@
 <main>
   <!-- HERO -->
   <section class="hero">
-    <div class="hero-badge">● APEX SYSTEM v1.2 ONLINE</div>
+    <div class="hero-badge">
+      <span class="status-dot"></span> APEX SYSTEM v1.2 ONLINE
+    </div>
     <h1 class="hero-title">Maximale Kontrolle.<br>Minimaler Aufwand.</h1>
     <p class="hero-subtitle">Die modulare All-in-One Lösung für deinen Discord-Server. Von hochmodernen Ticketsystemen bis hin zu lückenlosem Anti-Nuke Schutz.</p>
     <div class="hero-buttons">
@@ -242,7 +264,7 @@
     </div>
   </section>
 
-  <!-- NEUE SHOWCASE CARD STATT TERMINAL -->
+  <!-- SHOWCASE CARD -->
   <section class="showcase-section">
     <div class="showcase-card">
       <div class="showcase-stats">
