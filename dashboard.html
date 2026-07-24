@@ -1091,6 +1091,85 @@
             </div>
           </div>
         </div>
+
+        <!-- ===== NEUE TICKET-EINSTELLUNGEN ===== -->
+        <div class="form-card" style="max-width:100%; margin-top:2rem;">
+          <hr style="border-color:var(--border-subtle); margin:1rem 0;">
+          <h3 style="font-size:1rem; font-weight:700; margin-top:0;">Erweiterte Ticket-Einstellungen</h3>
+
+          <!-- Panel Enabled -->
+          <div class="form-group">
+            <div class="switch-row">
+              <label style="margin:0;">Panel aktiv</label>
+              <label class="switch">
+                <input type="checkbox" id="ticket-panel-enabled" checked>
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Panel Name -->
+          <div class="form-group">
+            <label for="ticket-panel-name">Panel-Name</label>
+            <input type="text" id="ticket-panel-name" placeholder="Leitungs Ticket" value="Leitungs Ticket">
+          </div>
+
+          <!-- Support Roles -->
+          <div class="form-group">
+            <label>Support-Rollen (wer Tickets sehen/verwalten darf)</label>
+            <div id="ticket-support-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span></div>
+          </div>
+
+          <!-- Ticket Location (Kategorie) -->
+          <div class="form-group">
+            <label for="ticket-location-category">Kategorie für Tickets</label>
+            <select id="ticket-location-category"></select>
+          </div>
+
+          <!-- Overflow Categories (Mehrfachauswahl) -->
+          <div class="form-group">
+            <label for="ticket-overflow-categories">Überlauf-Kategorien (optional)</label>
+            <select id="ticket-overflow-categories" multiple style="height:auto; min-height:80px;"></select>
+            <small>Halte Strg (Cmd) gedrückt, um mehrere auszuwählen.</small>
+          </div>
+
+          <!-- Threading Mode -->
+          <div class="form-group">
+            <label for="ticket-thread-mode">Thread-Modus</label>
+            <select id="ticket-thread-mode">
+              <option value="none">Kein Thread</option>
+              <option value="thread">Thread pro Ticket</option>
+              <option value="private">Private Threads</option>
+            </select>
+          </div>
+
+          <!-- Transcript Settings -->
+          <div class="form-group">
+            <label style="font-weight:700;">Transcript-Einstellungen</label>
+            <div class="switch-row">
+              <label style="margin:0;">Transcripts speichern</label>
+              <label class="switch"><input type="checkbox" id="ticket-save-transcripts"><span class="switch-slider"></span></label>
+            </div>
+            <div class="switch-row">
+              <label style="margin:0;">Bilder in Transcripts speichern</label>
+              <label class="switch"><input type="checkbox" id="ticket-save-images"><span class="switch-slider"></span></label>
+            </div>
+            <div class="switch-row">
+              <label style="margin:0;">Private Transcripts</label>
+              <label class="switch"><input type="checkbox" id="ticket-private-transcripts"><span class="switch-slider"></span></label>
+            </div>
+          </div>
+
+          <!-- Channel Name Generation -->
+          <div class="form-group">
+            <label for="ticket-channel-name-template">Kanalnamen-Vorlage</label>
+            <input type="text" id="ticket-channel-name-template" placeholder="{panel.name}-{ticket.creator.username}" value="{panel.name}-{ticket.creator.username}">
+            <small>Platzhalter: <code>{panel.name}</code>, <code>{ticket.creator.username}</code>, <code>{ticket.id}</code></small>
+          </div>
+
+          <!-- Speicher-Status (optional) -->
+          <div id="ticket-ext-save-status" class="hidden" style="color:var(--text-muted); font-size:0.85rem; margin-top:8px;"></div>
+        </div>
       </div>
 
       <!-- Teamliste Tab -->
