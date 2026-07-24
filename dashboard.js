@@ -25,6 +25,12 @@ const DOM = {
   activeGuildIcon: document.getElementById('active-guild-icon'),
   overviewMembers: document.getElementById('overview-members'),
   overviewBoosts: document.getElementById('overview-boosts'),
+  overviewBots: document.getElementById('overview-bots'),
+  overviewChannels: document.getElementById('overview-channels'),
+  overviewRoles: document.getElementById('overview-roles'),
+  overviewCreated: document.getElementById('overview-created'),
+  overviewOwnerName: document.getElementById('overview-owner-name'),
+  overviewOwnerAvatar: document.getElementById('overview-owner-avatar'),
   toastContainer: document.getElementById('toast-container')
 };
 
@@ -83,6 +89,31 @@ function debounce(fn, delay = 300) {
     clearTimeout(timeout);
     timeout = setTimeout(() => fn.apply(this, args), delay);
   };
+}
+
+// ============================================================
+// DISCORD SNOWFLAKE HELPERS
+// ============================================================
+// Discord-IDs (Snowflakes) codieren einen Zeitstempel. So lässt sich
+// das Erstellungsdatum eines Servers direkt aus seiner ID berechnen,
+// ganz ohne zusätzlichen API-Call.
+const DISCORD_EPOCH = 1420070400000n;
+
+function snowflakeToDate(id) {
+  try {
+    const snowflake = BigInt(id);
+    const timestampMs = Number((snowflake >> 22n) + DISCORD_EPOCH);
+    const date = new Date(timestampMs);
+    return isNaN(date.getTime()) ? null : date;
+  } catch (err) {
+    return null;
+  }
+}
+
+function formatGuildCreatedDate(guildId) {
+  const date = snowflakeToDate(guildId);
+  if (!date) return 'N/A';
+  return date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
 // ============================================================
@@ -187,6 +218,15 @@ async function openManagement(guildId, name, iconUrl) {
   // Reset stats
   DOM.overviewMembers.textContent = '...';
   DOM.overviewBoosts.textContent = '...';
+  DOM.overviewBots.textContent = '...';
+  DOM.overviewChannels.textContent = '...';
+  DOM.overviewRoles.textContent = '...';
+  DOM.overviewOwnerName.textContent = '...';
+  DOM.overviewOwnerAvatar.classList.add('hidden');
+  DOM.overviewOwnerAvatar.src = '';
+  
+  // Erstellungsdatum steckt direkt in der Guild-ID und braucht keinen API-Call
+  DOM.overviewCreated.textContent = formatGuildCreatedDate(guildId);
   
   await Promise.all([
     loadGuildDetails(guildId),
@@ -207,11 +247,31 @@ async function loadGuildDetails(guildId) {
     if (data) {
       DOM.overviewMembers.textContent = data.members ?? '0';
       DOM.overviewBoosts.textContent = data.boosts ?? '0';
+      DOM.overviewBots.textContent = data.botCount ?? data.bots ?? 'N/A';
+      renderGuildOwner(data.owner);
     }
   } catch (err) {
     DOM.overviewMembers.textContent = 'N/A';
     DOM.overviewBoosts.textContent = 'N/A';
+    DOM.overviewBots.textContent = 'N/A';
+    renderGuildOwner(null);
   }
+}
+
+function renderGuildOwner(owner) {
+  if (!owner) {
+    DOM.overviewOwnerName.textContent = 'N/A';
+    DOM.overviewOwnerAvatar.classList.add('hidden');
+    DOM.overviewOwnerAvatar.src = '';
+    return;
+  }
+  
+  DOM.overviewOwnerName.textContent = owner.username || 'Unbekannt';
+  DOM.overviewOwnerAvatar.src = owner.avatar
+    ? `https://cdn.discordapp.com/avatars/${owner.id}/${owner.avatar}.png`
+    : 'https://cdn.discordapp.com/embed/avatars/0.png';
+  DOM.overviewOwnerAvatar.alt = `${owner.username || 'Owner'}s Avatar`;
+  DOM.overviewOwnerAvatar.classList.remove('hidden');
 }
 
 // ============================================================
@@ -230,6 +290,9 @@ async function loadRolesAndChannels(guildId) {
     state.guildRoles = [];
     state.guildChannels = [];
   }
+  
+  DOM.overviewRoles.textContent = state.guildRoles.length;
+  DOM.overviewChannels.textContent = state.guildChannels.length;
   
   renderAllSelects();
 }
