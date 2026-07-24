@@ -1,20 +1,25 @@
 {
   "name": "apex-bot-website",
   "version": "1.0.0",
+  "description": "Apex Dashboard – Discord-Login & Server-Verwaltung",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "bot": "node bot.js",
-    "dev": "concurrently \"node server.js\" \"nodemon bot.js\""
+    "dev": "nodemon server.js"
   },
   "dependencies": {
+    "@vercel/analytics": "^1.5.0",
+    "axios": "^1.4.0",
+    "cookie-parser": "^1.4.6",
     "cookie-session": "^2.1.0",
-    "discord.js": "^14.15.3",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "mongoose": "^8.0.0",
-    "concurrently": "^8.2.2"
+    "mongoose": "^8.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": "20.x"
   }
 }
