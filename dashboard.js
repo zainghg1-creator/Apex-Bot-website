@@ -835,19 +835,106 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ============================================================
-// NEUE FUNKTIONEN FÜR DIE TICKET-ÜBERSICHT (Kartenansicht)
+// NEUE FUNKTIONEN FÜR DIE TICKET-ÜBERSICHT (Kartenansicht + Bearbeitungsansicht)
 // ============================================================
 
-/**
- * Lädt die Ticket-Config und rendert die Übersicht.
- * Wird automatisch aufgerufen, wenn der Ticket-Tab sichtbar wird.
- */
-async function renderTicketOverview() {
-  const grid = document.getElementById('ticket-overview-grid');
-  if (!grid) return;
+// ------ Globale Referenzen für die Ticket-Übersicht ------
+const ticketGrid = document.getElementById('ticket-overview-grid');
+const editContainer = document.getElementById('ticket-edit-container');
+const editContent = document.getElementById('ticket-edit-content');
+let editingIndex = null;
 
+// ------ Hilfsfunktion: Kategorien für Dropdowns füllen ------
+function populateCategorySelects() {
+  const ids = ['edit-ticket-category', 'edit-ticket-overflow'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const categories = state.guildChannels.filter(c => c.type === 4);
+    el.innerHTML = categories.length
+      ? categories.map(c => `<option value="${c.id}">📁 ${escapeHtml(c.name)}</option>`).join('')
+      : `<option value="">Keine Kategorien gefunden</option>`;
+  });
+}
+
+// ------ Hilfsfunktion: Rollen-Chips in der Bearbeitungsansicht rendern ------
+function renderEditRoleChips(containerId, selectedIds = [], singleSelect = false) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (state.guildRoles.length === 0) {
+    el.innerHTML = `<span class="chip-empty">Keine Rollen gefunden</span>`;
+    return;
+  }
+  const selectedSet = new Set(selectedIds);
+  el.innerHTML = state.guildRoles
+    .map(r => {
+      const isSelected = selectedSet.has(r.id);
+      return `<div class="role-chip ${isSelected ? 'selected' : ''}" 
+                    data-role-id="${r.id}" 
+                    onclick="toggleEditRoleChip('${containerId}', '${r.id}', ${singleSelect})">
+                <span class="chip-icon">@</span>
+                <span class="chip-label">${escapeHtml(r.name)}</span>
+              </div>`;
+    })
+    .join('');
+}
+
+// ------ Toggle für Rollen-Chips in der Bearbeitungsansicht ------
+window.toggleEditRoleChip = function(containerId, roleId, singleSelect) {
+  const el = document.getElementById(containerId);
+  const chip = el.querySelector(`[data-role-id="${roleId}"]`);
+  if (!chip) return;
+  if (singleSelect) {
+    el.querySelectorAll('.role-chip').forEach(c => c.classList.remove('selected'));
+    chip.classList.add('selected');
+  } else {
+    chip.classList.toggle('selected');
+  }
+};
+
+// ------ Werte aus den Chips sammeln ------
+function getEditSelectedRoles(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return [];
+  return Array.from(el.querySelectorAll('.role-chip.selected'))
+    .map(c => c.dataset.roleId);
+}
+
+// ------ Buttons (für Panel) ------
+let buttonCounter = 0;
+
+window.addButtonRow = function(data = null) {
+  const container = document.getElementById('edit-button-list');
+  if (!container) return;
+  const rowId = `btn-${++buttonCounter}`;
+  const row = document.createElement('div');
+  row.className = 'button-row';
+  row.id = rowId;
+  row.innerHTML = `
+    <input type="text" placeholder="Label" class="btn-label" value="${data ? escapeHtml(data.label || '') : ''}" style="min-width:120px;">
+    <input type="text" placeholder="Emoji" class="btn-emoji" value="${data ? escapeHtml(data.emoji || '') : '🎫'}" style="max-width:80px;">
+    <input type="color" class="btn-color" value="${data ? (data.color || '#ffffff') : '#ffffff'}" style="width:44px;height:38px;padding:0;border:1px solid var(--border-subtle);border-radius:8px;background:var(--bg-base);cursor:pointer;">
+    <input type="text" placeholder="Aktion (z.B. open)" class="btn-action" value="${data ? escapeHtml(data.action || '') : ''}" style="min-width:100px;">
+    <button type="button" class="button-remove" onclick="document.getElementById('${rowId}').remove()" aria-label="Button entfernen">✕</button>
+  `;
+  container.appendChild(row);
+};
+
+function collectButtons() {
+  const rows = document.querySelectorAll('#edit-button-list .button-row');
+  return Array.from(rows).map(row => ({
+    label: row.querySelector('.btn-label')?.value || '',
+    emoji: row.querySelector('.btn-emoji')?.value || '🎫',
+    color: row.querySelector('.btn-color')?.value || '#ffffff',
+    action: row.querySelector('.btn-action')?.value || ''
+  }));
+}
+
+// ------ Übersicht rendern (Karten) ------
+async function renderTicketOverview() {
+  if (!ticketGrid) return;
   if (!state.activeGuildId) {
-    grid.innerHTML = `<div class="state-box" style="grid-column:1/-1;">Bitte wähle zuerst einen Server aus.</div>`;
+    ticketGrid.innerHTML = `<div class="state-box" style="grid-column:1/-1;">Bitte wähle zuerst einen Server aus.</div>`;
     return;
   }
 
@@ -857,8 +944,8 @@ async function renderTicketOverview() {
     const options = tickets.options || [];
 
     if (options.length === 0) {
-      grid.innerHTML = `
-        <div class="guild-card add-card" onclick="openAddTicketModal()" style="cursor:pointer;">
+      ticketGrid.innerHTML = `
+        <div class="guild-card add-card" onclick="openAddTicket()">
           <div style="font-size:3rem; line-height:1;">＋</div>
           <div style="font-weight:700; font-size:1.1rem; margin-top:6px;">Neues Ticket hinzufügen</div>
           <div style="color:var(--text-muted); font-size:0.85rem;">Klicke hier, um eine neue Kategorie zu erstellen.</div>
@@ -883,7 +970,7 @@ async function renderTicketOverview() {
             <span>📂 Kategorie: ${escapeHtml(categoryName)}</span>
           </div>
           <div class="guild-action">
-            <button class="btn btn-secondary" onclick="openEditTicketModal(${index})">Bearbeiten</button>
+            <button class="btn btn-secondary" onclick="openEditView(${index})">Bearbeiten</button>
             <button class="btn btn-danger" onclick="deleteTicketOption(${index})">Löschen</button>
           </div>
         </div>
@@ -891,63 +978,270 @@ async function renderTicketOverview() {
     });
 
     html += `
-      <div class="guild-card add-card" onclick="openAddTicketModal()" style="cursor:pointer;">
+      <div class="guild-card add-card" onclick="openAddTicket()">
         <div style="font-size:3rem; line-height:1;">＋</div>
         <div style="font-weight:700; font-size:1.1rem; margin-top:6px;">Neues Ticket hinzufügen</div>
         <div style="color:var(--text-muted); font-size:0.85rem;">Klicke hier, um eine weitere Kategorie zu erstellen.</div>
       </div>
     `;
 
-    grid.innerHTML = html;
+    ticketGrid.innerHTML = html;
   } catch (err) {
-    grid.innerHTML = `<div class="state-box error" style="grid-column:1/-1;">Fehler beim Laden: ${err.message}</div>`;
+    ticketGrid.innerHTML = `<div class="state-box error" style="grid-column:1/-1;">Fehler beim Laden: ${err.message}</div>`;
   }
 }
 
-// ------ Modal-Funktionen (global) ------
-let editingTicketIndex = null;
-
-window.openAddTicketModal = function() {
-  editingTicketIndex = null;
-  document.getElementById('ticket-modal-title').textContent = 'Neues Ticket hinzufügen';
-  document.getElementById('ticket-modal-label').value = '';
-  document.getElementById('ticket-modal-emoji').value = '🎫';
-  populateModalCategories();
-  document.getElementById('ticket-modal').classList.remove('hidden');
-  document.getElementById('ticket-modal-label').focus();
+// ------ Neues Ticket hinzufügen ------
+window.openAddTicket = function() {
+  editingIndex = null;
+  showEditView(null);
 };
 
-window.openEditTicketModal = async function(index) {
+// ------ Vorhandenes Ticket bearbeiten ------
+window.openEditView = function(index) {
+  editingIndex = index;
+  showEditView(index);
+};
+
+// ------ Bearbeitungsansicht anzeigen und befüllen ------
+async function showEditView(index) {
+  // Übersicht ausblenden, Bearbeitungsansicht einblenden
+  document.getElementById('ticket-overview-container').classList.add('hidden');
+  editContainer.classList.remove('hidden');
+
+  // Config laden
+  let config;
   try {
-    const config = await apiFetch(`/guild/${state.activeGuildId}/config`);
-    const options = (config.tickets && config.tickets.options) || [];
-    if (!options[index]) return;
-    const opt = options[index];
-    editingTicketIndex = index;
-    document.getElementById('ticket-modal-title').textContent = 'Ticket bearbeiten';
-    document.getElementById('ticket-modal-label').value = opt.label || '';
-    document.getElementById('ticket-modal-emoji').value = opt.emoji || '🎫';
-    populateModalCategories();
-    if (opt.categoryId) document.getElementById('ticket-modal-category').value = opt.categoryId;
-    document.getElementById('ticket-modal').classList.remove('hidden');
-    document.getElementById('ticket-modal-label').focus();
-  } catch (err) {
-    showToast('Fehler beim Laden der Daten.', 'error');
+    config = await apiFetch(`/guild/${state.activeGuildId}/config`);
+  } catch {
+    showToast('Fehler beim Laden der Konfiguration.', 'error');
+    return;
   }
+  if (!config.tickets) config.tickets = {};
+  if (!config.tickets.options) config.tickets.options = [];
+
+  let data = null;
+  if (index !== null && config.tickets.options[index]) {
+    data = config.tickets.options[index];
+  } else {
+    // neues Ticket – Standardwerte
+    data = {
+      enabled: true,
+      panelName: 'Neues Ticket',
+      supportRoles: [],
+      categoryId: '',
+      overflowEnabled: false,
+      overflowCategories: [],
+      threadMode: 'none',
+      saveTranscripts: false,
+      saveImages: false,
+      privateTranscripts: false,
+      channelNameTemplate: '{panel.name}-{ticket.creator.username}',
+      allowedRoles: [],
+      deniedRoles: [],
+      maxTickets: 1,
+      claimEnabled: false,
+      buttons: []
+    };
+  }
+
+  // HTML für die Bearbeitungsansicht generieren
+  let html = `
+    <div class="card form-card" style="max-width:100%;">
+      <h3 style="font-size:1rem; font-weight:700; margin-bottom:0.5rem;">${index !== null ? 'Ticket bearbeiten' : 'Neues Ticket hinzufügen'}</h3>
+
+      <!-- Panel aktiv -->
+      <div class="form-group">
+        <div class="switch-row">
+          <label style="margin:0;">Panel aktiv</label>
+          <label class="switch"><input type="checkbox" id="edit-panel-enabled" ${data.enabled ? 'checked' : ''}><span class="switch-slider"></span></label>
+        </div>
+      </div>
+
+      <!-- Panel Name -->
+      <div class="form-group">
+        <label for="edit-panel-name">Panel-Name</label>
+        <input type="text" id="edit-panel-name" value="${escapeHtml(data.panelName || '')}" placeholder="Support">
+      </div>
+
+      <!-- Support Rollen -->
+      <div class="form-group">
+        <label>Support-Rollen (Zugriff)</label>
+        <div id="edit-support-roles" class="chip-select"></div>
+      </div>
+
+      <!-- Kategorie -->
+      <div class="form-group">
+        <label for="edit-ticket-category">Kategorie für Tickets</label>
+        <select id="edit-ticket-category"></select>
+      </div>
+
+      <!-- Overflow aktiv -->
+      <div class="form-group">
+        <div class="switch-row">
+          <label style="margin:0;">Überlauf-Kategorien aktivieren</label>
+          <label class="switch"><input type="checkbox" id="edit-overflow-enabled" ${data.overflowEnabled ? 'checked' : ''}><span class="switch-slider"></span></label>
+        </div>
+      </div>
+
+      <!-- Overflow Kategorien -->
+      <div class="form-group" id="edit-overflow-group" style="${data.overflowEnabled ? '' : 'display:none;'}">
+        <label for="edit-ticket-overflow">Überlauf-Kategorien (mehrfach)</label>
+        <select id="edit-ticket-overflow" multiple style="height:auto;min-height:80px;"></select>
+        <small>Halte Strg (Cmd) gedrückt, um mehrere auszuwählen.</small>
+      </div>
+
+      <!-- Threading Modus -->
+      <div class="form-group">
+        <label for="edit-thread-mode">Thread-Modus</label>
+        <select id="edit-thread-mode">
+          <option value="none" ${data.threadMode === 'none' ? 'selected' : ''}>Keine Threads</option>
+          <option value="thread" ${data.threadMode === 'thread' ? 'selected' : ''}>Öffentliche Threads</option>
+          <option value="private" ${data.threadMode === 'private' ? 'selected' : ''}>Private Threads</option>
+        </select>
+      </div>
+
+      <!-- Transkript Einstellungen -->
+      <div class="form-group">
+        <label style="font-weight:700;">Transkript-Einstellungen</label>
+        <div class="switch-row">
+          <label style="margin:0;">Transkripte speichern</label>
+          <label class="switch"><input type="checkbox" id="edit-save-transcripts" ${data.saveTranscripts ? 'checked' : ''}><span class="switch-slider"></span></label>
+        </div>
+        <div class="switch-row">
+          <label style="margin:0;">Bilder in Transkripten</label>
+          <label class="switch"><input type="checkbox" id="edit-save-images" ${data.saveImages ? 'checked' : ''}><span class="switch-slider"></span></label>
+        </div>
+        <div class="switch-row">
+          <label style="margin:0;">Private Transkripte</label>
+          <label class="switch"><input type="checkbox" id="edit-private-transcripts" ${data.privateTranscripts ? 'checked' : ''}><span class="switch-slider"></span></label>
+        </div>
+      </div>
+
+      <!-- Kanalnamen Vorlage -->
+      <div class="form-group">
+        <label for="edit-channel-template">Kanalnamen-Vorlage</label>
+        <input type="text" id="edit-channel-template" value="${escapeHtml(data.channelNameTemplate || '{panel.name}-{ticket.creator.username}')}" placeholder="{panel.name}-{ticket.creator.username}">
+        <small>Platzhalter: <code>{panel.name}</code>, <code>{ticket.creator.username}</code>, <code>{ticket.id}</code></small>
+      </div>
+
+      <!-- Rollen, die öffnen dürfen -->
+      <div class="form-group">
+        <label>Rollen, die ein Ticket öffnen dürfen (optional)</label>
+        <div id="edit-allowed-roles" class="chip-select"></div>
+        <small>Leer lassen = jeder darf öffnen.</small>
+      </div>
+
+      <!-- Rollen, die nicht öffnen dürfen -->
+      <div class="form-group">
+        <label>Rollen, die kein Ticket öffnen dürfen (optional)</label>
+        <div id="edit-denied-roles" class="chip-select"></div>
+      </div>
+
+      <!-- Maximale Tickets pro User -->
+      <div class="form-group">
+        <label for="edit-max-tickets">Maximale Tickets pro Benutzer</label>
+        <input type="number" id="edit-max-tickets" value="${data.maxTickets || 1}" min="1" step="1">
+      </div>
+
+      <!-- Claim System -->
+      <div class="form-group">
+        <div class="switch-row">
+          <label style="margin:0;">Claim-System aktivieren</label>
+          <label class="switch"><input type="checkbox" id="edit-claim-enabled" ${data.claimEnabled ? 'checked' : ''}><span class="switch-slider"></span></label>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="form-group">
+        <label style="font-weight:700;">Buttons (für das Panel)</label>
+        <div id="edit-button-list"></div>
+        <button type="button" class="add-button-btn" onclick="window.addButtonRow()">+ Button hinzufügen</button>
+      </div>
+
+      <!-- Speichern -->
+      <div class="form-action">
+        <button class="btn btn-primary" onclick="saveEditView()">Speichern</button>
+        <button class="btn btn-secondary" onclick="closeEditView()">Abbrechen</button>
+        <span id="edit-save-status" class="hidden status-success"></span>
+      </div>
+    </div>
+  `;
+
+  editContent.innerHTML = html;
+
+  // Kategorien befüllen
+  populateCategorySelects();
+  // Rollen-Chips rendern
+  renderEditRoleChips('edit-support-roles', data.supportRoles || []);
+  renderEditRoleChips('edit-allowed-roles', data.allowedRoles || []);
+  renderEditRoleChips('edit-denied-roles', data.deniedRoles || []);
+  // Ausgewählte Kategorie setzen
+  if (data.categoryId) document.getElementById('edit-ticket-category').value = data.categoryId;
+  // Mehrfachauswahl für Overflow setzen
+  if (data.overflowCategories) {
+    const overflowSelect = document.getElementById('edit-ticket-overflow');
+    if (overflowSelect) {
+      Array.from(overflowSelect.options).forEach(opt => {
+        opt.selected = data.overflowCategories.includes(opt.value);
+      });
+    }
+  }
+
+  // Overflow-Toggle
+  document.getElementById('edit-overflow-enabled').addEventListener('change', function() {
+    const group = document.getElementById('edit-overflow-group');
+    group.style.display = this.checked ? '' : 'none';
+  });
+
+  // Buttons laden
+  if (data.buttons && data.buttons.length) {
+    data.buttons.forEach(btn => window.addButtonRow(btn));
+  } else {
+    // Standard-Button
+    window.addButtonRow({ label: 'Ticket öffnen', emoji: '🎫', color: '#ffffff', action: 'open' });
+  }
+}
+
+// ------ Bearbeitungsansicht schließen ------
+window.closeEditView = function() {
+  document.getElementById('ticket-overview-container').classList.remove('hidden');
+  editContainer.classList.add('hidden');
+  editContent.innerHTML = '';
+  editingIndex = null;
+  renderTicketOverview();
 };
 
-window.closeTicketModal = function() {
-  document.getElementById('ticket-modal').classList.add('hidden');
-  editingTicketIndex = null;
-};
+// ------ Speichern der Bearbeitung ------
+window.saveEditView = async function() {
+  const saveStatus = document.getElementById('edit-save-status');
+  if (saveStatus) {
+    saveStatus.classList.remove('hidden');
+    saveStatus.textContent = '⏳ Speichern...';
+  }
 
-window.saveTicketModal = async function() {
-  const label = document.getElementById('ticket-modal-label').value.trim();
-  const emoji = document.getElementById('ticket-modal-emoji').value.trim() || '🎫';
-  const categoryId = document.getElementById('ticket-modal-category').value;
+  // Daten sammeln
+  const enabled = document.getElementById('edit-panel-enabled').checked;
+  const panelName = document.getElementById('edit-panel-name').value.trim();
+  const supportRoles = getEditSelectedRoles('edit-support-roles');
+  const categoryId = document.getElementById('edit-ticket-category').value;
+  const overflowEnabled = document.getElementById('edit-overflow-enabled').checked;
+  const overflowSelect = document.getElementById('edit-ticket-overflow');
+  const overflowCategories = overflowSelect ? Array.from(overflowSelect.selectedOptions).map(o => o.value) : [];
+  const threadMode = document.getElementById('edit-thread-mode').value;
+  const saveTranscripts = document.getElementById('edit-save-transcripts').checked;
+  const saveImages = document.getElementById('edit-save-images').checked;
+  const privateTranscripts = document.getElementById('edit-private-transcripts').checked;
+  const channelNameTemplate = document.getElementById('edit-channel-template').value.trim() || '{panel.name}-{ticket.creator.username}';
+  const allowedRoles = getEditSelectedRoles('edit-allowed-roles');
+  const deniedRoles = getEditSelectedRoles('edit-denied-roles');
+  const maxTickets = parseInt(document.getElementById('edit-max-tickets').value) || 1;
+  const claimEnabled = document.getElementById('edit-claim-enabled').checked;
+  const buttons = collectButtons().filter(b => b.label.trim());
 
-  if (!label) {
-    showToast('Bitte gib eine Bezeichnung ein.', 'error');
+  if (!panelName) {
+    showToast('Bitte gib einen Panel-Namen ein.', 'error');
+    if (saveStatus) saveStatus.textContent = '✕ Fehler';
     return;
   }
 
@@ -956,10 +1250,29 @@ window.saveTicketModal = async function() {
     if (!config.tickets) config.tickets = {};
     if (!config.tickets.options) config.tickets.options = [];
 
-    if (editingTicketIndex !== null) {
-      config.tickets.options[editingTicketIndex] = { label, emoji, categoryId };
+    const newData = {
+      enabled,
+      panelName,
+      supportRoles,
+      categoryId,
+      overflowEnabled,
+      overflowCategories,
+      threadMode,
+      saveTranscripts,
+      saveImages,
+      privateTranscripts,
+      channelNameTemplate,
+      allowedRoles,
+      deniedRoles,
+      maxTickets,
+      claimEnabled,
+      buttons
+    };
+
+    if (editingIndex !== null) {
+      config.tickets.options[editingIndex] = newData;
     } else {
-      config.tickets.options.push({ label, emoji, categoryId });
+      config.tickets.options.push(newData);
     }
 
     await apiFetch(`/guild/${state.activeGuildId}/config/tickets`, {
@@ -967,67 +1280,33 @@ window.saveTicketModal = async function() {
       body: JSON.stringify(config.tickets)
     });
 
-    showToast(editingTicketIndex !== null ? 'Ticket aktualisiert!' : 'Ticket hinzugefügt!', 'success');
-    closeTicketModal();
+    showToast(editingIndex !== null ? 'Ticket aktualisiert!' : 'Ticket hinzugefügt!', 'success');
+    if (saveStatus) saveStatus.textContent = '✓ Gespeichert';
+    closeEditView();
+  } catch (err) {
+    showToast(`Fehler: ${err.message}`, 'error');
+    if (saveStatus) saveStatus.textContent = '✕ Fehler';
+  }
+};
+
+// ------ Ticket löschen ------
+window.deleteTicketOption = async function(index) {
+  if (!confirm('Möchtest du dieses Ticket wirklich löschen?')) return;
+  try {
+    const config = await apiFetch(`/guild/${state.activeGuildId}/config`);
+    if (!config.tickets || !config.tickets.options || !config.tickets.options[index]) return;
+    config.tickets.options.splice(index, 1);
+    await apiFetch(`/guild/${state.activeGuildId}/config/tickets`, {
+      method: 'POST',
+      body: JSON.stringify(config.tickets)
+    });
+    showToast('Ticket gelöscht.', 'success');
     renderTicketOverview();
   } catch (err) {
     showToast(`Fehler: ${err.message}`, 'error');
   }
 };
 
-window.deleteTicketOption = async function(index) {
-  if (!confirm('Möchtest du dieses Ticket wirklich löschen?')) return;
-
-  try {
-    const config = await apiFetch(`/guild/${state.activeGuildId}/config`);
-    if (!config.tickets || !config.tickets.options || !config.tickets.options[index]) return;
-    config.tickets.options.splice(index, 1);
-
-    await apiFetch(`/guild/${state.activeGuildId}/config/tickets`, {
-      method: 'POST',
-      body: JSON.stringify(config.tickets)
-    });
-
-    showToast('Ticket gelöscht.', 'success');
-    renderTicketOverview();
-  } catch (err) {
-    showToast(`Fehler beim Löschen: ${err.message}`, 'error');
-  }
-};
-
-function populateModalCategories() {
-  const select = document.getElementById('ticket-modal-category');
-  if (!select) return;
-  const categories = state.guildChannels.filter(c => c.type === 4);
-  select.innerHTML = categories.length
-    ? categories.map(c => `<option value="${c.id}">📁 ${escapeHtml(c.name)}</option>`).join('')
-    : `<option value="">Keine Kategorien gefunden</option>`;
-}
-
-// Automatisch rendern, wenn der Ticket-Tab sichtbar wird
+// ------ Event Listener für Ticket-Tab ------
 document.addEventListener('DOMContentLoaded', function() {
-  const ticketTabBtn = document.querySelector('[data-tab="tickets"]');
-  if (ticketTabBtn) {
-    ticketTabBtn.addEventListener('click', function() {
-      setTimeout(() => {
-        if (state.activeGuildId) renderTicketOverview();
-      }, 50);
-    });
-  }
-
-  const overlay = document.getElementById('manage-overlay');
-  if (overlay) {
-    const observer = new MutationObserver(() => {
-      if (!overlay.classList.contains('hidden')) {
-        const activeTab = document.querySelector('.tab-btn.active[data-tab="tickets"]');
-        if (activeTab && state.activeGuildId) renderTicketOverview();
-      }
-    });
-    observer.observe(overlay, { attributes: true, attributeFilter: ['class'] });
-  }
-});
-
-// ============================================================
-// INIT
-// ============================================================
-document.addEventListener('DOMContentLoaded', loadDashboard);
+  const ticketTabBtn = document.querySelector('[data
