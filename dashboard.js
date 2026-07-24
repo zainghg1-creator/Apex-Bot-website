@@ -35,13 +35,16 @@ const DOM = {
 };
 
 // ============================================================
-// STATE
+// STATE (erweitert um Cache)
 // ============================================================
 let state = {
   activeGuildId: null,
-  guildRoles: [],
-  guildChannels: [],
-  ticketOptionCount: 0
+  guildRoles: [],          // einmal geladen und gecacht
+  guildChannels: [],       // einmal geladen und gecacht
+  ticketOptionCount: 0,
+  // Cache für Ticket-Config
+  ticketConfigCache: null,
+  ticketConfigCacheGuildId: null
 };
 
 // ============================================================
@@ -138,6 +141,37 @@ async function apiFetch(endpoint, options = {}) {
 }
 
 // ============================================================
+// CACHED TICKET CONFIG
+// ============================================================
+async function getCachedTicketConfig(forceRefresh = false) {
+  if (!state.activeGuildId) return null;
+  
+  // Cache verwenden, wenn vorhanden und nicht veraltet
+  if (!forceRefresh && 
+      state.ticketConfigCache && 
+      state.ticketConfigCacheGuildId === state.activeGuildId) {
+    return state.ticketConfigCache;
+  }
+  
+  // Neu laden
+  try {
+    const config = await apiFetch(`/guild/${state.activeGuildId}/config`);
+    state.ticketConfigCache = config.tickets || {};
+    state.ticketConfigCacheGuildId = state.activeGuildId;
+    return state.ticketConfigCache;
+  } catch (err) {
+    console.error('Fehler beim Laden der Ticket-Config:', err);
+    return null;
+  }
+}
+
+// Cache zurücksetzen (nach Speichern)
+function invalidateTicketCache() {
+  state.ticketConfigCache = null;
+  state.ticketConfigCacheGuildId = null;
+}
+
+// ============================================================
 // GUILD LIST
 // ============================================================
 async function loadDashboard() {
@@ -222,14 +256,25 @@ async function openManagement(guildId, name, iconUrl) {
   DOM.overviewOwnerAvatar.classList.add('hidden');
   DOM.overviewOwnerAvatar.src = '';
   
-  // Erstellungsdatum steckt direkt in der Guild-ID und braucht keinen API-Call
   DOM.overviewCreated.textContent = formatGuildCreatedDate(guildId);
   
-  await Promise.all([
-    loadGuildDetails(guildId),
-    loadRolesAndChannels(guildId),
-    loadAllModuleSettings(guildId)
-  ]);
+  // Rollen & Kanäle nur laden, wenn sie noch nicht gecacht sind
+  if (state.guildRoles.length === 0 || state.guildChannels.length === 0) {
+    await loadRolesAndChannels(guildId);
+  } else {
+    // Bereits vorhanden – nur die Dropdowns aktualisieren
+    renderAllSelects();
+    renderCategorySelects();
+  }
+  
+  // Ticket-Config laden (cached)
+  await getCachedTicketConfig(true); // frisch laden beim ersten Öffnen
+  
+  // Übersichts-Statistiken laden
+  await loadGuildDetails(guildId);
+  
+  // Alle Moduleinstellungen laden (für die anderen Tabs)
+  await loadAllModuleSettings(guildId);
 }
 
 function closeManagement() {
@@ -272,7 +317,7 @@ function renderGuildOwner(owner) {
 }
 
 // ============================================================
-// ROLES & CHANNELS
+// ROLES & CHANNELS (mit Cache)
 // ============================================================
 async function loadRolesAndChannels(guildId) {
   try {
@@ -400,7 +445,7 @@ function switchTab(tabName) {
   if (activeBtn) activeBtn.classList.add('active');
   if (activePage) activePage.classList.remove('hidden');
 
-  // Wenn Ticket-Tab, lade die Übersicht
+  // Wenn Ticket-Tab, lade die Übersicht (nutzt Cache)
   if (tabName === 'tickets' && state.activeGuildId) {
     setTimeout(() => renderTicketOverview(), 50);
   }
@@ -769,6 +814,8 @@ async function saveModuleSettings(moduleName) {
           privateTranscripts: document.getElementById('ticket-private-transcripts').checked,
           channelNameTemplate: document.getElementById('ticket-channel-name-template').value
         };
+        // Cache ungültig machen, da sich die Config geändert hat
+        invalidateTicketCache();
         break;
         
       case 'teamliste':
@@ -835,7 +882,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ============================================================
-// NEUE FUNKTIONEN FÜR DIE TICKET-ÜBERSICHT (Kartenansicht + Bearbeitungsansicht)
+// NEUE FUNKTIONEN FÜR DIE TICKET-ÜBERSICHT (Kartenansicht + Bearbeitungsansicht) – optimiert mit Cache
 // ============================================================
 
 // ------ Globale Referenzen für die Ticket-Übersicht ------
@@ -843,8 +890,9 @@ const ticketGrid = document.getElementById('ticket-overview-grid');
 const editContainer = document.getElementById('ticket-edit-container');
 const editContent = document.getElementById('ticket-edit-content');
 let editingIndex = null;
+let isEditViewOpen = false;
 
-// ------ Hilfsfunktion: Kategorien für Dropdowns füllen ------
+// ------ Hilfsfunktion: Kategorien für Dropdowns füllen (nutzt state.guildChannels) ------
 function populateCategorySelects() {
   const ids = ['edit-ticket-category', 'edit-ticket-overflow'];
   ids.forEach(id => {
@@ -930,7 +978,7 @@ function collectButtons() {
   }));
 }
 
-// ------ Übersicht rendern (Karten) ------
+// ------ Übersicht rendern (Karten) – nutzt gecachte Config ------
 async function renderTicketOverview() {
   if (!ticketGrid) return;
   if (!state.activeGuildId) {
@@ -938,9 +986,16 @@ async function renderTicketOverview() {
     return;
   }
 
+  // Ladezustand anzeigen
+  ticketGrid.innerHTML = `<div class="state-box" style="grid-column:1/-1;"><span class="loading-spinner"></span> Lade Ticket-Kategorien...</div>`;
+
   try {
-    const config = await apiFetch(`/guild/${state.activeGuildId}/config`);
-    const tickets = config.tickets || {};
+    // Config aus dem Cache holen (oder neu laden, falls nicht vorhanden)
+    const tickets = await getCachedTicketConfig();
+    if (!tickets) {
+      ticketGrid.innerHTML = `<div class="state-box error" style="grid-column:1/-1;">Fehler beim Laden der Konfiguration.</div>`;
+      return;
+    }
     const options = tickets.options || [];
 
     if (options.length === 0) {
@@ -1003,26 +1058,27 @@ window.openEditView = function(index) {
   showEditView(index);
 };
 
-// ------ Bearbeitungsansicht anzeigen und befüllen ------
+// ------ Bearbeitungsansicht anzeigen und befüllen (mit Lade-Indikator) ------
 async function showEditView(index) {
   // Übersicht ausblenden, Bearbeitungsansicht einblenden
   document.getElementById('ticket-overview-container').classList.add('hidden');
   editContainer.classList.remove('hidden');
+  isEditViewOpen = true;
 
-  // Config laden
-  let config;
-  try {
-    config = await apiFetch(`/guild/${state.activeGuildId}/config`);
-  } catch {
-    showToast('Fehler beim Laden der Konfiguration.', 'error');
+  // Ladezustand anzeigen
+  editContent.innerHTML = `<div style="text-align:center;padding:3rem;"><span class="loading-spinner"></span> Lade Ticket-Einstellungen...</div>`;
+
+  // Config aus dem Cache holen
+  const tickets = await getCachedTicketConfig();
+  if (!tickets) {
+    editContent.innerHTML = `<div class="state-box error">Fehler beim Laden der Konfiguration.</div>`;
     return;
   }
-  if (!config.tickets) config.tickets = {};
-  if (!config.tickets.options) config.tickets.options = [];
+  const options = tickets.options || [];
 
   let data = null;
-  if (index !== null && config.tickets.options[index]) {
-    data = config.tickets.options[index];
+  if (index !== null && options[index]) {
+    data = options[index];
   } else {
     // neues Ticket – Standardwerte
     data = {
@@ -1170,7 +1226,7 @@ async function showEditView(index) {
 
   editContent.innerHTML = html;
 
-  // Kategorien befüllen
+  // Kategorien befüllen (nutzt state.guildChannels)
   populateCategorySelects();
   // Rollen-Chips rendern
   renderEditRoleChips('edit-support-roles', data.supportRoles || []);
@@ -1209,10 +1265,11 @@ window.closeEditView = function() {
   editContainer.classList.add('hidden');
   editContent.innerHTML = '';
   editingIndex = null;
+  isEditViewOpen = false;
   renderTicketOverview();
 };
 
-// ------ Speichern der Bearbeitung ------
+// ------ Speichern der Bearbeitung (mit Cache-Invalidierung) ------
 window.saveEditView = async function() {
   const saveStatus = document.getElementById('edit-save-status');
   if (saveStatus) {
@@ -1246,6 +1303,7 @@ window.saveEditView = async function() {
   }
 
   try {
+    // Aktuelle Config laden (vom Server, um Konflikte zu vermeiden)
     const config = await apiFetch(`/guild/${state.activeGuildId}/config`);
     if (!config.tickets) config.tickets = {};
     if (!config.tickets.options) config.tickets.options = [];
@@ -1280,6 +1338,9 @@ window.saveEditView = async function() {
       body: JSON.stringify(config.tickets)
     });
 
+    // Cache ungültig machen, damit die Änderungen sichtbar werden
+    invalidateTicketCache();
+
     showToast(editingIndex !== null ? 'Ticket aktualisiert!' : 'Ticket hinzugefügt!', 'success');
     if (saveStatus) saveStatus.textContent = '✓ Gespeichert';
     closeEditView();
@@ -1289,7 +1350,7 @@ window.saveEditView = async function() {
   }
 };
 
-// ------ Ticket löschen ------
+// ------ Ticket löschen (mit Cache-Invalidierung) ------
 window.deleteTicketOption = async function(index) {
   if (!confirm('Möchtest du dieses Ticket wirklich löschen?')) return;
   try {
@@ -1300,6 +1361,7 @@ window.deleteTicketOption = async function(index) {
       method: 'POST',
       body: JSON.stringify(config.tickets)
     });
+    invalidateTicketCache();
     showToast('Ticket gelöscht.', 'success');
     renderTicketOverview();
   } catch (err) {
@@ -1307,6 +1369,29 @@ window.deleteTicketOption = async function(index) {
   }
 };
 
-// ------ Event Listener für Ticket-Tab ------
+// ------ Event Listener für Ticket-Tab (mit Cache) ------
 document.addEventListener('DOMContentLoaded', function() {
-  const ticketTabBtn = document.querySelector('[data
+  const ticketTabBtn = document.querySelector('[data-tab="tickets"]');
+  if (ticketTabBtn) {
+    ticketTabBtn.addEventListener('click', function() {
+      setTimeout(() => {
+        if (state.activeGuildId) renderTicketOverview();
+      }, 50);
+    });
+  }
+  const overlay = document.getElementById('manage-overlay');
+  if (overlay) {
+    const observer = new MutationObserver(() => {
+      if (!overlay.classList.contains('hidden')) {
+        const activeTab = document.querySelector('.tab-btn.active[data-tab="tickets"]');
+        if (activeTab && state.activeGuildId) renderTicketOverview();
+      }
+    });
+    observer.observe(overlay, { attributes: true, attributeFilter: ['class'] });
+  }
+});
+
+// ============================================================
+// INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', loadDashboard);
