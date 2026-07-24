@@ -426,4 +426,20 @@ if (NODE_ENV !== 'production') {
   }).catch(err => {
     console.error('❌ Fehler:', err);
   });
+  app.post("/api/guild/:guildId/welcome", async (req, res) => {
+  try {
+    const { guildId } = req.params;
+
+    await saveModuleConfig(guildId, "welcome", req.body);
+
+    res.json({
+      success: true
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false
+    });
+  }
+});
 }
