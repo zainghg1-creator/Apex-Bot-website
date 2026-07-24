@@ -62,7 +62,7 @@ async function connectToDatabase() {
   if (!cachedConnection.promise) {
     cachedConnection.promise = mongoose.connect(MONGODB_URI, {
       dbName: 'apex',
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 15000,
       socketTimeoutMS: 45000
     }).then(m => m);
   }
