@@ -383,9 +383,21 @@
 
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
       gap: 18px;
       margin-top: 1.5rem;
+    }
+
+    .card .stat-text {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .card .owner-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
 
     .form-card {
@@ -782,16 +794,39 @@
 
         <div class="stats-grid">
           <div class="card">
-            <h3>Mitglieder</h3>
+            <h3>👥 Mitglieder</h3>
             <p id="overview-members">N/A</p>
           </div>
           <div class="card">
-            <h3>Server Boosts</h3>
+            <h3>💎 Server Boosts</h3>
             <p id="overview-boosts">N/A</p>
           </div>
           <div class="card">
             <h3>Bot Status</h3>
             <p style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1rem; font-weight: 600; display:flex; align-items:center; gap:8px;"><span class="status-dot online"></span> Online</p>
+          </div>
+          <div class="card">
+            <h3>🤖 Anzahl Bots</h3>
+            <p id="overview-bots">N/A</p>
+          </div>
+          <div class="card">
+            <h3>📁 Anzahl Channels</h3>
+            <p id="overview-channels">N/A</p>
+          </div>
+          <div class="card">
+            <h3>🎭 Anzahl Rollen</h3>
+            <p id="overview-roles">N/A</p>
+          </div>
+          <div class="card">
+            <h3>📅 Server erstellt am</h3>
+            <p id="overview-created" class="stat-text">N/A</p>
+          </div>
+          <div class="card">
+            <h3>👑 Server Owner</h3>
+            <p id="overview-owner" class="stat-text owner-row">
+              <img id="overview-owner-avatar" class="guild-icon-small hidden" src="" alt="">
+              <span id="overview-owner-name">N/A</span>
+            </p>
           </div>
         </div>
       </div>
