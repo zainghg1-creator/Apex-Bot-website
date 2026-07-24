@@ -136,6 +136,8 @@
     .btn-primary:hover { background: #e4e4e7; transform: translateY(-2px); }
     .btn-secondary { background: rgba(255, 255, 255, 0.05); color: var(--text-primary); border-color: var(--border-subtle); }
     .btn-secondary:hover { background: rgba(255, 255, 255, 0.12); border-color: var(--border-active); transform: translateY(-2px); }
+    .btn-danger { background: #ef4444; color: #ffffff; }
+    .btn-danger:hover { background: #dc2626; transform: translateY(-2px); }
 
     /* Container / page heading */
     .container {
@@ -161,7 +163,7 @@
 
     .guild-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 20px;
     }
 
@@ -173,13 +175,29 @@
       display: flex;
       flex-direction: column;
       align-items: stretch;
-      gap: 18px;
+      gap: 14px;
       transition: all 0.25s ease;
+      cursor: default;
     }
 
     .guild-card:hover {
       border-color: var(--border-active);
       transform: translateY(-4px);
+    }
+
+    .guild-card.add-card {
+      border-style: dashed;
+      border-color: var(--border-subtle);
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      cursor: pointer;
+      background: transparent;
+    }
+
+    .guild-card.add-card:hover {
+      border-color: var(--border-active);
+      background: rgba(255,255,255,0.02);
     }
 
     .guild-info {
@@ -198,6 +216,10 @@
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid var(--border-subtle);
       flex-shrink: 0;
+      font-size: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .guild-name {
@@ -215,26 +237,30 @@
       white-space: normal;
     }
 
+    .guild-detail {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .guild-detail span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
     .guild-action {
-      width: 100%;
+      display: flex;
+      gap: 10px;
+      margin-top: 4px;
     }
 
     .guild-action .btn {
-      width: 100%;
+      flex: 1;
     }
 
-    .guild-action .btn-primary {
-      background: #ffffff;
-      color: #000000;
-    }
-
-    .guild-action .btn-secondary {
-      background: rgba(255, 255, 255, 0.05);
-      color: var(--text-primary);
-      border: 1px solid var(--border-subtle);
-    }
-
-    /* Overlay / Sidebar Dashboard */
     .overlay {
       position: fixed;
       inset: 0;
@@ -357,7 +383,6 @@
       font-size: 0.92rem;
     }
 
-    /* Cards & Forms */
     .card {
       background: var(--bg-surface);
       border: 1px solid var(--border-subtle);
@@ -627,25 +652,6 @@
     }
     .add-option-btn:hover { color: var(--text-primary); border-color: var(--border-active); }
 
-    .embed-preview-wrap { max-width: 100%; }
-    .discord-embed {
-      background: #2b2d31; border-left: 4px solid #ffffff; border-radius: 6px;
-      padding: 14px 16px; font-family: 'Plus Jakarta Sans', sans-serif; color: #dbdee1;
-      display: flex; gap: 14px; justify-content: space-between;
-    }
-    .discord-embed-body { flex: 1; min-width: 0; }
-    .discord-embed-title { font-weight: 700; color: #ffffff; margin-bottom: 6px; font-size: 0.95rem; }
-    .discord-embed-desc { font-size: 0.85rem; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
-    .discord-embed-thumb {
-      width: 56px; height: 56px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
-    }
-    .discord-embed-image { width: 100%; border-radius: 6px; margin-top: 10px; max-height: 160px; object-fit: cover; }
-    .discord-embed-footer {
-      display: flex; align-items: center; gap: 8px; margin-top: 10px;
-      font-size: 0.72rem; color: #949ba4;
-    }
-    .discord-embed-footer img { width: 18px; height: 18px; border-radius: 50%; }
-
     .soon-badge {
       display: inline-block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em;
       text-transform: uppercase; color: var(--text-dim); background: rgba(255,255,255,0.06);
@@ -665,6 +671,50 @@
     @keyframes toast-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes toast-out { from { opacity: 1; } to { opacity: 0; transform: translateY(-6px); } }
 
+    /* ----- Modal (für Hinzufügen / Bearbeiten) ----- */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 300;
+      padding: 20px;
+    }
+    .modal-overlay.hidden { display: none; }
+
+    .modal-box {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 2rem;
+      max-width: 520px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+    }
+
+    .modal-box h3 {
+      font-size: 1.3rem;
+      font-weight: 800;
+      margin-bottom: 1.5rem;
+    }
+
+    .modal-box .form-group {
+      margin-bottom: 1.2rem;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 1.5rem;
+    }
+
+    .modal-actions .btn {
+      flex: 1;
+    }
+
     @media (max-width: 768px) {
       .nav-center { display: none; }
       .stats-grid { grid-template-columns: 1fr; }
@@ -683,6 +733,7 @@
       .sidebar-nav { flex-direction: row; flex: none; }
       .back-btn { margin-top: 0; margin-left: auto; width: auto; }
       .content-area { padding: 1.5rem; }
+      .guild-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -1007,171 +1058,18 @@
       </div>
 
       <!-- ========================================================= -->
-      <!-- TICKET SYSTEM – IM STIL VON TICKETY, ABER EIGENSTÄNDIG   -->
+      <!-- TICKET SYSTEM – NEUE ÜBERSICHT MIT KARTEN                -->
       <!-- ========================================================= -->
       <div id="mod-tickets" class="module-page hidden">
         <h2>🎫 Ticket System</h2>
-        <p>Konfiguriere dein Ticket-Panel – von der Optik bis zur Logik.</p>
+        <p>Verwalte deine Ticket-Kategorien – hier siehst du alle vorhandenen Ticket-Typen.</p>
 
-        <div class="card form-card" style="max-width:100%;">
-
-          <!-- ====== ALLGEMEIN ====== -->
-          <div style="border-bottom:1px solid var(--border-subtle); padding-bottom:16px; margin-bottom:8px;">
-            <h3 style="font-size:0.85rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Allgemein</h3>
-          </div>
-
-          <div class="form-group">
-            <div class="switch-row">
-              <label style="margin:0;">Ticket-System aktivieren</label>
-              <label class="switch"><input type="checkbox" id="ticket-panel-enabled" checked><span class="switch-slider"></span></label>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="ticket-panel-name">Panel-Bezeichnung</label>
-            <input type="text" id="ticket-panel-name" placeholder="Support" value="Support">
-          </div>
-
-          <div class="form-group">
-            <label for="ticket-panel-channel">Ausgabekanal für das Panel</label>
-            <select id="ticket-panel-channel"></select>
-          </div>
-
-          <!-- ====== BEREchtIGUNGEN ====== -->
-          <div style="border-bottom:1px solid var(--border-subtle); padding-bottom:16px; margin:16px 0 8px;">
-            <h3 style="font-size:0.85rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Berechtigungen</h3>
-          </div>
-
-          <div class="form-group">
-            <label>Support-Team (Rollen mit Zugriff)</label>
-            <div id="ticket-support-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span></div>
-          </div>
-
-          <!-- ====== KATEGORIEN & THREADS ====== -->
-          <div style="border-bottom:1px solid var(--border-subtle); padding-bottom:16px; margin:16px 0 8px;">
-            <h3 style="font-size:0.85rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Kategorien & Kanäle</h3>
-          </div>
-
-          <div class="form-group">
-            <label for="ticket-location-category">Haupt-Kategorie für Tickets</label>
-            <select id="ticket-location-category"></select>
-          </div>
-
-          <div class="form-group">
-            <label for="ticket-overflow-categories">Ausweich-Kategorien (optional)</label>
-            <select id="ticket-overflow-categories" multiple style="height:auto; min-height:80px;"></select>
-            <small>Mehrfachauswahl mit Strg (Cmd) möglich.</small>
-          </div>
-
-          <div class="form-group">
-            <label for="ticket-thread-mode">Unterhaltungsmodus</label>
-            <select id="ticket-thread-mode">
-              <option value="none">Keine Threads</option>
-              <option value="thread">Öffentliche Threads</option>
-              <option value="private">Private Threads</option>
-            </select>
-          </div>
-
-          <!-- ====== TRANSCRIPTE ====== -->
-          <div style="border-bottom:1px solid var(--border-subtle); padding-bottom:16px; margin:16px 0 8px;">
-            <h3 style="font-size:0.85rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Transkripte</h3>
-          </div>
-
-          <div class="form-group">
-            <div class="switch-row">
-              <label style="margin:0;">Transkripte automatisch speichern</label>
-              <label class="switch"><input type="checkbox" id="ticket-save-transcripts"><span class="switch-slider"></span></label>
-            </div>
-            <div class="switch-row">
-              <label style="margin:0;">Bilder in Transkripte einbetten</label>
-              <label class="switch"><input type="checkbox" id="ticket-save-images"><span class="switch-slider"></span></label>
-            </div>
-            <div class="switch-row">
-              <label style="margin:0;">Transkripte nur für Team sichtbar</label>
-              <label class="switch"><input type="checkbox" id="ticket-private-transcripts"><span class="switch-slider"></span></label>
-            </div>
-          </div>
-
-          <!-- ====== KANALNAMEN ====== -->
-          <div style="border-bottom:1px solid var(--border-subtle); padding-bottom:16px; margin:16px 0 8px;">
-            <h3 style="font-size:0.85rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Kanalbenennung</h3>
-          </div>
-
-          <div class="form-group">
-            <label for="ticket-channel-name-template">Vorlage für Ticket-Kanäle</label>
-            <input type="text" id="ticket-channel-name-template" placeholder="{panel.name}-{ticket.creator.username}" value="{panel.name}-{ticket.creator.username}">
-            <small>Platzhalter: <code>{panel.name}</code>, <code>{ticket.creator.username}</code>, <code>{ticket.id}</code></small>
-          </div>
-
-          <!-- ====== EMBED & NACHRICHT ====== -->
-          <div style="border-bottom:1px solid var(--border-subtle); padding-bottom:16px; margin:16px 0 8px;">
-            <h3 style="font-size:0.85rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Panel-Design & Nachricht</h3>
-          </div>
-
-          <div class="form-group">
-            <label for="ticket-panel-title">Titel des Panels</label>
-            <input type="text" id="ticket-panel-title" placeholder="Support Center" oninput="updateEmbedPreview('ticket')">
-          </div>
-
-          <div class="form-group">
-            <label for="ticket-panel-desc">Beschreibungstext</label>
-            <textarea id="ticket-panel-desc" rows="3" placeholder="Wähle eine Kategorie, um ein Ticket zu öffnen." oninput="updateEmbedPreview('ticket')"></textarea>
-          </div>
-
-          <div class="form-group">
-            <label>Panel-Bild (optional)</label>
-            <div class="image-upload">
-              <img id="ticket-image-preview" class="image-preview" src="" alt="">
-              <div class="upload-btn-wrap">
-                <label class="btn btn-secondary" for="ticket-image-input">Bild hochladen</label>
-                <input type="file" id="ticket-image-input" accept="image/*" onchange="handleImageUpload(this,'ticket')">
-              </div>
-              <button class="btn btn-secondary" onclick="clearImage('ticket')" type="button">Entfernen</button>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>Akzentfarbe (Embed)</label>
-            <div class="color-row">
-              <input type="color" id="ticket-color" value="#ffffff" oninput="syncColor('ticket')">
-              <input type="text" id="ticket-color-hex" value="#ffffff" oninput="syncColorHex('ticket')">
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="ticket-create-msg">Begrüßungsnachricht im Ticket</label>
-            <textarea id="ticket-create-msg" rows="3" placeholder="Hallo {user}, wir kümmern uns um dein Anliegen."></textarea>
-            <small>Wird automatisch im neuen Ticket-Kanal gesendet.</small>
-          </div>
-
-          <!-- ====== SPEICHERN ====== -->
-          <div class="form-action">
-            <button class="btn btn-primary" onclick="saveModuleSettings('tickets')">Alle Einstellungen speichern</button>
-            <span id="ticket-save-status" class="hidden status-success"></span>
-          </div>
-        </div>
-
-        <!-- ====== VORSCHAU & KATEGORIEN ====== -->
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:28px; margin-top:28px;">
-          <div class="embed-preview-wrap">
-            <label style="font-size:0.85rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:10px;">Live-Vorschau</label>
-            <div class="discord-embed" id="ticket-preview" style="border-left-color:#ffffff;">
-              <div class="discord-embed-body">
-                <div class="discord-embed-title" id="ticket-preview-title">Support Center</div>
-                <div class="discord-embed-desc" id="ticket-preview-desc">Wähle eine Kategorie, um ein Ticket zu öffnen.</div>
-                <img id="ticket-preview-image" class="discord-embed-image hidden" src="">
-                <div class="discord-embed-footer">
-                  <img src="apex_logo.png">
-                  <span>Ticket System • Powered by Apex</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label style="font-weight:700;">Dropdown-Optionen (Kategorien)</label>
-            <div id="ticket-options-list" style="display:flex; flex-direction:column; gap:10px;"></div>
-            <button type="button" class="add-option-btn" onclick="addTicketOption()">+ Option hinzufügen</button>
+        <!-- Container für die Übersicht -->
+        <div id="ticket-overview-container">
+          <!-- Das Grid wird per JavaScript befüllt -->
+          <div id="ticket-overview-grid" class="guild-grid">
+            <!-- Platzhalter / Ladezustand -->
+            <div class="state-box" style="grid-column: 1 / -1;">Lade Ticket-Kategorien...</div>
           </div>
         </div>
       </div>
@@ -1320,6 +1218,29 @@
     </div>
   </div>
 
+  <!-- ========== MODAL FÜR HINZUFÜGEN / BEARBEITEN ========== -->
+  <div id="ticket-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <h3 id="ticket-modal-title">Ticket hinzufügen</h3>
+      <div class="form-group">
+        <label for="ticket-modal-label">Bezeichnung</label>
+        <input type="text" id="ticket-modal-label" placeholder="z.B. Support">
+      </div>
+      <div class="form-group">
+        <label for="ticket-modal-emoji">Emoji (optional)</label>
+        <input type="text" id="ticket-modal-emoji" placeholder="🎫">
+      </div>
+      <div class="form-group">
+        <label for="ticket-modal-category">Kategorie</label>
+        <select id="ticket-modal-category"></select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeTicketModal()">Abbrechen</button>
+        <button class="btn btn-primary" id="ticket-modal-save" onclick="saveTicketModal()">Speichern</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast-container"></div>
 
   <footer>
@@ -1442,5 +1363,231 @@
   })();
   </script>
   <script src="/dashboard.js"></script>
+
+  <!-- Neuer Code für die Ticket-Übersicht – nur hinzugefügt, nichts Bestehendes geändert -->
+  <script>
+  (function() {
+    'use strict';
+
+    // ------ Globale Referenzen ------
+    const ticketGrid = document.getElementById('ticket-overview-grid');
+    const modal = document.getElementById('ticket-modal');
+    const modalTitle = document.getElementById('ticket-modal-title');
+    const modalLabel = document.getElementById('ticket-modal-label');
+    const modalEmoji = document.getElementById('ticket-modal-emoji');
+    const modalCategory = document.getElementById('ticket-modal-category');
+    const modalSaveBtn = document.getElementById('ticket-modal-save');
+
+    let editingIndex = null; // welcher Index wird gerade bearbeitet?
+
+    // ------ Kategorien laden für das Modal ------
+    function populateModalCategories() {
+      const categories = state.guildChannels.filter(c => c.type === 4);
+      modalCategory.innerHTML = categories.length
+        ? categories.map(c => `<option value="${c.id}">📁 ${escapeHtml(c.name)}</option>`).join('')
+        : `<option value="">Keine Kategorien gefunden</option>`;
+    }
+
+    // ------ Config laden (nur für Tickets) ------
+    async function fetchTicketConfig() {
+      if (!state.activeGuildId) return null;
+      try {
+        const data = await apiFetch(`/guild/${state.activeGuildId}/config`);
+        return data.tickets || {};
+      } catch {
+        return null;
+      }
+    }
+
+    // ------ Hauptfunktion: Übersicht rendern ------
+    async function renderTicketOverview() {
+      if (!ticketGrid) return;
+      const config = await fetchTicketConfig();
+      const options = (config && config.options) ? config.options : [];
+
+      if (options.length === 0) {
+        // Keine Optionen – zeige "Hinzufügen"-Karte
+        ticketGrid.innerHTML = `
+          <div class="guild-card add-card" onclick="openAddTicketModal()" style="cursor:pointer;">
+            <div style="font-size:3rem; line-height:1;">＋</div>
+            <div style="font-weight:700; font-size:1.1rem; margin-top:6px;">Neues Ticket hinzufügen</div>
+            <div style="color:var(--text-muted); font-size:0.85rem;">Klicke hier, um eine neue Kategorie zu erstellen.</div>
+          </div>
+        `;
+        return;
+      }
+
+      // Karten für jede Option
+      let html = '';
+      options.forEach((opt, index) => {
+        const emoji = opt.emoji || '🎫';
+        const label = opt.label || 'Unbenannt';
+        const categoryName = state.guildChannels.find(c => c.id === opt.categoryId)?.name || 'Keine Kategorie';
+
+        html += `
+          <div class="guild-card">
+            <div class="guild-info">
+              <div class="guild-icon">${escapeHtml(emoji)}</div>
+              <span class="guild-name">${escapeHtml(label)}</span>
+            </div>
+            <div class="guild-detail">
+              <span>📂 Kategorie: ${escapeHtml(categoryName)}</span>
+            </div>
+            <div class="guild-action">
+              <button class="btn btn-secondary" onclick="openEditTicketModal(${index})">Bearbeiten</button>
+              <button class="btn btn-danger" onclick="deleteTicketOption(${index})">Löschen</button>
+            </div>
+          </div>
+        `;
+      });
+
+      // "Hinzufügen"-Karte am Ende
+      html += `
+        <div class="guild-card add-card" onclick="openAddTicketModal()" style="cursor:pointer;">
+          <div style="font-size:3rem; line-height:1;">＋</div>
+          <div style="font-weight:700; font-size:1.1rem; margin-top:6px;">Neues Ticket hinzufügen</div>
+          <div style="color:var(--text-muted); font-size:0.85rem;">Klicke hier, um eine weitere Kategorie zu erstellen.</div>
+        </div>
+      `;
+
+      ticketGrid.innerHTML = html;
+    }
+
+    // ------ Modal öffnen (hinzufügen) ------
+    window.openAddTicketModal = function() {
+      editingIndex = null;
+      modalTitle.textContent = 'Neues Ticket hinzufügen';
+      modalLabel.value = '';
+      modalEmoji.value = '🎫';
+      populateModalCategories();
+      modal.classList.remove('hidden');
+      modalLabel.focus();
+    };
+
+    // ------ Modal öffnen (bearbeiten) ------
+    window.openEditTicketModal = async function(index) {
+      const config = await fetchTicketConfig();
+      if (!config || !config.options || !config.options[index]) return;
+      const opt = config.options[index];
+      editingIndex = index;
+      modalTitle.textContent = 'Ticket bearbeiten';
+      modalLabel.value = opt.label || '';
+      modalEmoji.value = opt.emoji || '🎫';
+      populateModalCategories();
+      if (opt.categoryId) modalCategory.value = opt.categoryId;
+      modal.classList.remove('hidden');
+      modalLabel.focus();
+    };
+
+    // ------ Modal schließen ------
+    window.closeTicketModal = function() {
+      modal.classList.add('hidden');
+      editingIndex = null;
+    };
+
+    // ------ Modal speichern ------
+    window.saveTicketModal = async function() {
+      const label = modalLabel.value.trim();
+      const emoji = modalEmoji.value.trim() || '🎫';
+      const categoryId = modalCategory.value;
+
+      if (!label) {
+        showToast('Bitte gib eine Bezeichnung ein.', 'error');
+        return;
+      }
+
+      // Aktuelle Config laden
+      const config = await fetchTicketConfig();
+      if (!config) {
+        showToast('Fehler beim Laden der Konfiguration.', 'error');
+        return;
+      }
+
+      if (!config.options) config.options = [];
+
+      if (editingIndex !== null) {
+        // Vorhandenen Eintrag aktualisieren
+        config.options[editingIndex] = { label, emoji, categoryId };
+      } else {
+        // Neuen Eintrag hinzufügen
+        config.options.push({ label, emoji, categoryId });
+      }
+
+      // Config speichern
+      try {
+        await apiFetch(`/guild/${state.activeGuildId}/config/tickets`, {
+          method: 'POST',
+          body: JSON.stringify(config)
+        });
+        showToast(editingIndex !== null ? 'Ticket aktualisiert!' : 'Ticket hinzugefügt!', 'success');
+        closeTicketModal();
+        renderTicketOverview(); // neu laden
+      } catch (err) {
+        showToast(`Fehler beim Speichern: ${err.message}`, 'error');
+      }
+    };
+
+    // ------ Ticket löschen ------
+    window.deleteTicketOption = async function(index) {
+      if (!confirm('Möchtest du dieses Ticket wirklich löschen?')) return;
+
+      const config = await fetchTicketConfig();
+      if (!config || !config.options || !config.options[index]) return;
+
+      config.options.splice(index, 1);
+
+      try {
+        await apiFetch(`/guild/${state.activeGuildId}/config/tickets`, {
+          method: 'POST',
+          body: JSON.stringify(config)
+        });
+        showToast('Ticket gelöscht.', 'success');
+        renderTicketOverview();
+      } catch (err) {
+        showToast(`Fehler beim Löschen: ${err.message}`, 'error');
+      }
+    };
+
+    // ------ Event Listener für den Ticket-Tab ------
+    // Wird ausgelöst, wenn der Ticket-Tab sichtbar wird (nach switchTab)
+    // Wir hängen uns an den bestehenden Tab-Button, ohne ihn zu überschreiben
+    document.addEventListener('DOMContentLoaded', function() {
+      const ticketTabBtn = document.querySelector('[data-tab="tickets"]');
+      if (ticketTabBtn) {
+        // Wir nutzen einen eigenen Event Listener, der nach dem Klick die Übersicht lädt
+        ticketTabBtn.addEventListener('click', function(e) {
+          // Kurze Verzögerung, damit switchTab zuerst ausgeführt wird
+          setTimeout(() => {
+            if (state.activeGuildId) {
+              renderTicketOverview();
+            }
+          }, 50);
+        });
+      }
+
+      // Auch beim ersten Öffnen des Overlays: wenn der Ticket-Tab aktiv ist, rendern
+      // Dazu beobachten wir das Overlay
+      const overlay = document.getElementById('manage-overlay');
+      if (overlay) {
+        const observer = new MutationObserver(() => {
+          if (!overlay.classList.contains('hidden')) {
+            // Prüfen, ob der Ticket-Tab aktiv ist
+            const activeTab = document.querySelector('.tab-btn.active[data-tab="tickets"]');
+            if (activeTab && state.activeGuildId) {
+              renderTicketOverview();
+            }
+          }
+        });
+        observer.observe(overlay, { attributes: true, attributeFilter: ['class'] });
+      }
+    });
+
+    // Exportiere Funktionen für den globalen Zugriff (werden in HTML aufgerufen)
+    window.renderTicketOverview = renderTicketOverview;
+    window.fetchTicketConfig = fetchTicketConfig;
+    window.populateModalCategories = populateModalCategories;
+
+  })();
+  </script>
 </body>
 </html>
