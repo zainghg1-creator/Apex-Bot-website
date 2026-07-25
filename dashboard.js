@@ -369,7 +369,7 @@ function switchSubtab(moduleName, subName) {
 }
 
 // ============================================================
-// COLOR SYNC (Welcome) – mit automatischer Vorschau-Aktualisierung
+// COLOR SYNC (Welcome)
 // ============================================================
 function syncColor(prefix) {
   const color = document.getElementById(`${prefix}-color`).value;
@@ -377,7 +377,6 @@ function syncColor(prefix) {
   const preview = document.getElementById(`${prefix}-preview`);
   if (hexInput) hexInput.value = color;
   if (preview) preview.style.borderLeftColor = color;
-  // Vorschau aktualisieren
   updateEmbedPreview(prefix);
 }
 
@@ -393,28 +392,86 @@ function syncColorHex(prefix) {
 }
 
 // ============================================================
-// IMAGE UPLOAD (Welcome)
+// BILD-KOMPRIMIERUNG (max. 300 KB)
 // ============================================================
-function handleImageUpload(input, prefix) {
+function compressImage(dataUrl, maxSizeKB = 300) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+      
+      // Maximal 800px Breite/Höhe (Discord-Embeds sind sowieso klein)
+      const maxDim = 800;
+      if (width > maxDim || height > maxDim) {
+        const ratio = Math.min(maxDim / width, maxDim / height);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      // Qualität reduzieren bis unter maxSizeKB
+      let quality = 0.9;
+      let result = canvas.toDataURL('image/jpeg', quality);
+      while (result.length > maxSizeKB * 1024 && quality > 0.1) {
+        quality -= 0.1;
+        result = canvas.toDataURL('image/jpeg', quality);
+      }
+      resolve(result);
+    };
+    img.onerror = () => resolve(dataUrl); // Fallback: Original
+    img.src = dataUrl;
+  });
+}
+
+// ============================================================
+// IMAGE UPLOAD (Welcome & Verification) – mit Komprimierung
+// ============================================================
+async function handleImageUpload(input, prefix) {
   const file = input.files?.[0];
   if (!file) return;
-  if (file.size > 5 * 1024 * 1024) {
-    showToast('Bild ist zu groß (max. 5MB)', 'error');
+  
+  if (!file.type.startsWith('image/')) {
+    showToast('Bitte wähle ein Bild aus.', 'error');
     input.value = '';
     return;
   }
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const dataUrl = e.target.result;
-    const previewImg = document.getElementById(`${prefix}-image-preview`);
-    if (previewImg) previewImg.src = dataUrl;
-    input.dataset.value = dataUrl;
-    updateEmbedPreview(prefix);
-  };
-  reader.onerror = () => showToast('Fehler beim Lesen der Datei', 'error');
-  reader.readAsDataURL(file);
+  
+  if (file.size > 5 * 1024 * 1024) {
+    showToast('Bild ist zu groß (max. 5MB).', 'error');
+    input.value = '';
+    return;
+  }
+  
+  try {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const compressed = await compressImage(e.target.result, 300);
+        const previewImg = document.getElementById(`${prefix}-image-preview`);
+        if (previewImg) previewImg.src = compressed;
+        input.dataset.value = compressed;
+        updateEmbedPreview(prefix);
+        showToast('Bild hochgeladen ✅', 'success');
+      } catch (err) {
+        showToast('Fehler beim Komprimieren: ' + err.message, 'error');
+      }
+    };
+    reader.onerror = () => showToast('Fehler beim Lesen der Datei', 'error');
+    reader.readAsDataURL(file);
+  } catch (err) {
+    showToast('Fehler: ' + err.message, 'error');
+  }
 }
 
+// ============================================================
+// BILD ENTFERNEN
+// ============================================================
 function clearImage(prefix) {
   const input = document.getElementById(`${prefix}-image-input`);
   if (input) { input.value = ''; input.dataset.value = ''; }
@@ -424,7 +481,29 @@ function clearImage(prefix) {
 }
 
 // ============================================================
-// EMBED VORSCHAU (Welcome) – inklusive Farbaktualisierung
+// BILD AUS KONFIGURATION LADEN
+// ============================================================
+function setImage(prefix, url) {
+  const preview = document.getElementById(`${prefix}-image-preview`);
+  const input = document.getElementById(`${prefix}-image-input`);
+  
+  if (preview) {
+    if (url && (url.startsWith('data:image') || url.startsWith('http'))) {
+      preview.src = url;
+      preview.style.display = 'block';
+    } else {
+      preview.src = '';
+      preview.style.display = 'none';
+    }
+  }
+  if (input) {
+    input.dataset.value = url || '';
+  }
+  updateEmbedPreview(prefix);
+}
+
+// ============================================================
+// EMBED VORSCHAU (Welcome)
 // ============================================================
 const updateEmbedPreview = debounce((prefix) => {
   const titleEl = document.getElementById(`${prefix}-title`);
@@ -443,14 +522,13 @@ const updateEmbedPreview = debounce((prefix) => {
     if (val) { previewImage.src = val; previewImage.classList.remove('hidden'); }
     else { previewImage.classList.add('hidden'); }
   }
-  // Farbe anwenden
   if (preview && colorInput) {
     preview.style.borderLeftColor = colorInput.value;
   }
 }, 200);
 
 // ============================================================
-// LOAD SETTINGS (andere Module)
+// LOAD SETTINGS
 // ============================================================
 async function loadAllModuleSettings(guildId) {
   try {
@@ -486,7 +564,6 @@ function applyWelcomeConfig(cfg) {
   setChecked('leave-avatar-thumb', l.useAvatarThumbnail ?? true);
   setImage('leave', l.image);
   setSelectValue('leave-channel', l.channelId || '');
-  // Vorschau aktualisieren
   updateEmbedPreview('join');
   updateEmbedPreview('leave');
 }
@@ -504,7 +581,7 @@ function applyVerificationConfig(cfg) {
   setValue('verification-title', cfg.title || '');
   setValue('verification-description', cfg.description || '');
   setColor('verification', cfg.color || '#6d5ef8');
-  setValue('verification-image', cfg.image || '');
+  setImage('verification', cfg.image);
   setValue('verification-button-label', cfg.buttonLabel || '');
 }
 
@@ -526,12 +603,7 @@ function setColor(prefix, color) {
   if (hexEl) hexEl.value = color || '#ffffff';
   if (preview) preview.style.borderLeftColor = color || '#ffffff';
 }
-function setImage(prefix, url) {
-  const preview = document.getElementById(`${prefix}-image-preview`);
-  const input = document.getElementById(`${prefix}-image-input`);
-  if (preview) preview.src = url || '';
-  if (input) input.dataset.value = url || '';
-}
+// setImage wurde oben bereits definiert
 
 // ============================================================
 // SAVE SETTINGS
@@ -608,7 +680,7 @@ async function saveModuleSettings(moduleName) {
           title: document.getElementById('verification-title').value,
           description: document.getElementById('verification-description').value,
           color: document.getElementById('verification-color').value,
-          image: document.getElementById('verification-image').value,
+          image: document.getElementById('verification-image-input')?.dataset.value || '',
           buttonLabel: document.getElementById('verification-button-label').value
         };
         break;
@@ -1406,7 +1478,7 @@ window.closeEditView = function() {
 };
 
 // ============================================================
-// VERIFICATION PANEL SENDEN (mit Debug-Log)
+// VERIFICATION PANEL SENDEN
 // ============================================================
 async function sendVerificationPanel() {
   if (!state.activeGuildId) { showToast('Kein Server ausgewählt.', 'error'); return; }
@@ -1419,7 +1491,7 @@ async function sendVerificationPanel() {
   const title = document.getElementById('verification-title').value;
   const description = document.getElementById('verification-description').value;
   const color = document.getElementById('verification-color').value;
-  const image = document.getElementById('verification-image').value;
+  const image = document.getElementById('verification-image-input')?.dataset.value || '';
   const buttonLabel = document.getElementById('verification-button-label').value;
 
   console.log('📤 Sende Verifizierungs-Panel mit:', { channelId, method, roleId, title, description, color, image, buttonLabel });
