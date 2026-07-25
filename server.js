@@ -537,7 +537,7 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
 });
 
 // ============================================================
-// VERIFICATION PANEL SENDEN (MIT VERBESSERTER FARBKONVERTIERUNG)
+// ⭐ VERIFICATION PANEL SENDEN (MIT VERBESSERTER FARBKONVERTIERUNG)
 // ============================================================
 app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req, res) => {
   const { guildId } = req.params;
@@ -565,23 +565,29 @@ app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req,
     }
 
     // ============================================================
-    // 🎨 ROBUSTE FARBKONVERTIERUNG
+    // 🎨 ROBUSTE FARBKONVERTIERUNG (JETZT MIT FALLBACK AUF DISCORD-BLAU)
     // ============================================================
-    let parsedColor = 0x6d5ef8; // Standard-Farbe (lila)
+    let parsedColor = 0x5865f2; // Standard: Discord-Blau
     if (color) {
-      let hex = color.replace(/[^0-9a-fA-F]/g, ''); // nur hex-Zeichen
+      // 1. Alle nicht-hex Zeichen entfernen
+      let hex = color.replace(/[^0-9a-fA-F]/g, '');
+      console.log('🧹 Gereinigter Hex:', hex);
+      
+      // 2. Kurzform erweitern (z.B. #0f0 → 00ff00)
       if (hex.length === 3) {
-        // Kurzform erweitern: #0f0 -> 00ff00
         hex = hex.split('').map(c => c + c).join('');
+        console.log('↔️ Erweiterte Kurzform:', hex);
       }
+      
+      // 3. Prüfen, ob wir 6 Zeichen haben
       if (hex.length === 6) {
         parsedColor = parseInt(hex, 16);
-        console.log('✅ Geparste Farbe:', parsedColor, 'Hex:', hex);
+        console.log('✅ Geparste Farbe (dezimal):', parsedColor, '| Hex:', '#' + hex);
       } else {
-        console.warn('⚠️ Ungültige Farbe, verwende Standard:', hex);
+        console.warn('⚠️ Ungültige Farbe – Länge:', hex.length, 'Verwende Standard (Discord-Blau)');
       }
     } else {
-      console.warn('⚠️ Keine Farbe übergeben, verwende Standard.');
+      console.warn('⚠️ Keine Farbe übergeben – Verwende Standard (Discord-Blau)');
     }
 
     // Embed mit benutzerdefinierten Werten
@@ -593,6 +599,8 @@ app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req,
       color: parsedColor,
       footer: { text: 'Verifizierungssystem • Powered by Apex' }
     };
+
+    console.log('📦 Finales Embed:', JSON.stringify(embed, null, 2));
 
     if (image && image.startsWith('http')) {
       embed.image = { url: image };
@@ -640,13 +648,14 @@ app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req,
 
     const data = await response.json();
     if (!response.ok) {
-      console.error('Discord API Fehler:', response.status, data);
+      console.error('❌ Discord API Fehler:', response.status, data);
       return res.status(response.status).json({ error: `Discord Fehler: ${data.message || 'Unbekannt'}` });
     }
 
+    console.log('✅ Verifizierungs-Panel gesendet!');
     res.json({ success: true, message: 'Verifizierungs-Panel gesendet!', data });
   } catch (err) {
-    console.error('Fehler beim Senden des Verifizierungs-Panels:', err);
+    console.error('❌ Fehler beim Senden des Verifizierungs-Panels:', err);
     res.status(500).json({ error: 'Interner Serverfehler: ' + err.message });
   }
 });
