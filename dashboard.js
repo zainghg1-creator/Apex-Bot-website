@@ -1122,7 +1122,7 @@ async function showEditView(index) {
           <div class="tpe-card-title" style="margin-bottom:12px;">📺 Live-Vorschau</div>
           <div class="tpe-discord-preview">
             <div class="tpe-discord-author">
-              <div class="tpe-discord-avatar">🎫</div>
+              <div class="tpe-discord-avatar"><img src="apex_logo.png" alt="APEX Bot"></div>
               <div class="tpe-discord-namerow">
                 <span class="tpe-discord-name">APEX Bot</span>
                 <span class="tpe-discord-app-badge">✓ App</span>
@@ -1174,7 +1174,7 @@ async function showEditView(index) {
           <div class="tpe-card-title" style="margin-bottom:12px;">💬 Begrüßungsnachricht</div>
           <div class="tpe-discord-preview">
             <div class="tpe-discord-author">
-              <div class="tpe-discord-avatar">🎫</div>
+              <div class="tpe-discord-avatar"><img src="apex_logo.png" alt="APEX Bot"></div>
               <div class="tpe-discord-namerow">
                 <span class="tpe-discord-name">APEX Bot</span>
                 <span class="tpe-discord-app-badge">✓ App</span>
