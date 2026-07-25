@@ -1124,7 +1124,7 @@ async function showEditView(index) {
             <div class="tpe-discord-author">
               <div class="tpe-discord-avatar">🎫</div>
               <div class="tpe-discord-namerow">
-                <span class="tpe-discord-name">Tickety</span>
+                <span class="tpe-discord-name">APEX Bot</span>
                 <span class="tpe-discord-app-badge">✓ App</span>
                 <span class="tpe-discord-time">Heute um 12:00</span>
               </div>
@@ -1176,7 +1176,7 @@ async function showEditView(index) {
             <div class="tpe-discord-author">
               <div class="tpe-discord-avatar">🎫</div>
               <div class="tpe-discord-namerow">
-                <span class="tpe-discord-name">Tickety</span>
+                <span class="tpe-discord-name">APEX Bot</span>
                 <span class="tpe-discord-app-badge">✓ App</span>
                 <span class="tpe-discord-time">Heute um 12:00</span>
               </div>
