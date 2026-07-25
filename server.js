@@ -537,6 +537,82 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
 });
 
 // ============================================================
+// VERIFICATION PANEL SENDEN
+// ============================================================
+app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req, res) => {
+  const { guildId } = req.params;
+  const { channelId, method, roleId } = req.body;
+
+  if (!channelId || !method || !roleId) {
+    return res.status(400).json({ error: 'channelId, method und roleId sind erforderlich.' });
+  }
+
+  try {
+    const botToken = process.env.BOT_TOKEN;
+    if (!botToken) {
+      return res.status(500).json({ error: 'BOT_TOKEN nicht konfiguriert.' });
+    }
+
+    const embed = {
+      title: '🔐 Verifizierung',
+      description: method === 'button'
+        ? 'Klicke auf den Button, um dich zu verifizieren.'
+        : 'Beantworte die folgende Aufgabe, um dich zu verifizieren.',
+      color: 0x6d5ef8,
+      footer: { text: 'Verifizierungssystem • Powered by Apex' }
+    };
+
+    let components = [];
+    if (method === 'button') {
+      components = [{
+        type: 1,
+        components: [{
+          type: 2,
+          label: 'Verifizieren',
+          style: 1,
+          custom_id: `verify_button_${guildId}_${roleId}`
+        }]
+      }];
+    } else if (method === 'math') {
+      components = [{
+        type: 1,
+        components: [{
+          type: 2,
+          label: 'Aufgabe lösen',
+          style: 1,
+          custom_id: `verify_math_${guildId}_${roleId}`
+        }]
+      }];
+    } else {
+      return res.status(400).json({ error: 'Ungültige Methode.' });
+    }
+
+    const response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bot ${botToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        embeds: [embed],
+        components: components
+      })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      console.error('Discord API Fehler:', response.status, data);
+      return res.status(response.status).json({ error: `Discord Fehler: ${data.message || 'Unbekannt'}` });
+    }
+
+    res.json({ success: true, message: 'Verifizierungs-Panel gesendet!', data });
+  } catch (err) {
+    console.error('Fehler beim Senden des Verifizierungs-Panels:', err);
+    res.status(500).json({ error: 'Interner Serverfehler: ' + err.message });
+  }
+});
+
+// ============================================================
 // EXPORT (für Vercel)
 // ============================================================
 module.exports = app;
