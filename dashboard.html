@@ -696,7 +696,7 @@
       color: var(--text-muted);
     }
     .role-chip:hover { border-color: var(--border-active); color: var(--text-primary); background: rgba(255,255,255,0.06); }
-    .role-chip.selected { background: #ffffff; color: #000000; border-color: #ffffff; box-shadow: 0 2px 8px rgba(255,255,255,0.10); }
+    .role-chip.selected { background: var(--accent-purple); color: #fff; border-color: var(--accent-purple); box-shadow: 0 2px 10px rgba(109,94,248,0.30); }
     .chip-empty { color: var(--text-dim); font-size: 0.8rem; padding: 4px 0; }
 
     .color-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -904,15 +904,15 @@
     /* ===== TOAST ===== */
     #toast-container {
       position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
+      bottom: 28px;
+      right: 28px;
       z-index: 999;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      align-items: flex-end;
+      gap: 10px;
       width: 92%;
-      max-width: 400px;
+      max-width: 340px;
       pointer-events: none;
     }
     .toast {
@@ -929,11 +929,29 @@
       gap: 10px;
       animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
       pointer-events: auto;
+      width: 100%;
     }
-    .toast.success { border-left: 4px solid #22c55e; }
+    .toast.success {
+      background: rgba(34, 197, 94, 0.14);
+      border: 1px solid rgba(34, 197, 94, 0.4);
+      color: #86efac;
+    }
+    .toast.success::before {
+      content: '✓';
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: #22c55e;
+      color: #052e12;
+      font-size: 0.7rem;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
     .toast.error { border-left: 4px solid #ef4444; }
-    @keyframes toastIn { from { opacity: 0; transform: translateY(16px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
-    @keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateY(-10px); } }
+    @keyframes toastIn { from { opacity: 0; transform: translateX(24px) scale(0.95); } to { opacity: 1; transform: translateX(0) scale(1); } }
+    @keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateX(24px); } }
 
     .soon-badge { display: inline-block; font-size: 0.55rem; font-weight: 700; text-transform: uppercase; color: var(--text-dim); background: rgba(255,255,255,0.04); border: 1px solid var(--border-subtle); padding: 2px 8px; border-radius: 20px; margin-left: 6px; vertical-align: middle; }
 
@@ -1291,7 +1309,7 @@
               <div class="color-row"><input type="color" id="join-color" value="#ffffff" oninput="syncColor('join')"><input type="text" id="join-color-hex" value="#ffffff" oninput="syncColorHex('join')"></div>
             </div>
             <div class="form-group"><label>Auto-Rolle(n) bei Beitritt</label><div id="join-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span></div></div>
-            <div class="form-action"><button class="btn btn-primary" onclick="saveModuleSettings('welcome')">Speichern</button></div>
+            <div class="form-action"><button class="btn btn-primary" onclick="handleSaveClick('welcome')">Speichern</button></div>
           </div>
           <div style="margin-top:1rem; background:var(--bg-surface); border-radius:10px; padding:14px; border:1px solid var(--border-subtle);">
             <label style="font-size:0.75rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">📺 Live-Vorschau</label>
@@ -1328,7 +1346,7 @@
               <label>Embed-Farbe</label>
               <div class="color-row"><input type="color" id="leave-color" value="#ffffff" oninput="syncColor('leave')"><input type="text" id="leave-color-hex" value="#ffffff" oninput="syncColorHex('leave')"></div>
             </div>
-            <div class="form-action"><button class="btn btn-primary" onclick="saveModuleSettings('welcome')">Speichern</button></div>
+            <div class="form-action"><button class="btn btn-primary" onclick="handleSaveClick('welcome')">Speichern</button></div>
           </div>
           <div style="margin-top:1rem; background:var(--bg-surface); border-radius:10px; padding:14px; border:1px solid var(--border-subtle);">
             <label style="font-size:0.75rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">📺 Live-Vorschau</label>
@@ -1368,7 +1386,7 @@
         <div class="panel-card">
           <div class="form-group"><label for="teamliste-channel">Kanal für die Teamliste</label><select id="teamliste-channel"></select></div>
           <div class="form-group"><label>Team-Rollen</label><div id="teamliste-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span></div></div>
-          <div class="form-action"><button class="btn btn-primary" onclick="saveModuleSettings('teamliste')">Speichern</button></div>
+          <div class="form-action"><button class="btn btn-primary" onclick="handleSaveClick('teamliste')">Speichern</button></div>
         </div>
       </div>
 
@@ -1380,7 +1398,7 @@
             <div class="switch-row"><label>Modul aktiv</label><label class="switch"><input type="checkbox" id="support-enabled"><span class="switch-slider"></span></label></div>
           </div>
           <div class="form-group"><label for="support-channel">FAQ-Kanal</label><select id="support-channel"></select></div>
-          <div class="form-action"><button class="btn btn-primary" onclick="saveModuleSettings('support')">Speichern</button></div>
+          <div class="form-action"><button class="btn btn-primary" onclick="handleSaveClick('support')">Speichern</button></div>
         </div>
       </div>
 
@@ -1392,7 +1410,7 @@
             <div class="switch-row"><label>Automod aktiv</label><label class="switch"><input type="checkbox" id="moderation-enabled"><span class="switch-slider"></span></label></div>
           </div>
           <div class="form-group"><label for="moderation-log-channel">Log-Kanal</label><select id="moderation-log-channel"></select></div>
-          <div class="form-action"><button class="btn btn-primary" onclick="saveModuleSettings('moderation')">Speichern</button></div>
+          <div class="form-action"><button class="btn btn-primary" onclick="handleSaveClick('moderation')">Speichern</button></div>
         </div>
       </div>
 
@@ -1404,7 +1422,7 @@
             <div class="switch-row"><label>Log aktiv</label><label class="switch"><input type="checkbox" id="teamupdate-enabled"><span class="switch-slider"></span></label></div>
           </div>
           <div class="form-group"><label for="teamupdate-channel">Log-Kanal</label><select id="teamupdate-channel"></select></div>
-          <div class="form-action"><button class="btn btn-primary" onclick="saveModuleSettings('teamupdate')">Speichern</button></div>
+          <div class="form-action"><button class="btn btn-primary" onclick="handleSaveClick('teamupdate')">Speichern</button></div>
         </div>
       </div>
 
@@ -1415,7 +1433,7 @@
           <div class="form-group">
             <div class="switch-row"><label>Live-Statistik-Kanäle aktiv</label><label class="switch"><input type="checkbox" id="stats-enabled"><span class="switch-slider"></span></label></div>
           </div>
-          <div class="form-action"><button class="btn btn-primary" onclick="saveModuleSettings('stats')">Speichern</button></div>
+          <div class="form-action"><button class="btn btn-primary" onclick="handleSaveClick('stats')">Speichern</button></div>
         </div>
       </div>
 
@@ -1427,7 +1445,7 @@
             <div class="switch-row"><label>Verifizierung aktiv</label><label class="switch"><input type="checkbox" id="verification-enabled"><span class="switch-slider"></span></label></div>
           </div>
           <div class="form-group"><label>Rolle nach Verifizierung</label><div id="verification-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span></div></div>
-          <div class="form-action"><button class="btn btn-primary" onclick="saveModuleSettings('verification')">Speichern</button></div>
+          <div class="form-action"><button class="btn btn-primary" onclick="handleSaveClick('verification')">Speichern</button></div>
         </div>
       </div>
 
@@ -1438,7 +1456,7 @@
           <div class="form-group">
             <div class="switch-row"><label>Anti Nuke aktiv</label><label class="switch"><input type="checkbox" id="antinuke-enabled" checked><span class="switch-slider"></span></label></div>
           </div>
-          <div class="form-action"><button class="btn btn-primary" onclick="saveModuleSettings('antinuke')">Speichern</button></div>
+          <div class="form-action"><button class="btn btn-primary" onclick="handleSaveClick('antinuke')">Speichern</button></div>
         </div>
       </div>
 
@@ -1631,6 +1649,27 @@
       const activePage = document.getElementById(`${module}-${sub}-page`);
       if (activeBtn) activeBtn.classList.add('active');
       if (activePage) activePage.classList.remove('hidden');
+    }
+
+    // ===== TOAST HELPER =====
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+
+    // Wird von allen "Speichern"-Buttons aufgerufen: ruft die eigentliche
+    // Speicher-Funktion (aus dashboard.js) auf und zeigt danach den grünen
+    // Erfolgs-Toast unten rechts an.
+    function handleSaveClick(module) {
+      if (typeof saveModuleSettings === 'function') {
+        saveModuleSettings(module);
+      }
+      showToast('Gespeichert', 'success');
     }
 
     // ===== DUMMY FUNKTIONEN (werden von dashboard.js überschrieben) =====
