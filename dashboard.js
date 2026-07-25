@@ -369,7 +369,7 @@ function switchSubtab(moduleName, subName) {
 }
 
 // ============================================================
-// COLOR SYNC (Welcome)
+// COLOR SYNC (Welcome) – mit automatischer Vorschau-Aktualisierung
 // ============================================================
 function syncColor(prefix) {
   const color = document.getElementById(`${prefix}-color`).value;
@@ -377,7 +377,10 @@ function syncColor(prefix) {
   const preview = document.getElementById(`${prefix}-preview`);
   if (hexInput) hexInput.value = color;
   if (preview) preview.style.borderLeftColor = color;
+  // Vorschau aktualisieren
+  updateEmbedPreview(prefix);
 }
+
 function syncColorHex(prefix) {
   let hex = document.getElementById(`${prefix}-color-hex`).value.trim();
   if (!hex.startsWith('#')) hex = `#${hex}`;
@@ -385,6 +388,7 @@ function syncColorHex(prefix) {
     document.getElementById(`${prefix}-color`).value = hex;
     const preview = document.getElementById(`${prefix}-preview`);
     if (preview) preview.style.borderLeftColor = hex;
+    updateEmbedPreview(prefix);
   }
 }
 
@@ -419,6 +423,9 @@ function clearImage(prefix) {
   updateEmbedPreview(prefix);
 }
 
+// ============================================================
+// EMBED VORSCHAU (Welcome) – inklusive Farbaktualisierung
+// ============================================================
 const updateEmbedPreview = debounce((prefix) => {
   const titleEl = document.getElementById(`${prefix}-title`);
   const descEl = document.getElementById(`${prefix}-text`);
@@ -426,13 +433,19 @@ const updateEmbedPreview = debounce((prefix) => {
   const previewDesc = document.getElementById(`${prefix}-preview-desc`);
   const previewImage = document.getElementById(`${prefix}-preview-image`);
   const imageInput = document.getElementById(`${prefix}-image-input`);
-  const avatarThumbToggle = document.getElementById(`${prefix}-avatar-thumb`);
+  const colorInput = document.getElementById(`${prefix}-color`);
+  const preview = document.getElementById(`${prefix}-preview`);
+
   if (previewTitle && titleEl) previewTitle.textContent = titleEl.value || titleEl.placeholder;
   if (previewDesc && descEl) previewDesc.textContent = descEl.value || descEl.placeholder;
   if (previewImage) {
     const val = imageInput?.dataset.value;
     if (val) { previewImage.src = val; previewImage.classList.remove('hidden'); }
     else { previewImage.classList.add('hidden'); }
+  }
+  // Farbe anwenden
+  if (preview && colorInput) {
+    preview.style.borderLeftColor = colorInput.value;
   }
 }, 200);
 
@@ -473,6 +486,7 @@ function applyWelcomeConfig(cfg) {
   setChecked('leave-avatar-thumb', l.useAvatarThumbnail ?? true);
   setImage('leave', l.image);
   setSelectValue('leave-channel', l.channelId || '');
+  // Vorschau aktualisieren
   updateEmbedPreview('join');
   updateEmbedPreview('leave');
 }
@@ -507,9 +521,9 @@ function setSelectValue(id, val) { const el = document.getElementById(id); if (e
 function setColor(prefix, color) {
   const colorEl = document.getElementById(`${prefix}-color`);
   const hexEl = document.getElementById(`${prefix}-color-hex`);
+  const preview = document.getElementById(`${prefix}-preview`);
   if (colorEl) colorEl.value = color || '#ffffff';
   if (hexEl) hexEl.value = color || '#ffffff';
-  const preview = document.getElementById(`${prefix}-preview`);
   if (preview) preview.style.borderLeftColor = color || '#ffffff';
 }
 function setImage(prefix, url) {
