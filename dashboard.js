@@ -3,6 +3,17 @@
 console.log('✅ GalaxyBot-Style Dashboard geladen!');
 
 // ============================================================
+// TEMPORÄRER DEBUG-HANDLER (zeigt JS-Fehler als Popup an,
+// damit wir sie auch ohne Browser-Konsole auf dem iPad sehen)
+// ============================================================
+window.addEventListener('error', function (e) {
+  alert('❌ JS-Fehler:\n' + e.message + '\nDatei: ' + e.filename + '\nZeile: ' + e.lineno + ':' + e.colno);
+});
+window.addEventListener('unhandledrejection', function (e) {
+  alert('❌ Unbehandelter Promise-Fehler:\n' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+});
+
+// ============================================================
 // KONFIGURATION
 // ============================================================
 const CONFIG = {
@@ -1219,4 +1230,18 @@ async function showEditView(index) {
 // ============================================================
 // Vorher fehlte dieser Aufruf komplett – deshalb wurde die
 // Serverliste nie geladen und die Seite blieb im Lade-Zustand hängen.
-document.addEventListener('DOMContentLoaded', loadDashboard);
+console.log('🚀 Init-Block erreicht, readyState:', document.readyState);
+function initDashboard() {
+  console.log('🚀 initDashboard() wird aufgerufen');
+  try {
+    loadDashboard();
+  } catch (err) {
+    alert('❌ Fehler beim Start von loadDashboard:\n' + err.message);
+  }
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initDashboard);
+} else {
+  // DOM ist bereits fertig geladen (z.B. bei gecachtem Skript) – sofort starten
+  initDashboard();
+}
