@@ -52,7 +52,7 @@
       display: block;
     }
 
-    /* Header mit Hamburger */
+    /* ===== HEADER mit APEX rechts ===== */
     header {
       display: flex;
       align-items: center;
@@ -74,6 +74,7 @@
       gap: 10px;
     }
 
+    /* Hamburger Button */
     .hamburger-btn {
       background: rgba(255,255,255,0.05);
       border: 1px solid var(--border-subtle);
@@ -89,6 +90,7 @@
       transition: all 0.2s ease;
       padding: 0;
       flex-shrink: 0;
+      touch-action: manipulation;
     }
     .hamburger-btn:hover {
       background: rgba(255,255,255,0.10);
@@ -100,27 +102,31 @@
       height: 2px;
       background: var(--text-primary);
       border-radius: 2px;
-      transition: all 0.2s ease;
+      transition: all 0.25s ease;
+      transform-origin: center;
     }
     .hamburger-btn.active span:nth-child(1) {
-      transform: rotate(45deg) translate(4px, 4px);
+      transform: translateY(6px) rotate(45deg);
     }
     .hamburger-btn.active span:nth-child(2) {
       opacity: 0;
+      transform: scaleX(0);
     }
     .hamburger-btn.active span:nth-child(3) {
-      transform: rotate(-45deg) translate(4px, -4px);
+      transform: translateY(-6px) rotate(-45deg);
     }
 
-    .brand {
+    /* APEX Brand – jetzt rechts */
+    .brand-right {
       display: flex;
       align-items: center;
       gap: 8px;
       text-decoration: none;
       color: var(--text-primary);
       flex-shrink: 0;
+      margin-left: auto;
     }
-    .brand-logo {
+    .brand-right .brand-logo {
       width: 28px;
       height: 28px;
       background: #000;
@@ -130,9 +136,13 @@
       justify-content: center;
       border: 1px solid rgba(255, 255, 255, 0.3);
     }
-    .brand-logo svg { width: 14px; height: 14px; }
-    .brand-name { font-size: 0.9rem; font-weight: 800; letter-spacing: -0.02em; }
-    .brand-name span { color: var(--text-muted); }
+    .brand-right .brand-logo svg { width: 14px; height: 14px; }
+    .brand-right .brand-name {
+      font-size: 0.9rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .brand-right .brand-name span { color: var(--text-muted); }
 
     .nav-center {
       display: none;
@@ -335,7 +345,7 @@
       min-height: 36px;
     }
 
-    /* ===== OVERLAY / SIDEBAR mit Hamburger-Menü ===== */
+    /* ===== OVERLAY / SIDEBAR ===== */
     .overlay {
       position: fixed;
       inset: 0;
@@ -345,7 +355,6 @@
       z-index: 200;
     }
 
-    /* Sidebar – Desktop: sichtbar, Mobil: als Overlay von links */
     .sidebar {
       background: var(--bg-surface);
       border-bottom: 1px solid var(--border-subtle);
@@ -472,7 +481,7 @@
       z-index: 10;
       background: rgba(0,0,0,0.8);
       backdrop-filter: blur(8px);
-      border: none;
+      border: 1px solid var(--border-subtle);
       border-radius: 8px;
       width: 38px;
       height: 38px;
@@ -485,7 +494,7 @@
       padding: 0;
       margin-bottom: 12px;
       flex-shrink: 0;
-      border: 1px solid var(--border-subtle);
+      touch-action: manipulation;
     }
     .hamburger-overlay-btn span {
       display: block;
@@ -493,32 +502,18 @@
       height: 2px;
       background: var(--text-primary);
       border-radius: 2px;
-      transition: all 0.2s ease;
+      transition: all 0.25s ease;
+      transform-origin: center;
     }
     .hamburger-overlay-btn.active span:nth-child(1) {
-      transform: rotate(45deg) translate(4px, 4px);
+      transform: translateY(6px) rotate(45deg);
     }
     .hamburger-overlay-btn.active span:nth-child(2) {
       opacity: 0;
+      transform: scaleX(0);
     }
     .hamburger-overlay-btn.active span:nth-child(3) {
-      transform: rotate(-45deg) translate(4px, -4px);
-    }
-
-    /* Overlay für mobiles Menü (Hintergrund) */
-    .menu-overlay-bg {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.6);
-      z-index: 245;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s ease;
-    }
-    .menu-overlay-bg.open {
-      opacity: 1;
-      pointer-events: auto;
+      transform: translateY(-6px) rotate(-45deg);
     }
 
     .content-area h2 {
@@ -1032,7 +1027,7 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ===== MOBILE MENU (Hamburger Overlay) ===== */
+    /* ===== MOBILE MENU ===== */
     @media (max-width: 767px) {
       .sidebar {
         position: fixed;
@@ -1104,7 +1099,14 @@
         min-height: 44px;
       }
 
-      /* Overlay-Background für das mobile Menü (im Overlay) */
+      .hamburger-overlay-btn {
+        display: flex !important;
+      }
+
+      .nav-center { display: none; }
+      #user-name { display: none; }
+
+      /* Overlay-Background für das mobile Menü – nur für Hauptmenü (nicht im Overlay) */
       .menu-overlay-bg {
         display: block;
         position: fixed;
@@ -1119,14 +1121,6 @@
         opacity: 1;
         pointer-events: auto;
       }
-
-      /* Hamburger im Overlay sichtbar */
-      .hamburger-overlay-btn {
-        display: flex !important;
-      }
-
-      .nav-center { display: none; }
-      #user-name { display: none; }
     }
 
     @media (min-width: 768px) {
@@ -1187,9 +1181,6 @@
       .content-area {
         padding: 1.5rem 2rem;
       }
-      .brand-name { font-size: 1.05rem; }
-      .brand-logo { width: 32px; height: 32px; }
-      .brand-logo svg { width: 16px; height: 16px; }
       #user-name {
         display: inline !important;
       }
@@ -1199,6 +1190,9 @@
       .stats-grid {
         grid-template-columns: repeat(3, 1fr);
       }
+      .brand-right .brand-name { font-size: 1rem; }
+      .brand-right .brand-logo { width: 32px; height: 32px; }
+      .brand-right .brand-logo svg { width: 16px; height: 16px; }
     }
 
     @media (min-width: 1024px) {
@@ -1222,9 +1216,9 @@
       .hamburger-btn span { width: 16px; height: 2px; }
       .hamburger-overlay-btn { width: 34px; height: 34px; }
       .hamburger-overlay-btn span { width: 16px; height: 2px; }
-      .brand-logo { width: 24px; height: 24px; }
-      .brand-logo svg { width: 12px; height: 12px; }
-      .brand-name { font-size: 0.8rem; }
+      .brand-right .brand-logo { width: 24px; height: 24px; }
+      .brand-right .brand-logo svg { width: 12px; height: 12px; }
+      .brand-right .brand-name { font-size: 0.8rem; }
       .user-chip img { width: 22px; height: 22px; }
       .logout-btn { font-size: 0.55rem; padding: 2px 6px; }
       .content-area { padding: 0.6rem; }
@@ -1248,20 +1242,35 @@
   <div class="bg-grid"></div>
   <canvas id="starfield"></canvas>
 
-  <!-- Overlay-Background für mobiles Menü (außerhalb des Overlays) -->
+  <!-- Overlay-Background für mobiles Menü (nur außerhalb des Overlays) -->
   <div id="menu-overlay-bg" class="menu-overlay-bg" onclick="closeMobileMenu()"></div>
 
-  <!-- Top Navigation mit Hamburger -->
+  <!-- ===== HEADER ===== -->
   <header>
     <div class="header-left">
-      <!-- Hamburger-Button für die Hauptnavigation (nur auf der Server-Liste) -->
+      <!-- Hamburger-Button (nur auf Mobil sichtbar) -->
       <button class="hamburger-btn" id="hamburger-btn" onclick="toggleMobileMenu()" aria-label="Menü öffnen/schließen">
         <span></span>
         <span></span>
         <span></span>
       </button>
+    </div>
 
-      <a href="/" class="brand">
+    <!-- Zentrale Navigation (Desktop) -->
+    <nav class="nav-center">
+      <a href="/" class="nav-link">Startseite</a>
+    </nav>
+
+    <!-- User-Chip + APEX (rechts) -->
+    <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
+      <div id="user-chip" class="user-chip">
+        <img id="user-avatar" src="" alt="Avatar">
+        <span id="user-name">Laden...</span>
+        <a href="/auth/logout" class="logout-btn">Abmelden</a>
+      </div>
+
+      <!-- APEX mit Logo – oben rechts -->
+      <a href="/" class="brand-right">
         <div class="brand-logo">
           <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M50 18 L22 75 L38 75 L50 48 L62 75 L78 75 Z" fill="#FFFFFF"/>
@@ -1272,16 +1281,6 @@
         </div>
         <span class="brand-name">APEX<span>.</span></span>
       </a>
-    </div>
-
-    <nav class="nav-center">
-      <a href="/" class="nav-link">Startseite</a>
-    </nav>
-
-    <div id="user-chip" class="user-chip">
-      <img id="user-avatar" src="" alt="Avatar">
-      <span id="user-name">Laden...</span>
-      <a href="/auth/logout" class="logout-btn">Abmelden</a>
     </div>
   </header>
 
@@ -1301,7 +1300,7 @@
     <div id="guild-list" class="guild-grid hidden"></div>
   </main>
 
-  <!-- Server Management Overlay / Modal -->
+  <!-- ===== SERVER MANAGEMENT OVERLAY ===== -->
   <div id="manage-overlay" class="overlay hidden">
     <!-- Sidebar (Desktop: sichtbar, Mobil: als Hamburger-Menü) -->
     <div class="sidebar" id="mobile-sidebar">
@@ -1580,7 +1579,7 @@
       </div>
 
       <!-- ========================================================= -->
-      <!-- TICKET SYSTEM – mobil optimiert                          -->
+      <!-- TICKET SYSTEM                                             -->
       <!-- ========================================================= -->
       <div id="mod-tickets" class="module-page hidden">
         <h2>🎫 Ticket System</h2>
@@ -1865,16 +1864,19 @@
   })();
 
   // ============================================================
-  // HAMBURGER MENU FUNKTIONEN (für die Hauptnavigation)
+  // HAMBURGER MENU FUNKTIONEN
   // ============================================================
+
+  // Hauptmenü (auf der Server-Liste)
   function toggleMobileMenu() {
     const sidebar = document.getElementById('mobile-sidebar');
     const overlay = document.getElementById('menu-overlay-bg');
     const btn = document.getElementById('hamburger-btn');
     
+    if (!sidebar) return;
     sidebar.classList.toggle('open');
-    overlay.classList.toggle('open');
-    btn.classList.toggle('active');
+    if (overlay) overlay.classList.toggle('open');
+    if (btn) btn.classList.toggle('active');
   }
 
   function closeMobileMenu() {
@@ -1882,57 +1884,58 @@
     const overlay = document.getElementById('menu-overlay-bg');
     const btn = document.getElementById('hamburger-btn');
     
-    sidebar.classList.remove('open');
-    overlay.classList.remove('open');
-    btn.classList.remove('active');
+    if (sidebar) sidebar.classList.remove('open');
+    if (overlay) overlay.classList.remove('open');
+    if (btn) btn.classList.remove('active');
   }
 
-  // Menü schließen, wenn auf den Hintergrund geklickt wird
-  document.addEventListener('click', function(e) {
-    const sidebar = document.getElementById('mobile-sidebar');
-    const btn = document.getElementById('hamburger-btn');
-    if (sidebar.classList.contains('open')) {
-      if (!sidebar.contains(e.target) && !btn.contains(e.target)) {
-        closeMobileMenu();
-      }
-    }
-  });
-
-  // ============================================================
-  // HAMBURGER MENU IM OVERLAY (für die Server-Verwaltung)
-  // ============================================================
+  // Menü im Overlay (beim Verwalten)
   function toggleOverlayMenu() {
     const sidebar = document.getElementById('mobile-sidebar');
     const btn = document.getElementById('hamburger-overlay-btn');
     
+    if (!sidebar) return;
     sidebar.classList.toggle('open');
-    btn.classList.toggle('active');
+    if (btn) btn.classList.toggle('active');
   }
 
   function closeOverlayMenu() {
     const sidebar = document.getElementById('mobile-sidebar');
     const btn = document.getElementById('hamburger-overlay-btn');
     
-    sidebar.classList.remove('open');
-    btn.classList.remove('active');
+    if (sidebar) sidebar.classList.remove('open');
+    if (btn) btn.classList.remove('active');
   }
 
-  // Menü im Overlay schließen, wenn auf den Content-Bereich außerhalb der Sidebar geklickt wird
+  // Klick außerhalb schließt das Menü (für beide Menüs)
   document.addEventListener('click', function(e) {
     const sidebar = document.getElementById('mobile-sidebar');
-    const btn = document.getElementById('hamburger-overlay-btn');
-    // Nur im Overlay-Modus (wenn das Overlay sichtbar ist)
-    const overlay = document.getElementById('manage-overlay');
-    if (!overlay.classList.contains('hidden')) {
+    const btnMain = document.getElementById('hamburger-btn');
+    const btnOverlay = document.getElementById('hamburger-overlay-btn');
+    const overlayBg = document.getElementById('menu-overlay-bg');
+    const overlayContainer = document.getElementById('manage-overlay');
+
+    if (!sidebar) return;
+
+    // Hauptmenü schließen (wenn nicht im Overlay)
+    if (sidebar.classList.contains('open') && !overlayContainer.classList.contains('hidden') === false) {
+      // Nur wenn das Overlay nicht offen ist
+      if (!sidebar.contains(e.target) && !btnMain?.contains(e.target)) {
+        closeMobileMenu();
+      }
+    }
+
+    // Menü im Overlay schließen (wenn Overlay offen ist)
+    if (overlayContainer.classList.contains('hidden') === false) {
       if (sidebar.classList.contains('open')) {
-        if (!sidebar.contains(e.target) && !btn.contains(e.target)) {
+        if (!sidebar.contains(e.target) && !btnOverlay?.contains(e.target)) {
           closeOverlayMenu();
         }
       }
     }
   });
 
-  // Menü schließen, wenn ESC gedrückt wird
+  // ESC schließt beide Menüs
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
       closeOverlayMenu();
