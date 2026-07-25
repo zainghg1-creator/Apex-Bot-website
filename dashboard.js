@@ -287,7 +287,6 @@ async function loadRolesAndChannels(guildId) {
 function renderAllSelects() {
   const selectIds = ['join-channel', 'leave-channel', 'teamliste-channel', 'support-channel', 'moderation-log-channel', 'teamupdate-channel'];
   selectIds.forEach(id => renderChannelSelect(id, 0));
-  // Zusätzlich für Ticket-Panel-Kanal (wird in der Bearbeitungsansicht dynamisch erstellt)
 }
 function renderChannelSelect(selectId, filterType) {
   const el = document.getElementById(selectId);
@@ -371,7 +370,7 @@ function switchSubtab(moduleName, subName) {
 }
 
 // ============================================================
-// COLOR SYNC
+// COLOR SYNC (für Welcome-Modul)
 // ============================================================
 function syncColor(prefix) {
   const color = document.getElementById(`${prefix}-color`).value;
@@ -391,7 +390,7 @@ function syncColorHex(prefix) {
 }
 
 // ============================================================
-// IMAGE UPLOAD
+// IMAGE UPLOAD (für Welcome und Ticket)
 // ============================================================
 function handleImageUpload(input, prefix) {
   const file = input.files?.[0];
@@ -580,9 +579,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ============================================================
-// ============================================================
 // NEUES TICKET SYSTEM – 10x COOLER
-// ============================================================
 // ============================================================
 
 const ticketGrid = document.getElementById('ticket-overview-grid');
@@ -738,14 +735,19 @@ function updateEditPreview() {
   }
 }
 
-// ------ Übersicht der Tickets (Karten) ------
+// ------ Übersicht der Tickets (Karten) – angepasst an neue CSS-Klassen ------
 async function renderTicketOverview() {
   if (!ticketGrid) return;
   if (!state.activeGuildId) {
     ticketGrid.innerHTML = `<div class="state-box" style="grid-column:1/-1;">Bitte wähle zuerst einen Server aus.</div>`;
     return;
   }
-  ticketGrid.innerHTML = `<div class="state-box" style="grid-column:1/-1;"><span class="loading-spinner"></span> Lade Ticket-Kategorien...</div>`;
+  ticketGrid.innerHTML = `<div class="state-box" style="grid-column:1/-1;"><span class="loading-spinner"></span> Lade Ticket-Panels...</div>`;
+
+  // Zähler aktualisieren
+  const countEl = document.getElementById('ticket-panel-count');
+  if (countEl) countEl.textContent = 'Lade...';
+
   try {
     const tickets = await getCachedTicketConfig();
     if (!tickets) {
@@ -753,51 +755,100 @@ async function renderTicketOverview() {
       return;
     }
     const options = tickets.options || [];
+
+    // Zähler aktualisieren
+    if (countEl) countEl.textContent = `${options.length} Panel${options.length !== 1 ? 's' : ''}`;
+
     if (options.length === 0) {
       ticketGrid.innerHTML = `
-        <div class="guild-card add-card" onclick="openAddTicket()">
-          <div style="font-size:3rem; line-height:1;">＋</div>
-          <div style="font-weight:700; font-size:1.1rem; margin-top:6px;">Neues Ticket hinzufügen</div>
-          <div style="color:var(--text-muted); font-size:0.85rem;">Klicke hier, um eine neue Kategorie zu erstellen.</div>
+        <div class="guild-card ticket-add-card" onclick="openAddTicket()">
+          <div class="ticket-add-icon"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+          <div style="font-weight:700; font-size:1rem;">Neues Ticket-Panel</div>
+          <div style="color:var(--text-muted); font-size:0.8rem;">Klicke hier, um ein neues Panel zu erstellen.</div>
         </div>
       `;
       return;
     }
+
     let html = '';
     options.forEach((opt, index) => {
       const emoji = opt.emoji || '🎫';
-      const label = opt.label || 'Unbenannt';
+      const label = opt.label || opt.panelName || 'Unbenannt';
       const categoryName = state.guildChannels.find(c => c.id === opt.categoryId)?.name || 'Keine Kategorie';
-      const status = opt.enabled !== false ? '🟢 Aktiv' : '🔴 Inaktiv';
+      const isActive = opt.enabled !== false;
+      const statusClass = isActive ? 'active' : '';
+      const statusText = isActive ? 'Aktiv' : 'Inaktiv';
+
       html += `
-        <div class="guild-card" style="border-left: 4px solid ${opt.enabled !== false ? '#22c55e' : '#ef4444'};">
-          <div class="guild-info">
-            <div class="guild-icon">${escapeHtml(emoji)}</div>
-            <span class="guild-name">${escapeHtml(label)}</span>
+        <div class="guild-card ticket-card" style="border-left: 4px solid ${isActive ? '#22c55e' : '#ef4444'};">
+          <div class="ticket-card-header">
+            <div class="ticket-icon-badge"><svg viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><line x1="12" y1="9" x2="12" y2="15"/></svg></div>
+            <div class="ticket-card-titles">
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <span style="font-weight:700; font-size:0.95rem;">${escapeHtml(emoji)} ${escapeHtml(label)}</span>
+                <span class="ticket-status-pill ${statusClass}"><span class="status-dot"></span> ${statusText}</span>
+              </div>
+            </div>
           </div>
-          <div class="guild-detail">
-            <span>📂 Kategorie: ${escapeHtml(categoryName)}</span>
-            <span>📊 Status: ${status}</span>
+          <div class="ticket-card-meta">
+            <div class="ticket-card-meta-row">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+              ${escapeHtml(categoryName)}
+            </div>
+            <div class="ticket-card-meta-row">
+              <svg viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><line x1="12" y1="9" x2="12" y2="15"/></svg>
+              ${opt.options && opt.options.length ? opt.options.length + ' Optionen' : 'Keine Optionen'}
+            </div>
           </div>
-          <div class="guild-action">
-            <button class="btn btn-secondary" onclick="openEditView(${index})">✏️ Bearbeiten</button>
-            <button class="btn btn-danger" onclick="deleteTicketOption(${index})">🗑️ Löschen</button>
+          <div class="ticket-card-footer">
+            <div class="ticket-quick-toggle">
+              <label class="switch" style="width:32px; height:18px;">
+                <input type="checkbox" ${isActive ? 'checked' : ''} onchange="toggleTicketStatus(${index}, this.checked)">
+                <span class="switch-slider"></span>
+              </label>
+              <span style="font-size:0.7rem;">${isActive ? 'Aktiv' : 'Inaktiv'}</span>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button class="btn btn-secondary" onclick="openEditView(${index})" style="padding:6px 12px; font-size:0.7rem; min-height:30px;">✏️ Bearbeiten</button>
+              <button class="btn btn-danger" onclick="deleteTicketOption(${index})" style="padding:6px 12px; font-size:0.7rem; min-height:30px;">🗑️</button>
+            </div>
           </div>
         </div>
       `;
     });
+
+    // Add-Karte
     html += `
-      <div class="guild-card add-card" onclick="openAddTicket()">
-        <div style="font-size:3rem; line-height:1;">＋</div>
-        <div style="font-weight:700; font-size:1.1rem; margin-top:6px;">Neues Ticket hinzufügen</div>
-        <div style="color:var(--text-muted); font-size:0.85rem;">Klicke hier, um eine weitere Kategorie zu erstellen.</div>
+      <div class="guild-card ticket-add-card" onclick="openAddTicket()">
+        <div class="ticket-add-icon"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+        <div style="font-weight:700; font-size:1rem;">Neues Ticket-Panel</div>
+        <div style="color:var(--text-muted); font-size:0.8rem;">Klicke hier, um ein neues Panel zu erstellen.</div>
       </div>
     `;
+
     ticketGrid.innerHTML = html;
   } catch (err) {
     ticketGrid.innerHTML = `<div class="state-box error" style="grid-column:1/-1;">Fehler beim Laden: ${err.message}</div>`;
   }
 }
+
+// ------ Toggle Status (aktiv/inaktiv) ------
+window.toggleTicketStatus = async function(index, checked) {
+  try {
+    const config = await apiFetch(`/guild/${state.activeGuildId}/config`);
+    if (!config.tickets || !config.tickets.options || !config.tickets.options[index]) return;
+    config.tickets.options[index].enabled = checked;
+    await apiFetch(`/guild/${state.activeGuildId}/config/tickets`, {
+      method: 'POST',
+      body: JSON.stringify(config.tickets)
+    });
+    invalidateTicketCache();
+    showToast(`Panel ${checked ? 'aktiviert' : 'deaktiviert'}!`, 'success');
+    renderTicketOverview();
+  } catch (err) {
+    showToast(`Fehler: ${err.message}`, 'error');
+  }
+};
 
 // ------ Neues Ticket / Bearbeiten ------
 window.openAddTicket = function() { editingIndex = null; showEditView(null); };
@@ -823,7 +874,7 @@ async function showEditView(index) {
     data = {
       enabled: true,
       panelName: 'Neues Ticket',
-      panelChannelId: '', // <-- NEU: Kanal für das Panel
+      panelChannelId: '',
       supportRoles: [],
       categoryId: '',
       title: 'Support Center',
@@ -847,23 +898,23 @@ async function showEditView(index) {
     };
   }
 
-  // --- HTML mit allem ---
+  // --- HTML mit allen neuen CSS-Klassen ---
   let html = `
     <div class="card form-card" style="max-width:100%; padding:1.5rem;">
 
-      <!-- Panel-Dropdown -->
-      <div style="display:flex; gap:12px; align-items:center; margin-bottom:18px; flex-wrap:wrap; background:var(--bg-surface); padding:12px 16px; border-radius:12px; border:1px solid var(--border-subtle);">
-        <label style="font-weight:600; color:var(--text-muted); font-size:0.85rem;">📋 Panel wechseln:</label>
-        <select id="edit-panel-select" style="flex:1; background:var(--bg-base); border:1px solid var(--border-subtle); border-radius:8px; padding:8px 12px; color:var(--text-primary); min-height:38px; font-size:0.85rem;">
+      <!-- Toolbar: Panel wechseln -->
+      <div class="edit-toolbar">
+        <label><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="21" x2="9" y2="9"/></svg> Panel:</label>
+        <select id="edit-panel-select">
           ${options.map((opt, i) => `<option value="${i}" ${i === index ? 'selected' : ''}>${escapeHtml(opt.panelName || opt.label || 'Unbenannt')}</option>`).join('')}
           ${index === null ? `<option value="new" selected>+ Neues Panel</option>` : ''}
         </select>
-        <button class="btn btn-secondary" onclick="switchToSelectedPanel()" style="flex-shrink:0; padding:8px 14px; min-height:38px; font-size:0.8rem;">Wechseln</button>
+        <button class="btn btn-secondary" onclick="switchToSelectedPanel()" style="flex-shrink:0; padding:6px 14px; min-height:34px; font-size:0.75rem;">Wechseln</button>
       </div>
 
-      <!-- Embed-Vorschau (LIVE) -->
-      <div style="margin-bottom:20px; background:var(--bg-surface); border-radius:12px; padding:16px; border:1px solid var(--border-subtle);">
-        <label style="font-weight:600; color:var(--text-muted); display:block; margin-bottom:8px; font-size:0.8rem;">📺 Live-Vorschau</label>
+      <!-- Vorschau -->
+      <div class="edit-preview-wrap">
+        <div class="edit-preview-label"><svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Live-Vorschau</div>
         <div class="discord-embed" id="edit-embed-preview" style="border-left-color:${data.color || '#ffffff'};">
           <div class="discord-embed-body">
             <div class="discord-embed-title">${escapeHtml(data.title || 'Support Center')}</div>
@@ -877,14 +928,14 @@ async function showEditView(index) {
         </div>
       </div>
 
-      <!-- Tab Navigation (cooler) -->
-      <div style="display:flex; gap:6px; border-bottom:1px solid var(--border-subtle); margin-bottom:1.2rem; flex-wrap:wrap;">
-        <button class="edit-tab-btn active" data-edit-tab="general" onclick="switchEditTab('general')" style="background:transparent;border:none;color:var(--text-muted);padding:8px 16px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.8rem;">⚙️ Allgemein</button>
-        <button class="edit-tab-btn" data-edit-tab="embed" onclick="switchEditTab('embed')" style="background:transparent;border:none;color:var(--text-muted);padding:8px 16px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.8rem;">🎨 Design</button>
-        <button class="edit-tab-btn" data-edit-tab="messages" onclick="switchEditTab('messages')" style="background:transparent;border:none;color:var(--text-muted);padding:8px 16px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.8rem;">✉️ Nachrichten</button>
-        <button class="edit-tab-btn" data-edit-tab="roles" onclick="switchEditTab('roles')" style="background:transparent;border:none;color:var(--text-muted);padding:8px 16px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.8rem;">🔒 Berechtigungen</button>
-        <button class="edit-tab-btn" data-edit-tab="advanced" onclick="switchEditTab('advanced')" style="background:transparent;border:none;color:var(--text-muted);padding:8px 16px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.8rem;">⚡ Fortgeschritten</button>
-        <button class="edit-tab-btn" data-edit-tab="options" onclick="switchEditTab('options')" style="background:transparent;border:none;color:var(--text-muted);padding:8px 16px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.8rem;">📋 Optionen</button>
+      <!-- Tabs -->
+      <div class="edit-tabs">
+        <button class="edit-tab-btn active" data-edit-tab="general" onclick="switchEditTab('general')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Allgemein</button>
+        <button class="edit-tab-btn" data-edit-tab="embed" onclick="switchEditTab('embed')"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="21" x2="9" y2="9"/></svg> Design</button>
+        <button class="edit-tab-btn" data-edit-tab="messages" onclick="switchEditTab('messages')"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Nachrichten</button>
+        <button class="edit-tab-btn" data-edit-tab="roles" onclick="switchEditTab('roles')"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Berechtigungen</button>
+        <button class="edit-tab-btn" data-edit-tab="advanced" onclick="switchEditTab('advanced')"><svg viewBox="0 0 24 24"><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4 12H2"/><path d="M22 12h-2"/><path d="M19.07 4.93l-2.83 2.83"/><path d="M7.76 16.24l-2.83 2.83"/><path d="M16.24 7.76l2.83-2.83"/><path d="M4.93 19.07l2.83-2.83"/></svg> Fortgeschritten</button>
+        <button class="edit-tab-btn" data-edit-tab="options" onclick="switchEditTab('options')"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Optionen</button>
       </div>
 
       <!-- TAB: Allgemein (inkl. Kanalauswahl) -->
@@ -901,7 +952,7 @@ async function showEditView(index) {
           <input type="text" id="edit-panel-name" value="${escapeHtml(data.panelName || '')}" placeholder="z.B. Support">
           <small>Wird in der Kanalnamen-Vorlage verwendet.</small>
         </div>
-        <!-- NEU: Kanalauswahl für das Panel -->
+        <!-- Kanalauswahl für das Panel -->
         <div class="form-group">
           <label for="edit-panel-channel">📢 Kanal für das Panel</label>
           <select id="edit-panel-channel" style="width:100%; background:var(--bg-base); border:1px solid var(--border-subtle); border-radius:8px; padding:8px 12px; color:var(--text-primary); min-height:38px;"></select>
@@ -1209,7 +1260,7 @@ window.saveEditView = async function() {
     const newData = {
       enabled,
       panelName,
-      panelChannelId, // <-- NEU gespeichert
+      panelChannelId,
       supportRoles,
       categoryId,
       title,
