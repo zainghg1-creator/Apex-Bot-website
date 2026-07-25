@@ -22,6 +22,7 @@
     --text-primary: #ffffff;
     --text-muted: #a1a1aa;
     --text-dim: #71717a;
+    --accent-purple: #6d5ef8;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -89,8 +90,18 @@
     font-size: 0.9rem;
     font-weight: 600;
     transition: color 0.2s ease;
+    position: relative;
   }
   .nav-link:hover { color: var(--text-primary); }
+  .nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: -4px; left: 0;
+    width: 0; height: 2px;
+    background: var(--accent-purple);
+    transition: width 0.25s ease;
+  }
+  .nav-link:hover::after { width: 100%; }
 
   .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
@@ -176,7 +187,7 @@
     border-radius: 16px; padding: 28px; transition: all 0.3s ease; display: flex;
     flex-direction: column; gap: 16px;
   }
-  .module-card:hover { border-color: var(--border-active); transform: translateY(-4px); }
+  .module-card:hover { border-color: rgba(109, 94, 248, 0.4); transform: translateY(-4px); box-shadow: 0 12px 30px rgba(109, 94, 248, 0.08); }
 
   .module-icon-wrap {
     width: 44px; height: 44px; border-radius: 10px; background: rgba(255, 255, 255, 0.05);
@@ -233,7 +244,7 @@
 <main>
   <!-- HERO -->
   <section class="hero">
-    <div class="hero-badge">● APEX SYSTEM v1.2 ONLINE</div>
+    <div class="hero-badge"><span style="color: var(--accent-purple);">●</span> APEX SYSTEM v1.2 ONLINE</div>
     <h1 class="hero-title">Maximale Kontrolle.<br>Minimaler Aufwand.</h1>
     <p class="hero-subtitle">Die modulare All-in-One Lösung für deinen Discord-Server. Von hochmodernen Ticketsystemen bis hin zu lückenlosem Anti-Nuke Schutz.</p>
     <div class="hero-buttons">
