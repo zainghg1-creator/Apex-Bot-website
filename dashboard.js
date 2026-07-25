@@ -1,6 +1,6 @@
 'use strict';
 
-console.log('✅ NEUE dashboard.js – Ticket-System mit Log-Kanal!');
+console.log('✅ NEUE dashboard.js – Support-Rollen pro Option!');
 
 // ============================================================
 // KONFIGURATION
@@ -674,7 +674,7 @@ function collectButtons() {
   }));
 }
 
-// ------ Optionen (Kategorien) für das Panel ------
+// ------ Optionen (Kategorien) für das Panel – JETZT MIT SUPPORT-ROLLEN ------
 window.addOptionRow = function(data = null) {
   const container = document.getElementById('edit-options-list');
   if (!container) return;
@@ -682,27 +682,51 @@ window.addOptionRow = function(data = null) {
   const row = document.createElement('div');
   row.className = 'option-row';
   row.id = rowId;
+  
+  // Support-Rollen für diese Option
+  const supportRoles = data?.supportRoles || [];
+  
   row.innerHTML = `
-    <input type="text" placeholder="Label, z.B. Support" class="opt-label" value="${data ? escapeHtml(data.label || '') : ''}" style="flex:2;">
-    <input type="text" placeholder="Emoji" class="opt-emoji" value="${data ? escapeHtml(data.emoji || '') : '🎫'}" style="max-width:80px;">
-    <select class="opt-category" style="flex:2;"></select>
-    <button type="button" class="option-remove" onclick="document.getElementById('${rowId}').remove()" aria-label="Option entfernen">✕</button>
+    <div style="display:flex; flex-wrap:wrap; gap:8px; width:100%; align-items:center;">
+      <input type="text" placeholder="Label, z.B. Support" class="opt-label" value="${data ? escapeHtml(data.label || '') : ''}" style="flex:2; min-width:120px;">
+      <input type="text" placeholder="Emoji" class="opt-emoji" value="${data ? escapeHtml(data.emoji || '') : '🎫'}" style="max-width:80px;">
+      <select class="opt-category" style="flex:2; min-width:140px;"></select>
+      <button type="button" class="option-remove" onclick="document.getElementById('${rowId}').remove()" aria-label="Option entfernen">✕</button>
+    </div>
+    <div style="width:100%; margin-top:4px;">
+      <label style="font-size:0.7rem; font-weight:600; color:var(--text-muted);">Support-Rollen für diese Option (optional):</label>
+      <div class="chip-select" id="opt-support-roles-${rowId}" style="margin-top:2px;"></div>
+    </div>
   `;
   container.appendChild(row);
+  
+  // Kategorien für dieses Select befüllen
   const select = row.querySelector('.opt-category');
   const categories = state.guildChannels.filter(c => c.type === 4);
   select.innerHTML = categories.length
     ? categories.map(c => `<option value="${c.id}">📁 ${escapeHtml(c.name)}</option>`).join('')
     : `<option value="">Keine Kategorien gefunden</option>`;
   if (data && data.categoryId) select.value = data.categoryId;
+  
+  // Support-Rollen-Chips rendern
+  const chipContainerId = `opt-support-roles-${rowId}`;
+  const chipContainer = document.getElementById(chipContainerId);
+  if (chipContainer) {
+    renderEditRoleChips(chipContainerId, supportRoles);
+  }
 };
 function collectOptions() {
   const rows = document.querySelectorAll('#edit-options-list .option-row');
-  return Array.from(rows).map(row => ({
-    label: row.querySelector('.opt-label')?.value || '',
-    emoji: row.querySelector('.opt-emoji')?.value || '🎫',
-    categoryId: row.querySelector('.opt-category')?.value || ''
-  }));
+  return Array.from(rows).map(row => {
+    const chipContainerId = `opt-support-roles-${row.id}`;
+    const supportRoles = getEditSelectedRoles(chipContainerId);
+    return {
+      label: row.querySelector('.opt-label')?.value || '',
+      emoji: row.querySelector('.opt-emoji')?.value || '🎫',
+      categoryId: row.querySelector('.opt-category')?.value || '',
+      supportRoles: supportRoles
+    };
+  });
 }
 
 // ------ LIVE-VORSCHAU (für die Bearbeitungsansicht) ------
@@ -920,7 +944,7 @@ window.toggleTicketStatus = async function(index, checked) {
 window.openAddTicket = function() { editingIndex = null; showEditView(null); };
 window.openEditView = function(index) { editingIndex = index; showEditView(index); };
 
-// ------ Bearbeitungsansicht mit ALLEN Einstellungen (inkl. Log-Kanal) ------
+// ------ Bearbeitungsansicht mit ALLEN Einstellungen (inkl. Log-Kanal & pro-Option Support-Rollen) ------
 async function showEditView(index) {
   document.getElementById('ticket-overview-container').classList.add('hidden');
   editContainer.classList.remove('hidden');
@@ -941,7 +965,7 @@ async function showEditView(index) {
       enabled: true,
       panelName: 'Neues Ticket',
       panelChannelId: '',
-      logChannelId: '', // NEU: Log-Kanal
+      logChannelId: '',
       supportRoles: [],
       categoryId: '',
       title: 'Support Center',
@@ -1005,7 +1029,7 @@ async function showEditView(index) {
         <button class="edit-tab-btn" data-edit-tab="options" onclick="switchEditTab('options')"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Optionen</button>
       </div>
 
-      <!-- TAB: Allgemein (inkl. Kanalauswahl + Log-Kanal) -->
+      <!-- TAB: Allgemein -->
       <div id="edit-tab-general" class="edit-tab-content">
         <div class="form-group">
           <div class="switch-row">
@@ -1025,16 +1049,16 @@ async function showEditView(index) {
           <select id="edit-panel-channel" style="width:100%; background:var(--bg-base); border:1px solid var(--border-subtle); border-radius:8px; padding:8px 12px; color:var(--text-primary); min-height:38px;"></select>
           <small>Hier wird das Ticket-Panel (Embed) gesendet.</small>
         </div>
-        <!-- NEU: Log-Kanal -->
+        <!-- Log-Kanal -->
         <div class="form-group">
           <label for="edit-log-channel">📋 Log-Kanal (Transkripte & Logs)</label>
           <select id="edit-log-channel" style="width:100%; background:var(--bg-base); border:1px solid var(--border-subtle); border-radius:8px; padding:8px 12px; color:var(--text-primary); min-height:38px;"></select>
           <small>Hier werden Logs (Ticket geöffnet/geschlossen) und Transkripte gesendet.</small>
         </div>
         <div class="form-group">
-          <label>Support-Rollen (Zugriff)</label>
+          <label>Support-Rollen (Zugriff) – Fallback für alle Optionen</label>
           <div id="edit-support-roles" class="chip-select"></div>
-          <small>Diese Rollen können Tickets sehen und verwalten.</small>
+          <small>Diese Rollen werden verwendet, wenn eine Option keine eigenen Support-Rollen definiert.</small>
         </div>
         <div class="form-group">
           <label for="edit-ticket-category">📂 Kategorie für Tickets</label>
@@ -1155,13 +1179,13 @@ async function showEditView(index) {
         </div>
       </div>
 
-      <!-- TAB: Optionen (verlinkte Kategorien) -->
+      <!-- TAB: Optionen (verlinkte Kategorien mit eigenen Support-Rollen) -->
       <div id="edit-tab-options" class="edit-tab-content hidden">
         <div class="form-group">
           <label style="font-weight:600; font-size:0.85rem;">Dropdown-Optionen (Kategorien)</label>
           <div id="edit-options-list"></div>
           <button type="button" class="add-option-btn" onclick="window.addOptionRow()">+ Option hinzufügen</button>
-          <small>Diese Optionen erscheinen im Dropdown-Menü des Panels.</small>
+          <small>Jede Option kann eigene Support-Rollen haben. Wenn keine definiert, werden die globalen Support-Rollen verwendet.</small>
         </div>
       </div>
 
@@ -1181,7 +1205,7 @@ async function showEditView(index) {
   // Kategorien befüllen
   populateCategorySelects();
 
-  // Rollen-Chips rendern
+  // Rollen-Chips rendern (globale Support-Rollen)
   renderEditRoleChips('edit-support-roles', data.supportRoles || []);
   renderEditRoleChips('edit-allowed-roles', data.allowedRoles || []);
   renderEditRoleChips('edit-denied-roles', data.deniedRoles || []);
@@ -1198,7 +1222,7 @@ async function showEditView(index) {
     }
   }
 
-  // NEU: Log-Kanal befüllen (Textkanäle)
+  // Log-Kanal befüllen (Textkanäle)
   const logChannelSelect = document.getElementById('edit-log-channel');
   if (logChannelSelect) {
     const textChannels = state.guildChannels.filter(c => c.type === 0);
@@ -1235,7 +1259,7 @@ async function showEditView(index) {
     window.addButtonRow({ label: 'Ticket öffnen', emoji: '🎫', color: '#ffffff', action: 'open' });
   }
 
-  // Optionen laden
+  // Optionen laden (mit Support-Rollen)
   if (data.options && data.options.length) {
     data.options.forEach(opt => window.addOptionRow(opt));
   } else {
@@ -1299,7 +1323,7 @@ window.closeEditView = function() {
   renderTicketOverview();
 };
 
-// ------ Speichern der Bearbeitung (mit Log-Kanal) ------
+// ------ Speichern der Bearbeitung (mit pro-Option Support-Rollen) ------
 window.saveEditView = async function() {
   const saveStatus = document.getElementById('edit-save-status');
   if (saveStatus) { saveStatus.classList.add('hidden'); saveStatus.textContent = '⏳ Speichern...'; saveStatus.classList.remove('hidden'); }
@@ -1308,7 +1332,7 @@ window.saveEditView = async function() {
   const enabled = document.getElementById('edit-panel-enabled').checked;
   const panelName = document.getElementById('edit-panel-name').value.trim();
   const panelChannelId = document.getElementById('edit-panel-channel')?.value || '';
-  const logChannelId = document.getElementById('edit-log-channel')?.value || ''; // NEU
+  const logChannelId = document.getElementById('edit-log-channel')?.value || '';
   const supportRoles = getEditSelectedRoles('edit-support-roles');
   const categoryId = document.getElementById('edit-ticket-category').value;
   const title = document.getElementById('edit-panel-title').value.trim();
@@ -1347,7 +1371,7 @@ window.saveEditView = async function() {
       enabled,
       panelName,
       panelChannelId,
-      logChannelId, // NEU gespeichert
+      logChannelId,
       supportRoles,
       categoryId,
       title,
