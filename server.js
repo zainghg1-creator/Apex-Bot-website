@@ -428,4 +428,72 @@ if (NODE_ENV !== 'production') {
   }).catch(err => {
     console.error('❌ Fehler:', err);
   });
+  // ============================================================
+// NEU: Ticket-Panel in Discord senden
+// ============================================================
+app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res) => {
+  const { guildId } = req.params;
+  const { panelIndex, channelId } = req.body;
+
+  if (panelIndex === undefined || !channelId) {
+    return res.status(400).json({ error: 'panelIndex und channelId sind erforderlich.' });
+  }
+
+  try {
+    // Konfiguration laden
+    const config = await getGuildConfig(guildId);
+    const tickets = config.tickets || {};
+    const options = tickets.options || [];
+
+    if (panelIndex < 0 || panelIndex >= options.length) {
+      return res.status(404).json({ error: 'Panel nicht gefunden.' });
+    }
+
+    const panel = options[panelIndex];
+    if (!panel) {
+      return res.status(404).json({ error: 'Panel-Daten ungültig.' });
+    }
+
+    // Embed erstellen
+    const embed = {
+      title: panel.title || 'Support Center',
+      description: panel.description || 'Wähle eine Kategorie, um ein Ticket zu öffnen.',
+      color: parseInt(panel.color ? panel.color.replace('#', '') : 'ffffff', 16),
+      footer: {
+        text: 'Ticket System • Powered by Apex',
+        icon_url: 'https://cdn.discordapp.com/attachments/.../apex_logo.png' // Optional
+      },
+      timestamp: new Date().toISOString()
+    };
+
+    // Falls ein Bild hinterlegt ist
+    if (panel.image) {
+      embed.image = { url: panel.image };
+    }
+
+    // Nachricht an Discord senden (Bot-Token verwenden)
+    const response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bot ${process.env.BOT_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        embeds: [embed],
+        components: [] // Hier könnten später Buttons eingefügt werden
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Discord API Fehler:', errorData);
+      return res.status(response.status).json({ error: `Discord Fehler: ${errorData.message || 'Unbekannt'}` });
+    }
+
+    res.json({ success: true, message: 'Panel wurde erfolgreich gesendet.' });
+  } catch (err) {
+    console.error('Fehler beim Senden des Panels:', err);
+    res.status(500).json({ error: 'Interner Serverfehler.' });
+  }
+});
 }
