@@ -1,3 +1,4 @@
+console.log('🔑 BOT_TOKEN vorhanden?', process.env.BOT_TOKEN ? '✅ Ja' : '❌ Nein');
 require('dotenv').config();
 const express = require('express');
 const cookieSession = require('cookie-session');
@@ -428,25 +429,29 @@ if (NODE_ENV !== 'production') {
   }).catch(err => {
     console.error('❌ Fehler:', err);
   });
-  // ============================================================
-// NEU: Ticket-Panel in Discord senden
+  }
+});
+// ============================================================
+// NEU: Ticket-Panel in Discord senden (mit besserer Fehlerbehandlung)
 // ============================================================
 app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res) => {
   const { guildId } = req.params;
   const { panelIndex, channelId } = req.body;
 
-  if (panelIndex === undefined || !channelId) {
+  console.log('📤 Sende Panel:', { guildId, panelIndex, channelId });
+
+  if (panelIndex === undefined || panelIndex === null || !channelId) {
     return res.status(400).json({ error: 'panelIndex und channelId sind erforderlich.' });
   }
 
   try {
-    // Konfiguration laden
+    // 1. Konfiguration laden
     const config = await getGuildConfig(guildId);
     const tickets = config.tickets || {};
     const options = tickets.options || [];
 
     if (panelIndex < 0 || panelIndex >= options.length) {
-      return res.status(404).json({ error: 'Panel nicht gefunden.' });
+      return res.status(404).json({ error: `Panel mit Index ${panelIndex} nicht gefunden.` });
     }
 
     const panel = options[panelIndex];
@@ -454,46 +459,58 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
       return res.status(404).json({ error: 'Panel-Daten ungültig.' });
     }
 
-    // Embed erstellen
+    // 2. Embed erstellen (mit Standardwerten)
     const embed = {
       title: panel.title || 'Support Center',
       description: panel.description || 'Wähle eine Kategorie, um ein Ticket zu öffnen.',
-      color: parseInt(panel.color ? panel.color.replace('#', '') : 'ffffff', 16),
+      color: parseInt(panel.color ? panel.color.replace('#', '') : 'ffffff', 16), // Hex → Dezimal
       footer: {
-        text: 'Ticket System • Powered by Apex',
-        icon_url: 'https://cdn.discordapp.com/attachments/.../apex_logo.png' // Optional
+        text: 'Ticket System • Powered by Apex'
       },
       timestamp: new Date().toISOString()
     };
 
     // Falls ein Bild hinterlegt ist
-    if (panel.image) {
+    if (panel.image && panel.image.startsWith('http')) {
       embed.image = { url: panel.image };
     }
 
-    // Nachricht an Discord senden (Bot-Token verwenden)
+    // 3. An Discord senden
+    const botToken = process.env.BOT_TOKEN;
+    if (!botToken) {
+      console.error('❌ BOT_TOKEN fehlt in .env!');
+      return res.status(500).json({ error: 'BOT_TOKEN nicht konfiguriert.' });
+    }
+
     const response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bot ${process.env.BOT_TOKEN}`,
+        'Authorization': `Bot ${botToken}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        embeds: [embed],
-        components: [] // Hier könnten später Buttons eingefügt werden
+        embeds: [embed]
+        // components: [] // später für Buttons
       })
     });
 
+    // 4. Antwort auswerten
+    const responseData = await response.json();
+
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Discord API Fehler:', errorData);
-      return res.status(response.status).json({ error: `Discord Fehler: ${errorData.message || 'Unbekannt'}` });
+      console.error('❌ Discord API Fehler:', response.status, responseData);
+      return res.status(response.status).json({
+        error: `Discord Fehler (${response.status}): ${responseData.message || 'Unbekannt'}`,
+        details: responseData
+      });
     }
 
-    res.json({ success: true, message: 'Panel wurde erfolgreich gesendet.' });
+    console.log('✅ Panel gesendet, Nachricht-ID:', responseData.id);
+    res.json({ success: true, message: 'Panel wurde erfolgreich gesendet.', data: responseData });
+
   } catch (err) {
-    console.error('Fehler beim Senden des Panels:', err);
-    res.status(500).json({ error: 'Interner Serverfehler.' });
+    console.error('❌ Fehler beim Senden des Panels:', err);
+    res.status(500).json({ error: 'Interner Serverfehler: ' + err.message });
   }
 });
 }
