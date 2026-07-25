@@ -37,7 +37,7 @@ const app = express();
 app.set('trust proxy', 1);
 
 app.use(express.static(__dirname));
-app.use(express.json({ limit: '8mb' }));
+app.use(express.json({ limit: '20mb' })); // Größeres Limit für Base64-Bilder
 
 app.use(cookieSession({
   name: 'apex_session',
@@ -415,7 +415,23 @@ app.get('/api/test', (req, res) => {
 });
 
 // ============================================================
-// ⭐ TICKET-PANEL SENDEN (MIT EMBED + DROPDOWN)
+// HELPER: Bild als Base64 erkennen und in Attachment konvertieren
+// ============================================================
+function isBase64Image(str) {
+  return str && str.startsWith('data:image');
+}
+
+function getMimeTypeFromBase64(base64) {
+  const match = base64.match(/^data:image\/(\w+);/);
+  return match ? match[1] : 'png';
+}
+
+function stripBase64Header(base64) {
+  return base64.replace(/^data:image\/\w+;base64,/, '');
+}
+
+// ============================================================
+// ⭐ TICKET-PANEL SENDEN (MIT EMBED + DROPDOWN + BASE64-BILD)
 // ============================================================
 app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res) => {
   const { guildId } = req.params;
@@ -428,11 +444,8 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
   }
 
   try {
-    // 1. Konfiguration laden
     const config = await getGuildConfig(guildId);
     const tickets = config.tickets || {};
-    
-    // Die globale Liste aller Panels
     const panels = tickets.options || [];
 
     if (panelIndex < 0 || panelIndex >= panels.length) {
@@ -444,9 +457,7 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
       return res.status(404).json({ error: 'Panel-Daten ungültig.' });
     }
 
-    // 2. Die verlinkten Kategorien aus dem Panel holen
     const linkedOptions = panel.options || [];
-    
     if (linkedOptions.length === 0) {
       return res.status(400).json({
         error: '⚠️ Dieses Panel hat keine verlinkten Kategorien!',
@@ -456,7 +467,7 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
 
     console.log('📋 Verlinkte Kategorien:', linkedOptions);
 
-    // 3. Embed erstellen
+    // Embed erstellen
     const embed = {
       title: panel.title || 'Support Center',
       description: panel.description || 'Wähle eine Kategorie, um ein Ticket zu öffnen.',
@@ -467,11 +478,26 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
       timestamp: new Date().toISOString()
     };
 
-    if (panel.image && panel.image.startsWith('http')) {
-      embed.image = { url: panel.image };
+    // ========== BILD VERARBEITEN ==========
+    let files = [];
+    let imageUrl = panel.image || '';
+    if (imageUrl && isBase64Image(imageUrl)) {
+      // Base64-Bild – als Attachment senden
+      const mimeType = getMimeTypeFromBase64(imageUrl);
+      const base64Data = stripBase64Header(imageUrl);
+      const buffer = Buffer.from(base64Data, 'base64');
+      files.push({
+        name: `panel_image.${mimeType}`,
+        data: buffer
+      });
+      // Embed verweist auf Attachment
+      embed.image = { url: `attachment://panel_image.${mimeType}` };
+    } else if (imageUrl && imageUrl.startsWith('http')) {
+      // Externe URL – direkt setzen
+      embed.image = { url: imageUrl };
     }
 
-    // 4. Select Menu (Dropdown) erstellen
+    // Select Menu (Dropdown) erstellen
     const selectOptions = linkedOptions.map(opt => {
       const option = {
         label: opt.label || 'Unbenannt',
@@ -485,33 +511,54 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
     });
 
     const components = [{
-      type: 1, // Action Row
+      type: 1,
       components: [{
-        type: 3, // Select Menu
+        type: 3,
         custom_id: `ticket_select_${panelIndex}_${guildId}`,
         placeholder: 'Wähle eine Kategorie aus...',
         options: selectOptions
       }]
     }];
 
-    // 5. An Discord senden
     const botToken = process.env.BOT_TOKEN;
     if (!botToken) {
       console.error('❌ BOT_TOKEN fehlt in .env!');
       return res.status(500).json({ error: 'BOT_TOKEN nicht konfiguriert.' });
     }
 
-    const response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bot ${botToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        embeds: [embed],
-        components: components
-      })
-    });
+    // Body für Discord-API
+    const payload = {
+      embeds: [embed],
+      components: components
+    };
+
+    // Falls Dateien vorhanden, als FormData senden
+    let response;
+    if (files.length > 0) {
+      const formData = new FormData();
+      formData.append('payload_json', JSON.stringify(payload));
+      files.forEach(f => {
+        formData.append('files[0]', new Blob([f.data]), f.name);
+      });
+
+      response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bot ${botToken}`
+        },
+        body: formData
+      });
+    } else {
+      // Normales JSON
+      response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bot ${botToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+    }
 
     const responseData = await response.json();
 
@@ -537,7 +584,7 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
 });
 
 // ============================================================
-// ⭐ VERIFICATION PANEL SENDEN (MIT VERBESSERTER FARBKONVERTIERUNG)
+// VERIFICATION PANEL SENDEN (MIT BASE64-BILD)
 // ============================================================
 app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req, res) => {
   const { guildId } = req.params;
@@ -564,33 +611,22 @@ app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req,
       return res.status(500).json({ error: 'BOT_TOKEN nicht konfiguriert.' });
     }
 
-    // ============================================================
-    // 🎨 ROBUSTE FARBKONVERTIERUNG (FALLBACK: DISCORD-BLAU)
-    // ============================================================
-    let parsedColor = 0x5865f2; // Standard: Discord-Blau
+    // Farbkonvertierung
+    let parsedColor = 0x5865f2;
     if (color) {
-      // 1. Alle nicht-hex Zeichen entfernen
       let hex = color.replace(/[^0-9a-fA-F]/g, '');
-      console.log('🧹 Gereinigter Hex:', hex);
-      
-      // 2. Kurzform erweitern (z.B. #0f0 → 00ff00)
       if (hex.length === 3) {
         hex = hex.split('').map(c => c + c).join('');
-        console.log('↔️ Erweiterte Kurzform:', hex);
       }
-      
-      // 3. Prüfen, ob wir 6 Zeichen haben
       if (hex.length === 6) {
         parsedColor = parseInt(hex, 16);
         console.log('✅ Geparste Farbe (dezimal):', parsedColor, '| Hex:', '#' + hex);
       } else {
         console.warn('⚠️ Ungültige Farbe – Länge:', hex.length, 'Verwende Standard (Discord-Blau)');
       }
-    } else {
-      console.warn('⚠️ Keine Farbe übergeben – Verwende Standard (Discord-Blau)');
     }
 
-    // Embed mit benutzerdefinierten Werten
+    // Embed
     const embed = {
       title: title || '🔐 Verifizierung',
       description: description || (method === 'button'
@@ -600,12 +636,23 @@ app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req,
       footer: { text: 'Verifizierungssystem • Powered by Apex' }
     };
 
-    console.log('📦 Finales Embed:', JSON.stringify(embed, null, 2));
-
-    if (image && image.startsWith('http')) {
-      embed.image = { url: image };
+    // ========== BILD VERARBEITEN ==========
+    let files = [];
+    let imageUrl = image || '';
+    if (imageUrl && isBase64Image(imageUrl)) {
+      const mimeType = getMimeTypeFromBase64(imageUrl);
+      const base64Data = stripBase64Header(imageUrl);
+      const buffer = Buffer.from(base64Data, 'base64');
+      files.push({
+        name: `verification_image.${mimeType}`,
+        data: buffer
+      });
+      embed.image = { url: `attachment://verification_image.${mimeType}` };
+    } else if (imageUrl && imageUrl.startsWith('http')) {
+      embed.image = { url: imageUrl };
     }
 
+    // Button
     let components = [];
     const label = buttonLabel || (method === 'button' ? 'Verifizieren' : 'Aufgabe lösen');
     if (method === 'button') {
@@ -632,19 +679,36 @@ app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req,
       return res.status(400).json({ error: 'Ungültige Methode.' });
     }
 
-    console.log('📤 Sende an Discord:', { embed, components });
+    const payload = {
+      embeds: [embed],
+      components: components
+    };
 
-    const response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bot ${botToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        embeds: [embed],
-        components: components
-      })
-    });
+    let response;
+    if (files.length > 0) {
+      const formData = new FormData();
+      formData.append('payload_json', JSON.stringify(payload));
+      files.forEach(f => {
+        formData.append('files[0]', new Blob([f.data]), f.name);
+      });
+
+      response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bot ${botToken}`
+        },
+        body: formData
+      });
+    } else {
+      response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bot ${botToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+    }
 
     const data = await response.json();
     if (!response.ok) {
