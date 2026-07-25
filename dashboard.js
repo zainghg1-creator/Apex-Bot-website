@@ -292,7 +292,7 @@ async function loadRolesAndChannels(guildId) {
 }
 
 function renderAllSelects() {
-  const selectIds = ['join-channel', 'leave-channel', 'teamliste-channel', 'support-channel', 'moderation-log-channel', 'teamupdate-channel'];
+  const selectIds = ['join-channel', 'leave-channel', 'teamliste-channel', 'support-channel', 'moderation-log-channel', 'teamupdate-channel', 'verification-channel'];
   selectIds.forEach(id => renderChannelSelect(id, 0));
 }
 
@@ -484,6 +484,8 @@ function applyTeamlisteConfig(cfg) {
 
 function applyVerificationConfig(cfg) {
   setChecked('verification-enabled', cfg.enabled ?? false);
+  setSelectValue('verification-method', cfg.method || 'button');
+  setSelectValue('verification-channel', cfg.channelId || '');
   renderRoleChips('verification-roles', cfg.roleId ? [cfg.roleId] : [], true);
 }
 
@@ -579,7 +581,12 @@ async function saveModuleSettings(moduleName) {
         payload = { channelId: document.getElementById('teamliste-channel').value, roles: getSelectedRoleIds('teamliste-roles') };
         break;
       case 'verification':
-        payload = { enabled: document.getElementById('verification-enabled').checked, roleId: getSelectedRoleIds('verification-roles')[0] || null };
+        payload = {
+          enabled: document.getElementById('verification-enabled').checked,
+          method: document.getElementById('verification-method').value,
+          channelId: document.getElementById('verification-channel').value,
+          roleId: getSelectedRoleIds('verification-roles')[0] || null
+        };
         break;
       default:
         const enabledEl = document.getElementById(`${moduleName}-enabled`);
@@ -1373,6 +1380,31 @@ window.closeEditView = function() {
   document.getElementById('ticket-overview-container').classList.remove('hidden');
   editingIndex = null;
 };
+
+// ============================================================
+// VERIFICATION PANEL SENDEN
+// ============================================================
+async function sendVerificationPanel() {
+  if (!state.activeGuildId) { showToast('Kein Server ausgewählt.', 'error'); return; }
+  const channelId = document.getElementById('verification-channel').value;
+  const method = document.getElementById('verification-method').value;
+  const roleId = getSelectedRoleIds('verification-roles')[0];
+  if (!channelId) { showToast('Bitte wähle einen Kanal aus.', 'error'); return; }
+  if (!roleId) { showToast('Bitte wähle eine Rolle aus.', 'error'); return; }
+  try {
+    const response = await apiFetch(`/guild/${state.activeGuildId}/verification/send-panel`, {
+      method: 'POST',
+      body: JSON.stringify({ channelId, method, roleId })
+    });
+    if (response && response.success) {
+      showToast('Verifizierungs-Panel erfolgreich gesendet!', 'success');
+    } else {
+      showToast(response?.error || 'Fehler beim Senden.', 'error');
+    }
+  } catch (err) {
+    showToast(`Fehler: ${err.message}`, 'error');
+  }
+}
 
 // ============================================================
 // START
