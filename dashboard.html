@@ -16,9 +16,9 @@
       --bg-base: #000000;
       --bg-surface: #0a0a0a;
       --bg-card: #141414;
-      --border-subtle: rgba(255, 255, 255, 0.08);
-      --border-medium: rgba(255, 255, 255, 0.12);
-      --border-active: rgba(255, 255, 255, 0.25);
+      --border-subtle: rgba(255, 255, 255, 0.06);
+      --border-medium: rgba(255, 255, 255, 0.10);
+      --border-active: rgba(255, 255, 255, 0.20);
       --text-primary: #ffffff;
       --text-muted: #a1a1aa;
       --text-dim: #71717a;
@@ -54,14 +54,14 @@
       display: block;
     }
 
-    /* Header */
+    /* ===== HEADER ===== */
     header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 12px 4%;
       backdrop-filter: blur(16px);
-      background: rgba(0, 0, 0, 0.8);
+      background: rgba(0, 0, 0, 0.85);
       border-bottom: 1px solid var(--border-subtle);
       position: sticky;
       top: 0;
@@ -72,7 +72,7 @@
     .header-left { display: flex; align-items: center; gap: 12px; }
 
     .hamburger-btn {
-      background: rgba(255,255,255,0.05);
+      background: rgba(255,255,255,0.04);
       border: 1px solid var(--border-subtle);
       border-radius: 8px;
       width: 38px;
@@ -87,7 +87,7 @@
       padding: 0;
       flex-shrink: 0;
     }
-    .hamburger-btn:hover { background: rgba(255,255,255,0.10); border-color: var(--border-active); }
+    .hamburger-btn:hover { background: rgba(255,255,255,0.08); border-color: var(--border-medium); }
     .hamburger-btn span {
       display: block;
       width: 18px;
@@ -115,7 +115,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      border: 1px solid rgba(255, 255, 255, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.2);
     }
     .brand-logo svg { width: 16px; height: 16px; }
     .brand-name { font-size: 1rem; font-weight: 800; letter-spacing: -0.02em; }
@@ -141,8 +141,8 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      background: rgba(255,255,255,0.05);
-      padding: 4px 8px 4px 4px;
+      background: rgba(255,255,255,0.04);
+      padding: 4px 10px 4px 4px;
       border-radius: 30px;
       border: 1px solid var(--border-subtle);
       flex-shrink: 0;
@@ -166,10 +166,10 @@
       font-weight: 600;
       padding: 4px 10px;
       border-radius: 20px;
-      background: rgba(255,255,255,0.05);
+      background: rgba(255,255,255,0.04);
       transition: all 0.2s ease;
     }
-    .logout-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.12); }
+    .logout-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.08); }
 
     .brand-right {
       display: flex;
@@ -182,10 +182,10 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      padding: 10px 18px;
-      border-radius: 10px;
-      font-size: 0.85rem;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.8rem;
       font-weight: 600;
       text-decoration: none;
       border: 1px solid transparent;
@@ -193,15 +193,15 @@
       transition: all 0.2s ease;
       white-space: nowrap;
       font-family: inherit;
-      min-height: 42px;
+      min-height: 36px;
       touch-action: manipulation;
     }
     .btn-primary { background: #ffffff; color: #000000; }
-    .btn-primary:hover { background: #e4e4e7; transform: translateY(-2px); }
-    .btn-secondary { background: rgba(255,255,255,0.05); color: var(--text-primary); border-color: var(--border-subtle); }
-    .btn-secondary:hover { background: rgba(255,255,255,0.10); border-color: var(--border-active); transform: translateY(-2px); }
+    .btn-primary:hover { background: #e4e4e7; transform: translateY(-1px); }
+    .btn-secondary { background: rgba(255,255,255,0.04); color: var(--text-primary); border-color: var(--border-subtle); }
+    .btn-secondary:hover { background: rgba(255,255,255,0.08); border-color: var(--border-medium); transform: translateY(-1px); }
     .btn-danger { background: #ef4444; color: #ffffff; }
-    .btn-danger:hover { background: #dc2626; transform: translateY(-2px); }
+    .btn-danger:hover { background: #dc2626; transform: translateY(-1px); }
 
     .container {
       max-width: 1100px;
@@ -217,13 +217,13 @@
     .state-box {
       background: var(--bg-surface);
       padding: 2rem 1.5rem;
-      border-radius: 14px;
+      border-radius: 12px;
       text-align: center;
       color: var(--text-muted);
       border: 1px solid var(--border-subtle);
       font-size: 0.9rem;
     }
-    .state-box.error { border-color: rgba(239,68,68,0.3); color: #fca5a5; }
+    .state-box.error { border-color: rgba(239,68,68,0.2); color: #fca5a5; }
 
     .guild-grid {
       display: grid;
@@ -234,14 +234,14 @@
     .guild-card {
       background: var(--bg-surface);
       padding: 1.2rem;
-      border-radius: 14px;
+      border-radius: 12px;
       border: 1px solid var(--border-subtle);
       display: flex;
       flex-direction: column;
       gap: 12px;
       transition: all 0.25s ease;
     }
-    .guild-card:hover { border-color: var(--border-active); transform: translateY(-2px); }
+    .guild-card:hover { border-color: var(--border-medium); transform: translateY(-2px); }
     .guild-card.add-card {
       border-style: dashed;
       justify-content: center;
@@ -257,7 +257,7 @@
       width: 42px; height: 42px;
       border-radius: 50%;
       object-fit: cover;
-      background: rgba(255,255,255,0.05);
+      background: rgba(255,255,255,0.04);
       border: 1px solid var(--border-subtle);
       flex-shrink: 0;
       font-size: 1.2rem;
@@ -278,11 +278,11 @@
     .guild-detail { font-size: 0.8rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 2px; }
     .guild-detail span { display: flex; align-items: center; gap: 4px; }
     .guild-action { display: flex; gap: 6px; flex-wrap: wrap; }
-    .guild-action .btn { flex: 1; min-width: 50px; padding: 6px 12px; font-size: 0.75rem; min-height: 34px; }
+    .guild-action .btn { flex: 1; min-width: 50px; padding: 6px 12px; font-size: 0.75rem; min-height: 32px; }
 
     .hidden { display: none !important; }
 
-    /* Overlay */
+    /* ===== OVERLAY ===== */
     .overlay {
       position: fixed;
       inset: 0;
@@ -292,7 +292,7 @@
       z-index: 200;
     }
 
-    /* Sidebar – wie Tickety */
+    /* Sidebar – wie bisher */
     .sidebar {
       background: var(--bg-surface);
       border-bottom: 1px solid var(--border-subtle);
@@ -308,7 +308,7 @@
       transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
     }
     .sidebar::-webkit-scrollbar { height: 3px; }
-    .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
+    .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 10px; }
 
     .sidebar-header {
       display: flex;
@@ -361,7 +361,7 @@
       flex-shrink: 0;
       min-height: 32px;
     }
-    .tab-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.05); }
+    .tab-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.04); }
     .tab-btn.active { background: #ffffff; color: #000000; }
     .tab-btn.active .tab-icon svg { stroke: #000000; }
     .tab-icon { width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -394,38 +394,47 @@
       margin-bottom: 1rem;
     }
 
-    /* Tickety-style Panel Card */
-    .panel-card {
+    /* ===== GALAXYBOT-STYLE TICKET CARDS ===== */
+    .ticket-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+      margin-top: 4px;
+    }
+    .ticket-card {
       background: var(--bg-surface);
       border: 1px solid var(--border-subtle);
       border-radius: 12px;
-      padding: 1.2rem;
-      margin-bottom: 1rem;
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
       transition: all 0.25s ease;
+      border-left: 4px solid #71717a;
     }
-    .panel-card:hover { border-color: var(--border-active); }
-    .panel-card-header {
+    .ticket-card:hover { border-color: var(--border-medium); transform: translateY(-2px); }
+    .ticket-card .header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 10px;
       flex-wrap: wrap;
+      gap: 8px;
     }
-    .panel-card-title {
-      font-size: 1rem;
+    .ticket-card .title {
       font-weight: 700;
+      font-size: 0.95rem;
       display: flex;
       align-items: center;
       gap: 8px;
+      color: var(--text-primary);
     }
-    .panel-card-title .emoji { font-size: 1.2rem; }
-    .panel-card-status {
-      font-size: 0.65rem;
+    .ticket-card .title .emoji { font-size: 1.1rem; }
+    .ticket-card .status-pill {
+      font-size: 0.6rem;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.03em;
-      padding: 3px 10px;
+      padding: 3px 12px;
       border-radius: 20px;
       border: 1px solid var(--border-subtle);
       color: var(--text-dim);
@@ -433,51 +442,95 @@
       align-items: center;
       gap: 4px;
     }
-    .panel-card-status.active { color: #22c55e; border-color: rgba(34,197,94,0.3); }
-    .panel-card-status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-dim); }
-    .panel-card-status.active .dot { background: #22c55e; }
+    .ticket-card .status-pill .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text-dim);
+    }
+    .ticket-card .status-pill.active {
+      color: #22c55e;
+      border-color: rgba(34,197,94,0.2);
+    }
+    .ticket-card .status-pill.active .dot { background: #22c55e; }
 
-    .panel-card-meta {
+    .ticket-card .meta {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 12px;
       font-size: 0.75rem;
       color: var(--text-muted);
-      margin-bottom: 10px;
     }
-    .panel-card-meta span { display: flex; align-items: center; gap: 4px; }
+    .ticket-card .meta span { display: flex; align-items: center; gap: 4px; }
 
-    .panel-card-actions { display: flex; gap: 6px; flex-wrap: wrap; }
-    .panel-card-actions .btn { padding: 6px 14px; font-size: 0.75rem; min-height: 32px; }
+    .ticket-card .actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 2px;
+    }
+    .ticket-card .actions .btn {
+      padding: 5px 14px;
+      font-size: 0.7rem;
+      min-height: 30px;
+    }
 
-    /* Card für "Neues Panel" */
-    .panel-add-card {
+    .ticket-add-card {
       background: transparent;
-      border: 1px dashed var(--border-subtle);
+      border: 2px dashed var(--border-subtle);
       border-radius: 12px;
-      padding: 2rem;
+      padding: 28px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      color: var(--text-muted);
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      gap: 8px;
-      cursor: pointer;
-      transition: all 0.25s ease;
-      text-align: center;
-      min-height: 140px;
+      gap: 6px;
     }
-    .panel-add-card:hover { border-color: var(--border-active); background: rgba(255,255,255,0.02); }
-    .panel-add-card .icon { font-size: 2rem; }
-    .panel-add-card .label { font-weight: 700; font-size: 1rem; color: var(--text-primary); }
-    .panel-add-card .sub { color: var(--text-muted); font-size: 0.8rem; }
+    .ticket-add-card:hover { border-color: var(--border-active); color: var(--text-primary); background: rgba(255,255,255,0.02); }
+    .ticket-add-card .icon { font-size: 2rem; line-height: 1; }
+    .ticket-add-card .label { font-weight: 700; font-size: 1rem; }
+    .ticket-add-card .sub { font-size: 0.8rem; color: var(--text-dim); }
 
-    /* Edit View – wie Tickety */
+    /* ===== TOOLBAR (wie bisher) ===== */
+    .ticket-toolbar {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+      background: var(--bg-surface);
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border-subtle);
+    }
+    .ticket-toolbar label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+    .ticket-toolbar select {
+      flex: 1;
+      min-width: 120px;
+      background: var(--bg-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 6px 10px;
+      color: var(--text-primary);
+      font-size: 0.8rem;
+      min-height: 34px;
+    }
+
+    /* ===== EDIT VIEW (wie bisher) ===== */
     .edit-view { margin-top: 0.5rem; }
     .edit-toolbar {
       display: flex;
       gap: 12px;
       align-items: center;
-      margin-bottom: 18px;
+      margin-bottom: 16px;
       flex-wrap: wrap;
       background: var(--bg-surface);
       padding: 10px 14px;
@@ -495,14 +548,13 @@
       min-width: 140px;
       background: var(--bg-base);
       border: 1px solid var(--border-subtle);
-      border-radius: 8px;
-      padding: 8px 12px;
+      border-radius: 6px;
+      padding: 6px 10px;
       color: var(--text-primary);
-      min-height: 36px;
+      min-height: 34px;
       font-size: 0.8rem;
     }
 
-    /* Tickety Tabs */
     .edit-tabs {
       display: flex;
       gap: 2px;
@@ -525,6 +577,16 @@
     .edit-tab-btn:hover { color: var(--text-primary); }
     .edit-tab-btn.active { color: var(--text-primary); border-bottom-color: #ffffff; }
     .edit-tab-content.hidden { display: none; }
+
+    .panel-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 1.2rem;
+      margin-bottom: 1rem;
+      transition: all 0.25s ease;
+    }
+    .panel-card:hover { border-color: var(--border-medium); }
 
     .form-card {
       display: flex;
@@ -549,19 +611,18 @@
     }
     .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
       border-color: var(--border-active);
-      box-shadow: 0 0 0 2px rgba(255,255,255,0.05);
+      box-shadow: 0 0 0 2px rgba(255,255,255,0.04);
     }
     .form-group textarea { resize: vertical; min-height: 60px; }
     .form-group small { color: var(--text-dim); font-size: 0.7rem; }
     .form-group select {
       appearance: none;
       -webkit-appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
       background-repeat: no-repeat;
       background-position: right 10px center;
       padding-right: 32px;
     }
-    .form-group select option { background: #000; color: #fff; padding: 8px; }
 
     .switch-row {
       display: flex;
@@ -578,7 +639,7 @@
     }
     .switch input { opacity: 0; width: 0; height: 0; }
     .switch-slider {
-      position: absolute; inset: 0; background: rgba(255,255,255,0.12);
+      position: absolute; inset: 0; background: rgba(255,255,255,0.10);
       border-radius: 30px; cursor: pointer; transition: 0.2s;
     }
     .switch-slider::before {
@@ -602,7 +663,7 @@
       background: var(--bg-base);
       border: 1px solid var(--border-subtle);
       border-radius: 8px;
-      padding: 10px;
+      padding: 8px;
       min-height: 40px;
       transition: border-color 0.2s ease;
     }
@@ -611,7 +672,7 @@
       display: flex;
       align-items: center;
       gap: 4px;
-      background: rgba(255,255,255,0.05);
+      background: rgba(255,255,255,0.04);
       border: 1px solid var(--border-subtle);
       padding: 4px 10px;
       border-radius: 20px;
@@ -622,8 +683,8 @@
       transition: all 0.2s ease;
       color: var(--text-muted);
     }
-    .role-chip:hover { border-color: var(--border-active); color: var(--text-primary); background: rgba(255,255,255,0.08); }
-    .role-chip.selected { background: #ffffff; color: #000000; border-color: #ffffff; box-shadow: 0 2px 8px rgba(255,255,255,0.15); }
+    .role-chip:hover { border-color: var(--border-active); color: var(--text-primary); background: rgba(255,255,255,0.06); }
+    .role-chip.selected { background: #ffffff; color: #000000; border-color: #ffffff; box-shadow: 0 2px 8px rgba(255,255,255,0.10); }
     .chip-empty { color: var(--text-dim); font-size: 0.8rem; padding: 4px 0; }
 
     .color-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -637,7 +698,6 @@
     .form-action { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
     .form-action .btn { flex: 1; min-width: 100px; }
 
-    /* Option rows (wie bei Tickety) */
     .option-row {
       display: flex;
       flex-wrap: wrap;
@@ -649,12 +709,37 @@
       padding: 10px;
       margin-bottom: 8px;
     }
-    .option-row input, .option-row select { flex: 1; min-width: 80px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 6px 10px; color: var(--text-primary); font-family: inherit; font-size: 0.8rem; min-height: 34px; }
-    .option-remove { background: transparent; border: 1px solid var(--border-subtle); color: var(--text-muted); border-radius: 6px; width: 30px; height: 30px; cursor: pointer; font-size: 0.9rem; flex-shrink: 0; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; }
+    .option-row input, .option-row select {
+      flex: 1;
+      min-width: 80px;
+      background: var(--bg-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 6px 10px;
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 0.8rem;
+      min-height: 34px;
+    }
+    .option-remove {
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      border-radius: 6px;
+      width: 30px;
+      height: 30px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
     .option-remove:hover { color: #ff6b6b; border-color: #ff6b6b; }
     .add-option-btn {
       align-self: flex-start;
-      background: rgba(255,255,255,0.05);
+      background: rgba(255,255,255,0.04);
       border: 1px dashed var(--border-subtle);
       color: var(--text-muted);
       padding: 6px 14px;
@@ -668,13 +753,9 @@
     }
     .add-option-btn:hover { color: var(--text-primary); border-color: var(--border-active); background: rgba(255,255,255,0.06); }
 
-    .option-support-roles {
-      width: 100%;
-      margin-top: 4px;
-    }
+    .option-support-roles { width: 100%; margin-top: 4px; }
     .option-support-roles label { font-size: 0.7rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 4px; }
 
-    /* Discord Embed Preview */
     .embed-preview {
       background: #2b2d31;
       border-left: 4px solid #ffffff;
@@ -685,14 +766,14 @@
     }
     .embed-preview-title { font-weight: 700; color: #ffffff; margin-bottom: 4px; font-size: 0.9rem; }
     .embed-preview-desc { font-size: 0.8rem; line-height: 1.4; white-space: pre-wrap; word-break: break-word; }
-    .embed-preview-image { width: 100%; border-radius: 6px; margin-top: 8px; max-height: 120px; object-fit: cover; }
+    .embed-preview-image { width: 100%; border-radius: 6px; margin-top: 6px; max-height: 120px; object-fit: cover; }
     .embed-preview-image.hidden { display: none; }
-    .embed-preview-footer { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 0.65rem; color: #949ba4; }
+    .embed-preview-footer { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 0.65rem; color: #949ba4; }
     .embed-preview-footer img { width: 14px; height: 14px; border-radius: 50%; }
 
-    .edit-preview-wrap { margin-bottom: 18px; background: var(--bg-surface); border-radius: 10px; padding: 14px; border: 1px solid var(--border-subtle); }
+    .edit-preview-wrap { margin-bottom: 16px; background: var(--bg-surface); border-radius: 10px; padding: 14px; border: 1px solid var(--border-subtle); }
 
-    /* Toast */
+    /* ===== TOAST ===== */
     #toast-container {
       position: fixed;
       bottom: 20px;
@@ -707,26 +788,29 @@
       pointer-events: none;
     }
     .toast {
-      background: #ffffff;
-      color: #000000;
-      font-weight: 700;
+      background: #1a1a1a;
+      color: #ffffff;
+      font-weight: 600;
       font-size: 0.85rem;
       padding: 12px 18px;
       border-radius: 10px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      border: 1px solid var(--border-subtle);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
       display: flex;
       align-items: center;
       gap: 10px;
-      animation: toast-in 0.3s ease, toast-out 0.3s ease 2.7s forwards;
+      animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
       pointer-events: auto;
     }
-    @keyframes toast-in { from { opacity: 0; transform: translateY(16px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
-    @keyframes toast-out { from { opacity: 1; } to { opacity: 0; transform: translateY(-10px); } }
+    .toast.success { border-left: 4px solid #22c55e; }
+    .toast.error { border-left: 4px solid #ef4444; }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(16px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateY(-10px); } }
 
-    .soon-badge { display: inline-block; font-size: 0.55rem; font-weight: 700; text-transform: uppercase; color: var(--text-dim); background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); padding: 2px 8px; border-radius: 20px; margin-left: 6px; vertical-align: middle; }
+    .soon-badge { display: inline-block; font-size: 0.55rem; font-weight: 700; text-transform: uppercase; color: var(--text-dim); background: rgba(255,255,255,0.04); border: 1px solid var(--border-subtle); padding: 2px 8px; border-radius: 20px; margin-left: 6px; vertical-align: middle; }
 
     .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
-    .status-dot.online { background: #ffffff; box-shadow: 0 0 8px rgba(255,255,255,0.6); }
+    .status-dot.online { background: #ffffff; box-shadow: 0 0 8px rgba(255,255,255,0.4); }
 
     .loading-spinner {
       display: inline-block;
@@ -795,7 +879,7 @@
       font-size: 0.7rem;
     }
 
-    /* ===== MOBILE ===== */
+    /* ===== RESPONSIVE ===== */
     @media (max-width: 767px) {
       .sidebar {
         position: fixed;
@@ -814,7 +898,7 @@
         transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
         z-index: 250;
         background: var(--bg-surface);
-        box-shadow: 4px 0 30px rgba(0,0,0,0.8);
+        box-shadow: 4px 0 30px rgba(0,0,0,0.6);
       }
       .sidebar.open { transform: translateX(0); opacity: 1; }
       .sidebar-header { margin-bottom: 1rem; padding-bottom: 0.8rem; border-bottom: 1px solid var(--border-subtle); flex-shrink: 0; }
@@ -866,11 +950,12 @@
       .content-area { padding: 1.5rem 2rem; }
       #user-name { display: inline !important; }
       .guild-grid { grid-template-columns: repeat(2, 1fr); }
-      .brand-right .brand-name { font-size: 1rem; }
+      .ticket-grid { grid-template-columns: repeat(2, 1fr); }
     }
 
     @media (min-width: 1024px) {
       .guild-grid { grid-template-columns: repeat(3, 1fr); }
+      .ticket-grid { grid-template-columns: repeat(2, 1fr); }
       .container { padding: 40px 24px 80px; }
       .content-area { padding: 2rem 2.5rem; }
     }
@@ -886,11 +971,9 @@
       .logout-btn { font-size: 0.55rem; padding: 2px 6px; }
       .content-area { padding: 0.8rem; }
       .content-area h2 { font-size: 1.1rem; }
-      .guild-card { padding: 0.8rem; }
-      .panel-card { padding: 0.8rem; }
-      .panel-add-card { padding: 1.2rem; min-height: 100px; }
       .btn { font-size: 0.75rem; padding: 6px 12px; min-height: 34px; }
       .form-group input, .form-group textarea, .form-group select { font-size: 0.75rem; padding: 6px 8px; min-height: 34px; }
+      .ticket-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -901,7 +984,7 @@
 
   <div id="menu-overlay-bg" class="menu-overlay-bg" onclick="closeMobileMenu()"></div>
 
-  <!-- HEADER -->
+  <!-- ===== HEADER ===== -->
   <header>
     <div class="header-left">
       <button class="hamburger-btn" id="hamburger-btn" onclick="toggleMobileMenu()" aria-label="Menü">
@@ -935,7 +1018,7 @@
     </div>
   </header>
 
-  <!-- Server-Auswahl -->
+  <!-- ===== SERVER AUSWAHL ===== -->
   <main class="container">
     <div class="page-heading">
       <h2>Wähle einen Server</h2>
@@ -951,7 +1034,7 @@
     <div id="guild-list" class="guild-grid hidden"></div>
   </main>
 
-  <!-- SERVER MANAGEMENT OVERLAY -->
+  <!-- ===== SERVER MANAGEMENT OVERLAY ===== -->
   <div id="manage-overlay" class="overlay hidden">
 
     <!-- SIDEBAR -->
@@ -1003,54 +1086,54 @@
         <span></span>
       </button>
 
-      <!-- Übersicht Tab -->
+      <!-- ===== ÜBERSICHT ===== -->
       <div id="mod-overview" class="module-page">
         <h2>Übersicht</h2>
         <p>Statistiken und allgemeiner Status des Bots auf deinem Server.</p>
-        <div class="stats-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap:12px;">
-          <div class="card" style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
-            <h3 style="font-size:0.65rem; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:4px;">👥 Mitglieder</h3>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap:12px;">
+          <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
+            <div style="font-size:0.65rem; text-transform:uppercase; color:var(--text-muted); font-weight:600;">👥 Mitglieder</div>
             <p id="overview-members" style="font-size:1.3rem; font-weight:800; font-family:'JetBrains Mono',monospace;">N/A</p>
           </div>
-          <div class="card" style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
-            <h3 style="font-size:0.65rem; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:4px;">💎 Boosts</h3>
+          <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
+            <div style="font-size:0.65rem; text-transform:uppercase; color:var(--text-muted); font-weight:600;">💎 Boosts</div>
             <p id="overview-boosts" style="font-size:1.3rem; font-weight:800; font-family:'JetBrains Mono',monospace;">N/A</p>
           </div>
-          <div class="card" style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
-            <h3 style="font-size:0.65rem; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:4px;">🤖 Bots</h3>
+          <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
+            <div style="font-size:0.65rem; text-transform:uppercase; color:var(--text-muted); font-weight:600;">🤖 Bots</div>
             <p id="overview-bots" style="font-size:1.3rem; font-weight:800; font-family:'JetBrains Mono',monospace;">N/A</p>
           </div>
-          <div class="card" style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
-            <h3 style="font-size:0.65rem; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:4px;">📁 Channels</h3>
+          <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
+            <div style="font-size:0.65rem; text-transform:uppercase; color:var(--text-muted); font-weight:600;">📁 Channels</div>
             <p id="overview-channels" style="font-size:1.3rem; font-weight:800; font-family:'JetBrains Mono',monospace;">N/A</p>
           </div>
-          <div class="card" style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
-            <h3 style="font-size:0.65rem; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:4px;">🎭 Rollen</h3>
+          <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
+            <div style="font-size:0.65rem; text-transform:uppercase; color:var(--text-muted); font-weight:600;">🎭 Rollen</div>
             <p id="overview-roles" style="font-size:1.3rem; font-weight:800; font-family:'JetBrains Mono',monospace;">N/A</p>
           </div>
-          <div class="card" style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
-            <h3 style="font-size:0.65rem; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:4px;">📅 Erstellt</h3>
+          <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
+            <div style="font-size:0.65rem; text-transform:uppercase; color:var(--text-muted); font-weight:600;">📅 Erstellt</div>
             <p id="overview-created" style="font-size:0.9rem; font-weight:700;">N/A</p>
           </div>
-          <div class="card" style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
-            <h3 style="font-size:0.65rem; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:4px;">👑 Owner</h3>
+          <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
+            <div style="font-size:0.65rem; text-transform:uppercase; color:var(--text-muted); font-weight:600;">👑 Owner</div>
             <p id="overview-owner" style="font-size:0.9rem; font-weight:700; display:flex; align-items:center; gap:6px;">
               <img id="overview-owner-avatar" class="hidden" src="" alt="" style="width:24px;height:24px;border-radius:50%;">
               <span id="overview-owner-name">N/A</span>
             </p>
           </div>
-          <div class="card" style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
-            <h3 style="font-size:0.65rem; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:4px;">🟢 Bot Status</h3>
+          <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
+            <div style="font-size:0.65rem; text-transform:uppercase; color:var(--text-muted); font-weight:600;">🟢 Bot Status</div>
             <p style="font-size:0.9rem; font-weight:600; display:flex; align-items:center; gap:6px;"><span class="status-dot online"></span> Online</p>
           </div>
         </div>
       </div>
 
-      <!-- Willkommen Tab -->
+      <!-- ===== WILLKOMMEN ===== -->
       <div id="mod-welcome" class="module-page hidden">
         <h2>👋 Willkommen</h2>
         <p>Lass den Bot automatisch Nachrichten versenden, wenn ein Member beitritt oder verlässt.</p>
-        <div class="subtabs" style="display:flex; gap:6px; border-bottom:1px solid var(--border-subtle); margin-bottom:1rem; flex-wrap:wrap;">
+        <div style="display:flex; gap:6px; border-bottom:1px solid var(--border-subtle); margin-bottom:1rem; flex-wrap:wrap;">
           <button class="subtab-btn active" data-sub="join" onclick="switchSubtab('welcome','join')" style="background:transparent; border:none; color:var(--text-muted); padding:6px 2px; font-size:0.75rem; font-weight:700; cursor:pointer; border-bottom:2px solid transparent; transition:all 0.2s;">Beitritt</button>
           <button class="subtab-btn" data-sub="leave" onclick="switchSubtab('welcome','leave')" style="background:transparent; border:none; color:var(--text-muted); padding:6px 2px; font-size:0.75rem; font-weight:700; cursor:pointer; border-bottom:2px solid transparent; transition:all 0.2s;">Verlassen</button>
         </div>
@@ -1058,10 +1141,7 @@
         <div id="welcome-join-page" class="subpage">
           <div class="panel-card">
             <div class="form-group">
-              <div class="switch-row">
-                <label style="margin:0;">Willkommens-Nachricht aktiv</label>
-                <label class="switch"><input type="checkbox" id="join-enabled" checked><span class="switch-slider"></span></label>
-              </div>
+              <div class="switch-row"><label>Willkommens-Nachricht aktiv</label><label class="switch"><input type="checkbox" id="join-enabled" checked><span class="switch-slider"></span></label></div>
             </div>
             <div class="form-group"><label>Nachrichtentyp</label><select id="join-mode" onchange="updateEmbedPreview('join')"><option value="embed">Embed</option><option value="text">Einfache Nachricht</option></select></div>
             <div class="form-group"><label for="join-channel">Kanal</label><select id="join-channel"></select></div>
@@ -1076,7 +1156,7 @@
               </div>
             </div>
             <div class="form-group">
-              <div class="switch-row"><label style="margin:0;">Thumbnail = Profilbild</label><label class="switch"><input type="checkbox" id="join-avatar-thumb" checked onchange="updateEmbedPreview('join')"><span class="switch-slider"></span></label></div>
+              <div class="switch-row"><label>Thumbnail = Profilbild</label><label class="switch"><input type="checkbox" id="join-avatar-thumb" checked onchange="updateEmbedPreview('join')"><span class="switch-slider"></span></label></div>
             </div>
             <div class="form-group">
               <label>Embed-Farbe</label>
@@ -1085,7 +1165,7 @@
             <div class="form-group"><label>Auto-Rolle(n) bei Beitritt</label><div id="join-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span></div></div>
             <div class="form-action"><button class="btn btn-primary" onclick="saveModuleSettings('welcome')">Speichern</button></div>
           </div>
-          <div class="embed-preview-wrap" style="margin-top:1rem;">
+          <div style="margin-top:1rem; background:var(--bg-surface); border-radius:10px; padding:14px; border:1px solid var(--border-subtle);">
             <label style="font-size:0.75rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">📺 Live-Vorschau</label>
             <div class="embed-preview" id="join-preview" style="border-left-color:#ffffff;">
               <div class="embed-preview-title" id="join-preview-title">Willkommen auf {server}! 🎉</div>
@@ -1099,7 +1179,7 @@
         <div id="welcome-leave-page" class="subpage hidden">
           <div class="panel-card">
             <div class="form-group">
-              <div class="switch-row"><label style="margin:0;">Verlassen-Nachricht aktiv</label><label class="switch"><input type="checkbox" id="leave-enabled"><span class="switch-slider"></span></label></div>
+              <div class="switch-row"><label>Verlassen-Nachricht aktiv</label><label class="switch"><input type="checkbox" id="leave-enabled"><span class="switch-slider"></span></label></div>
             </div>
             <div class="form-group"><label>Nachrichtentyp</label><select id="leave-mode" onchange="updateEmbedPreview('leave')"><option value="embed">Embed</option><option value="text">Einfache Nachricht</option></select></div>
             <div class="form-group"><label for="leave-channel">Kanal</label><select id="leave-channel"></select></div>
@@ -1114,7 +1194,7 @@
               </div>
             </div>
             <div class="form-group">
-              <div class="switch-row"><label style="margin:0;">Thumbnail = Profilbild</label><label class="switch"><input type="checkbox" id="leave-avatar-thumb" checked onchange="updateEmbedPreview('leave')"><span class="switch-slider"></span></label></div>
+              <div class="switch-row"><label>Thumbnail = Profilbild</label><label class="switch"><input type="checkbox" id="leave-avatar-thumb" checked onchange="updateEmbedPreview('leave')"><span class="switch-slider"></span></label></div>
             </div>
             <div class="form-group">
               <label>Embed-Farbe</label>
@@ -1122,24 +1202,22 @@
             </div>
             <div class="form-action"><button class="btn btn-primary" onclick="saveModuleSettings('welcome')">Speichern</button></div>
           </div>
-          <div class="embed-preview-wrap" style="margin-top:1rem;">
+          <div style="margin-top:1rem; background:var(--bg-surface); border-radius:10px; padding:14px; border:1px solid var(--border-subtle);">
             <label style="font-size:0.75rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">📺 Live-Vorschau</label>
             <div class="embed-preview" id="leave-preview" style="border-left-color:#ffffff;">
               <div class="embed-preview-title" id="leave-preview-title">Auf Wiedersehen 👋</div>
               <div class="embed-preview-desc" id="leave-preview-desc">{username} hat den Server verlassen.</div>
               <img class="embed-preview-image hidden" id="leave-preview-image" src="">
-              <div class="embed-preview-footer"><img src="apex_logo.png"><span>Willkommens System • Powered by Apex</span></div>
+              <div class="embed-preview-footer"><img src="apex_logo.png"><span>Verlassen System • Powered by Apex</span></div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- ========================================================= -->
-      <!-- TICKET SYSTEM – WIE TICKETY                              -->
-      <!-- ========================================================= -->
+      <!-- ===== TICKET SYSTEM – GALAXYBOT-STYLE ===== -->
       <div id="mod-tickets" class="module-page hidden">
         <h2>🎫 Ticket System</h2>
-        <p>Verwalte deine Ticket-Panels – so wie bei Tickety.</p>
+        <p>Verwalte deine Ticket-Panels – übersichtlich wie bei GalaxyBot.</p>
 
         <div id="ticket-overview-container">
           <div id="ticket-overview-grid">
@@ -1147,16 +1225,15 @@
           </div>
         </div>
 
-        <!-- Bearbeitungsansicht (wie Tickety) -->
+        <!-- Bearbeitungsansicht (wie bisher) -->
         <div id="ticket-edit-container" class="edit-view hidden">
           <a href="#" onclick="closeEditView(); return false;" style="display:inline-flex; align-items:center; gap:4px; color:var(--text-muted); text-decoration:none; font-weight:600; font-size:0.8rem; margin-bottom:1rem; transition:color 0.2s;">← Zurück zur Übersicht</a>
-
           <div id="edit-panel-header" style="margin-bottom:16px;"></div>
           <div id="ticket-edit-content"></div>
         </div>
       </div>
 
-      <!-- Teamliste Tab -->
+      <!-- ===== TEAMLISTE ===== -->
       <div id="mod-teamliste" class="module-page hidden">
         <h2>👥 Teamliste</h2>
         <p>Generiert automatisch eine immer aktuelle Übersicht deines Teams in einem Kanal.</p>
@@ -1167,71 +1244,71 @@
         </div>
       </div>
 
-      <!-- Support & FAQ Tab -->
+      <!-- ===== SUPPORT ===== -->
       <div id="mod-support" class="module-page hidden">
         <h2>❓ Support &amp; FAQ<span class="soon-badge">Grundeinrichtung</span></h2>
         <div class="panel-card">
           <div class="form-group">
-            <div class="switch-row"><label style="margin:0;">Modul aktiv</label><label class="switch"><input type="checkbox" id="support-enabled"><span class="switch-slider"></span></label></div>
+            <div class="switch-row"><label>Modul aktiv</label><label class="switch"><input type="checkbox" id="support-enabled"><span class="switch-slider"></span></label></div>
           </div>
           <div class="form-group"><label for="support-channel">FAQ-Kanal</label><select id="support-channel"></select></div>
           <div class="form-action"><button class="btn btn-primary" onclick="saveModuleSettings('support')">Speichern</button></div>
         </div>
       </div>
 
-      <!-- Moderation Tab -->
+      <!-- ===== MODERATION ===== -->
       <div id="mod-moderation" class="module-page hidden">
         <h2>🛡️ Moderation<span class="soon-badge">Grundeinrichtung</span></h2>
         <div class="panel-card">
           <div class="form-group">
-            <div class="switch-row"><label style="margin:0;">Automod aktiv</label><label class="switch"><input type="checkbox" id="moderation-enabled"><span class="switch-slider"></span></label></div>
+            <div class="switch-row"><label>Automod aktiv</label><label class="switch"><input type="checkbox" id="moderation-enabled"><span class="switch-slider"></span></label></div>
           </div>
           <div class="form-group"><label for="moderation-log-channel">Log-Kanal</label><select id="moderation-log-channel"></select></div>
           <div class="form-action"><button class="btn btn-primary" onclick="saveModuleSettings('moderation')">Speichern</button></div>
         </div>
       </div>
 
-      <!-- Teamupdate Log Tab -->
+      <!-- ===== TEAMUPDATE ===== -->
       <div id="mod-teamupdate" class="module-page hidden">
         <h2>📝 Teamupdate Log<span class="soon-badge">Grundeinrichtung</span></h2>
         <div class="panel-card">
           <div class="form-group">
-            <div class="switch-row"><label style="margin:0;">Log aktiv</label><label class="switch"><input type="checkbox" id="teamupdate-enabled"><span class="switch-slider"></span></label></div>
+            <div class="switch-row"><label>Log aktiv</label><label class="switch"><input type="checkbox" id="teamupdate-enabled"><span class="switch-slider"></span></label></div>
           </div>
           <div class="form-group"><label for="teamupdate-channel">Log-Kanal</label><select id="teamupdate-channel"></select></div>
           <div class="form-action"><button class="btn btn-primary" onclick="saveModuleSettings('teamupdate')">Speichern</button></div>
         </div>
       </div>
 
-      <!-- Kanal Statistiken Tab -->
+      <!-- ===== STATISTIKEN ===== -->
       <div id="mod-stats" class="module-page hidden">
         <h2>📈 Kanal Statistiken<span class="soon-badge">Grundeinrichtung</span></h2>
         <div class="panel-card">
           <div class="form-group">
-            <div class="switch-row"><label style="margin:0;">Live-Statistik-Kanäle aktiv</label><label class="switch"><input type="checkbox" id="stats-enabled"><span class="switch-slider"></span></label></div>
+            <div class="switch-row"><label>Live-Statistik-Kanäle aktiv</label><label class="switch"><input type="checkbox" id="stats-enabled"><span class="switch-slider"></span></label></div>
           </div>
           <div class="form-action"><button class="btn btn-primary" onclick="saveModuleSettings('stats')">Speichern</button></div>
         </div>
       </div>
 
-      <!-- Verifizierungs System Tab -->
+      <!-- ===== VERIFIZIERUNG ===== -->
       <div id="mod-verification" class="module-page hidden">
         <h2>✅ Verifizierungs System<span class="soon-badge">Grundeinrichtung</span></h2>
         <div class="panel-card">
           <div class="form-group">
-            <div class="switch-row"><label style="margin:0;">Verifizierung aktiv</label><label class="switch"><input type="checkbox" id="verification-enabled"><span class="switch-slider"></span></label></div>
+            <div class="switch-row"><label>Verifizierung aktiv</label><label class="switch"><input type="checkbox" id="verification-enabled"><span class="switch-slider"></span></label></div>
           </div>
           <div class="form-group"><label>Rolle nach Verifizierung</label><div id="verification-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span></div></div>
           <div class="form-action"><button class="btn btn-primary" onclick="saveModuleSettings('verification')">Speichern</button></div>
         </div>
       </div>
 
-      <!-- Anti Nuke Schutz Tab -->
+      <!-- ===== ANTI NUKE ===== -->
       <div id="mod-antinuke" class="module-page hidden">
         <h2>🔒 Anti Nuke Schutz<span class="soon-badge">Grundeinrichtung</span></h2>
         <div class="panel-card">
           <div class="form-group">
-            <div class="switch-row"><label style="margin:0;">Anti Nuke aktiv</label><label class="switch"><input type="checkbox" id="antinuke-enabled" checked><span class="switch-slider"></span></div>
+            <div class="switch-row"><label>Anti Nuke aktiv</label><label class="switch"><input type="checkbox" id="antinuke-enabled" checked><span class="switch-slider"></span></label></div>
           </div>
           <div class="form-action"><button class="btn btn-primary" onclick="saveModuleSettings('antinuke')">Speichern</button></div>
         </div>
@@ -1405,6 +1482,36 @@
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape') { closeOverlayMenu(); closeMobileMenu(); }
     });
+
+    // ===== TABS =====
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.module-page').forEach(page => page.classList.add('hidden'));
+      const activeBtn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+      const activePage = document.getElementById(`mod-${tabName}`);
+      if (activeBtn) activeBtn.classList.add('active');
+      if (activePage) activePage.classList.remove('hidden');
+      if (tabName === 'tickets' && typeof renderTicketOverview === 'function') {
+        setTimeout(renderTicketOverview, 50);
+      }
+    }
+    function switchSubtab(module, sub) {
+      const container = document.getElementById(`mod-${module}`);
+      container.querySelectorAll('.subtab-btn').forEach(b => b.classList.remove('active'));
+      container.querySelectorAll('.subpage').forEach(p => p.classList.add('hidden'));
+      const activeBtn = container.querySelector(`[data-sub="${sub}"]`);
+      const activePage = document.getElementById(`${module}-${sub}-page`);
+      if (activeBtn) activeBtn.classList.add('active');
+      if (activePage) activePage.classList.remove('hidden');
+    }
+
+    // ===== DUMMY FUNKTIONEN (werden von dashboard.js überschrieben) =====
+    function updateEmbedPreview(prefix) {}
+    function syncColor(prefix) {}
+    function syncColorHex(prefix) {}
+    function handleImageUpload(input, prefix) {}
+    function clearImage(prefix) {}
+    function saveModuleSettings(module) {}
   </script>
 
   <script src="/dashboard.js"></script>
