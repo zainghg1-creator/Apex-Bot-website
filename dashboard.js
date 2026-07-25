@@ -1,6 +1,6 @@
 'use strict';
 
-console.log('✅ NEUE dashboard.js mit Live-Vorschau!');
+console.log('✅ NEUE dashboard.js – Ticket-System 10x cooler!');
 
 // ============================================================
 // KONFIGURATION
@@ -12,7 +12,7 @@ const CONFIG = {
 };
 
 // ============================================================
-// DOM-REFERENCES (cached)
+// DOM-REFERENCES
 // ============================================================
 const DOM = {
   loadingState: document.getElementById('loading-state'),
@@ -285,8 +285,9 @@ async function loadRolesAndChannels(guildId) {
   renderCategorySelects();
 }
 function renderAllSelects() {
-  const selectIds = ['join-channel', 'leave-channel', 'ticket-panel-channel', 'teamliste-channel', 'support-channel', 'moderation-log-channel', 'teamupdate-channel'];
+  const selectIds = ['join-channel', 'leave-channel', 'teamliste-channel', 'support-channel', 'moderation-log-channel', 'teamupdate-channel'];
   selectIds.forEach(id => renderChannelSelect(id, 0));
+  // Zusätzlich für Ticket-Panel-Kanal (wird in der Bearbeitungsansicht dynamisch erstellt)
 }
 function renderChannelSelect(selectId, filterType) {
   const el = document.getElementById(selectId);
@@ -299,7 +300,7 @@ function renderChannelSelect(selectId, filterType) {
   el.innerHTML = relevant.map(c => `<option value="${c.id}"># ${escapeHtml(c.name)}</option>`).join('');
 }
 function renderCategorySelects() {
-  const ids = ['ticket-location-category', 'ticket-overflow-categories', 'ticket-modal-category'];
+  const ids = ['ticket-location-category', 'ticket-overflow-categories'];
   ids.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -438,23 +439,13 @@ const updateEmbedPreview = debounce((prefix) => {
 }, 200);
 
 // ============================================================
-// TICKET OPTIONS (global – wird nur noch für die Übersicht verwendet)
-// ============================================================
-function addTicketOption(data = null) {
-  // Wird nicht mehr benötigt, da Optionen jetzt pro Panel in der Bearbeitungsansicht verwaltet werden.
-}
-function collectTicketOptions() {
-  return [];
-}
-
-// ============================================================
-// LOAD SETTINGS
+// LOAD SETTINGS (für andere Module)
 // ============================================================
 async function loadAllModuleSettings(guildId) {
   try {
     const config = await apiFetch(`/guild/${guildId}/config`).catch(() => ({}));
     applyWelcomeConfig(config.welcome || {});
-    applyTicketConfig(config.tickets || {});
+    // Tickets werden separat geladen
     applyTeamlisteConfig(config.teamliste || {});
     applySimpleConfig('support', config.support || {});
     applySimpleConfig('moderation', config.moderation || {});
@@ -486,35 +477,6 @@ function applyWelcomeConfig(cfg) {
   setSelectValue('leave-channel', l.channelId || '');
   updateEmbedPreview('join');
   updateEmbedPreview('leave');
-}
-function applyTicketConfig(cfg) {
-  setSelectValue('ticket-panel-channel', cfg.panelChannelId || '');
-  setValue('ticket-panel-title', cfg.title || '');
-  setValue('ticket-panel-desc', cfg.description || '');
-  setColor('ticket', cfg.color || '#ffffff');
-  setValue('ticket-create-msg', cfg.creationMessage || '');
-  setImage('ticket', cfg.image);
-  setChecked('ticket-panel-enabled', cfg.enabled ?? true);
-  setValue('ticket-panel-name', cfg.panelName || '');
-  renderRoleChips('ticket-support-roles', cfg.supportRoles || []);
-  setSelectValue('ticket-location-category', cfg.locationCategory || '');
-  setSelectMultiple('ticket-overflow-categories', cfg.overflowCategories || []);
-  setSelectValue('ticket-thread-mode', cfg.threadMode || 'none');
-  setChecked('ticket-save-transcripts', cfg.saveTranscripts ?? false);
-  setChecked('ticket-save-images', cfg.saveImages ?? false);
-  setChecked('ticket-private-transcripts', cfg.privateTranscripts ?? false);
-  setValue('ticket-channel-name-template', cfg.channelNameTemplate || '{panel.name}-{ticket.creator.username}');
-  updateEmbedPreview('ticket');
-}
-function getSelectedOptions(selectId) {
-  const el = document.getElementById(selectId);
-  if (!el) return [];
-  return Array.from(el.selectedOptions).map(opt => opt.value);
-}
-function setSelectMultiple(selectId, values) {
-  const el = document.getElementById(selectId);
-  if (!el) return;
-  Array.from(el.options).forEach(opt => { opt.selected = values.includes(opt.value); });
 }
 function applyTeamlisteConfig(cfg) {
   setSelectValue('teamliste-channel', cfg.channelId || '');
@@ -549,7 +511,7 @@ function setImage(prefix, url) {
 }
 
 // ============================================================
-// SAVE SETTINGS (global)
+// SAVE SETTINGS (für andere Module)
 // ============================================================
 async function saveModuleSettings(moduleName) {
   const saveStatus = document.getElementById(`${moduleName}-save-status`);
@@ -581,27 +543,6 @@ async function saveModuleSettings(moduleName) {
             channelId: document.getElementById('leave-channel').value
           }
         };
-        break;
-      case 'tickets':
-        payload = {
-          panelChannelId: document.getElementById('ticket-panel-channel').value,
-          title: document.getElementById('ticket-panel-title').value,
-          description: document.getElementById('ticket-panel-desc').value,
-          color: document.getElementById('ticket-color').value,
-          image: document.getElementById('ticket-image-input')?.dataset.value || '',
-          creationMessage: document.getElementById('ticket-create-msg').value,
-          enabled: document.getElementById('ticket-panel-enabled').checked,
-          panelName: document.getElementById('ticket-panel-name').value,
-          supportRoles: getSelectedRoleIds('ticket-support-roles'),
-          locationCategory: document.getElementById('ticket-location-category').value,
-          overflowCategories: getSelectedOptions('ticket-overflow-categories'),
-          threadMode: document.getElementById('ticket-thread-mode').value,
-          saveTranscripts: document.getElementById('ticket-save-transcripts').checked,
-          saveImages: document.getElementById('ticket-save-images').checked,
-          privateTranscripts: document.getElementById('ticket-private-transcripts').checked,
-          channelNameTemplate: document.getElementById('ticket-channel-name-template').value
-        };
-        invalidateTicketCache();
         break;
       case 'teamliste':
         payload = {
@@ -639,7 +580,9 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ============================================================
-// TICKET ÜBERSICHT & BEARBEITUNGSANSICHT MIT LIVE-VORSCHAU
+// ============================================================
+// NEUES TICKET SYSTEM – 10x COOLER
+// ============================================================
 // ============================================================
 
 const ticketGrid = document.getElementById('ticket-overview-grid');
@@ -658,7 +601,6 @@ function switchEditTab(tabName) {
   const activeContent = document.getElementById(`edit-tab-${tabName}`);
   if (activeBtn) activeBtn.classList.add('active');
   if (activeContent) activeContent.classList.remove('hidden');
-  // Vorschau aktualisieren
   updateEditPreview();
 }
 
@@ -750,7 +692,6 @@ window.addOptionRow = function(data = null) {
     <button type="button" class="option-remove" onclick="document.getElementById('${rowId}').remove()" aria-label="Option entfernen">✕</button>
   `;
   container.appendChild(row);
-  // Kategorien für dieses Select befüllen
   const select = row.querySelector('.opt-category');
   const categories = state.guildChannels.filter(c => c.type === 4);
   select.innerHTML = categories.length
@@ -767,9 +708,7 @@ function collectOptions() {
   }));
 }
 
-// ============================================================
-// LIVE-VORSCHAU (für die Bearbeitungsansicht)
-// ============================================================
+// ------ LIVE-VORSCHAU (für die Bearbeitungsansicht) ------
 function updateEditPreview() {
   const preview = document.getElementById('edit-embed-preview');
   if (!preview) return;
@@ -799,7 +738,7 @@ function updateEditPreview() {
   }
 }
 
-// ------ Übersicht rendern ------
+// ------ Übersicht der Tickets (Karten) ------
 async function renderTicketOverview() {
   if (!ticketGrid) return;
   if (!state.activeGuildId) {
@@ -829,18 +768,20 @@ async function renderTicketOverview() {
       const emoji = opt.emoji || '🎫';
       const label = opt.label || 'Unbenannt';
       const categoryName = state.guildChannels.find(c => c.id === opt.categoryId)?.name || 'Keine Kategorie';
+      const status = opt.enabled !== false ? '🟢 Aktiv' : '🔴 Inaktiv';
       html += `
-        <div class="guild-card">
+        <div class="guild-card" style="border-left: 4px solid ${opt.enabled !== false ? '#22c55e' : '#ef4444'};">
           <div class="guild-info">
             <div class="guild-icon">${escapeHtml(emoji)}</div>
             <span class="guild-name">${escapeHtml(label)}</span>
           </div>
           <div class="guild-detail">
             <span>📂 Kategorie: ${escapeHtml(categoryName)}</span>
+            <span>📊 Status: ${status}</span>
           </div>
           <div class="guild-action">
-            <button class="btn btn-secondary" onclick="openEditView(${index})">Bearbeiten</button>
-            <button class="btn btn-danger" onclick="deleteTicketOption(${index})">Löschen</button>
+            <button class="btn btn-secondary" onclick="openEditView(${index})">✏️ Bearbeiten</button>
+            <button class="btn btn-danger" onclick="deleteTicketOption(${index})">🗑️ Löschen</button>
           </div>
         </div>
       `;
@@ -862,7 +803,7 @@ async function renderTicketOverview() {
 window.openAddTicket = function() { editingIndex = null; showEditView(null); };
 window.openEditView = function(index) { editingIndex = index; showEditView(index); };
 
-// ------ Bearbeitungsansicht mit Embed-Vorschau und Live-Aktualisierung ------
+// ------ Bearbeitungsansicht mit ALLEN Einstellungen (inkl. Kanalauswahl) ------
 async function showEditView(index) {
   document.getElementById('ticket-overview-container').classList.add('hidden');
   editContainer.classList.remove('hidden');
@@ -882,6 +823,7 @@ async function showEditView(index) {
     data = {
       enabled: true,
       panelName: 'Neues Ticket',
+      panelChannelId: '', // <-- NEU: Kanal für das Panel
       supportRoles: [],
       categoryId: '',
       title: 'Support Center',
@@ -905,13 +847,13 @@ async function showEditView(index) {
     };
   }
 
-  // --- HTML mit Embed-Vorschau und Tabs ---
+  // --- HTML mit allem ---
   let html = `
-    <div class="card form-card" style="max-width:100%;">
+    <div class="card form-card" style="max-width:100%; padding:1.5rem;">
 
       <!-- Panel-Dropdown -->
-      <div style="display:flex; gap:12px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
-        <label style="font-weight:600; color:var(--text-muted); font-size:0.8rem;">Panel wechseln:</label>
+      <div style="display:flex; gap:12px; align-items:center; margin-bottom:18px; flex-wrap:wrap; background:var(--bg-surface); padding:12px 16px; border-radius:12px; border:1px solid var(--border-subtle);">
+        <label style="font-weight:600; color:var(--text-muted); font-size:0.85rem;">📋 Panel wechseln:</label>
         <select id="edit-panel-select" style="flex:1; background:var(--bg-base); border:1px solid var(--border-subtle); border-radius:8px; padding:8px 12px; color:var(--text-primary); min-height:38px; font-size:0.85rem;">
           ${options.map((opt, i) => `<option value="${i}" ${i === index ? 'selected' : ''}>${escapeHtml(opt.panelName || opt.label || 'Unbenannt')}</option>`).join('')}
           ${index === null ? `<option value="new" selected>+ Neues Panel</option>` : ''}
@@ -920,8 +862,8 @@ async function showEditView(index) {
       </div>
 
       <!-- Embed-Vorschau (LIVE) -->
-      <div style="margin-bottom:18px; background:var(--bg-surface); border-radius:10px; padding:14px; border:1px solid var(--border-subtle);">
-        <label style="font-weight:600; color:var(--text-muted); display:block; margin-bottom:8px; font-size:0.75rem;">📺 Live-Vorschau</label>
+      <div style="margin-bottom:20px; background:var(--bg-surface); border-radius:12px; padding:16px; border:1px solid var(--border-subtle);">
+        <label style="font-weight:600; color:var(--text-muted); display:block; margin-bottom:8px; font-size:0.8rem;">📺 Live-Vorschau</label>
         <div class="discord-embed" id="edit-embed-preview" style="border-left-color:${data.color || '#ffffff'};">
           <div class="discord-embed-body">
             <div class="discord-embed-title">${escapeHtml(data.title || 'Support Center')}</div>
@@ -935,39 +877,49 @@ async function showEditView(index) {
         </div>
       </div>
 
-      <!-- Tab Navigation -->
-      <div style="display:flex; gap:4px; border-bottom:1px solid var(--border-subtle); margin-bottom:1rem; flex-wrap:wrap;">
-        <button class="edit-tab-btn active" data-edit-tab="general" onclick="switchEditTab('general')" style="background:transparent;border:none;color:var(--text-muted);padding:8px 14px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.8rem;">Allgemein</button>
-        <button class="edit-tab-btn" data-edit-tab="embed" onclick="switchEditTab('embed')" style="background:transparent;border:none;color:var(--text-muted);padding:8px 14px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.8rem;">Embed</button>
-        <button class="edit-tab-btn" data-edit-tab="messages" onclick="switchEditTab('messages')" style="background:transparent;border:none;color:var(--text-muted);padding:8px 14px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.8rem;">Nachrichten</button>
-        <button class="edit-tab-btn" data-edit-tab="roles" onclick="switchEditTab('roles')" style="background:transparent;border:none;color:var(--text-muted);padding:8px 14px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.8rem;">Berechtigungen</button>
-        <button class="edit-tab-btn" data-edit-tab="advanced" onclick="switchEditTab('advanced')" style="background:transparent;border:none;color:var(--text-muted);padding:8px 14px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.8rem;">Fortgeschritten</button>
-        <button class="edit-tab-btn" data-edit-tab="options" onclick="switchEditTab('options')" style="background:transparent;border:none;color:var(--text-muted);padding:8px 14px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.8rem;">Optionen</button>
+      <!-- Tab Navigation (cooler) -->
+      <div style="display:flex; gap:6px; border-bottom:1px solid var(--border-subtle); margin-bottom:1.2rem; flex-wrap:wrap;">
+        <button class="edit-tab-btn active" data-edit-tab="general" onclick="switchEditTab('general')" style="background:transparent;border:none;color:var(--text-muted);padding:8px 16px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.8rem;">⚙️ Allgemein</button>
+        <button class="edit-tab-btn" data-edit-tab="embed" onclick="switchEditTab('embed')" style="background:transparent;border:none;color:var(--text-muted);padding:8px 16px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.8rem;">🎨 Design</button>
+        <button class="edit-tab-btn" data-edit-tab="messages" onclick="switchEditTab('messages')" style="background:transparent;border:none;color:var(--text-muted);padding:8px 16px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.8rem;">✉️ Nachrichten</button>
+        <button class="edit-tab-btn" data-edit-tab="roles" onclick="switchEditTab('roles')" style="background:transparent;border:none;color:var(--text-muted);padding:8px 16px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.8rem;">🔒 Berechtigungen</button>
+        <button class="edit-tab-btn" data-edit-tab="advanced" onclick="switchEditTab('advanced')" style="background:transparent;border:none;color:var(--text-muted);padding:8px 16px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.8rem;">⚡ Fortgeschritten</button>
+        <button class="edit-tab-btn" data-edit-tab="options" onclick="switchEditTab('options')" style="background:transparent;border:none;color:var(--text-muted);padding:8px 16px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.8rem;">📋 Optionen</button>
       </div>
 
-      <!-- Tab: Allgemein -->
+      <!-- TAB: Allgemein (inkl. Kanalauswahl) -->
       <div id="edit-tab-general" class="edit-tab-content">
         <div class="form-group">
           <div class="switch-row">
-            <label style="margin:0; font-size:0.85rem;">Panel aktiv</label>
+            <label style="margin:0; font-size:0.9rem; font-weight:600;">Panel aktiv</label>
             <label class="switch"><input type="checkbox" id="edit-panel-enabled" ${data.enabled ? 'checked' : ''}><span class="switch-slider"></span></label>
           </div>
+          <small style="margin-top:-4px;">Deaktiviert das Panel – es wird nicht im ausgewählten Kanal angezeigt.</small>
         </div>
         <div class="form-group">
           <label for="edit-panel-name">Panel-Name</label>
-          <input type="text" id="edit-panel-name" value="${escapeHtml(data.panelName || '')}" placeholder="Support">
+          <input type="text" id="edit-panel-name" value="${escapeHtml(data.panelName || '')}" placeholder="z.B. Support">
+          <small>Wird in der Kanalnamen-Vorlage verwendet.</small>
+        </div>
+        <!-- NEU: Kanalauswahl für das Panel -->
+        <div class="form-group">
+          <label for="edit-panel-channel">📢 Kanal für das Panel</label>
+          <select id="edit-panel-channel" style="width:100%; background:var(--bg-base); border:1px solid var(--border-subtle); border-radius:8px; padding:8px 12px; color:var(--text-primary); min-height:38px;"></select>
+          <small>Hier wird das Ticket-Panel (Embed) gesendet.</small>
         </div>
         <div class="form-group">
           <label>Support-Rollen (Zugriff)</label>
           <div id="edit-support-roles" class="chip-select"></div>
+          <small>Diese Rollen können Tickets sehen und verwalten.</small>
         </div>
         <div class="form-group">
-          <label for="edit-ticket-category">Kategorie für Tickets</label>
-          <select id="edit-ticket-category"></select>
+          <label for="edit-ticket-category">📂 Kategorie für Tickets</label>
+          <select id="edit-ticket-category" style="width:100%; background:var(--bg-base); border:1px solid var(--border-subtle); border-radius:8px; padding:8px 12px; color:var(--text-primary); min-height:38px;"></select>
+          <small>Tickets werden in dieser Kategorie erstellt.</small>
         </div>
       </div>
 
-      <!-- Tab: Embed (hier werden die Vorschau-Felder bearbeitet) -->
+      <!-- TAB: Design -->
       <div id="edit-tab-embed" class="edit-tab-content hidden">
         <div class="form-group">
           <label for="edit-panel-title">Panel-Titel</label>
@@ -982,14 +934,14 @@ async function showEditView(index) {
           <div class="image-upload">
             <img id="edit-image-preview" class="image-preview" src="${data.image || ''}" alt="">
             <div class="upload-btn-wrap">
-              <label class="btn btn-secondary" for="edit-image-input">Bild hochladen</label>
+              <label class="btn btn-secondary" for="edit-image-input">📤 Hochladen</label>
               <input type="file" id="edit-image-input" accept="image/*" onchange="handleEditImageUpload(this)">
             </div>
             <button class="btn btn-secondary" onclick="clearEditImage()" type="button">Entfernen</button>
           </div>
         </div>
         <div class="form-group">
-          <label>Akzentfarbe (Embed)</label>
+          <label>Akzentfarbe</label>
           <div class="color-row">
             <input type="color" id="edit-panel-color" value="${data.color || '#ffffff'}" oninput="document.getElementById('edit-panel-color-hex').value = this.value; updateEditPreview();">
             <input type="text" id="edit-panel-color-hex" value="${data.color || '#ffffff'}" oninput="document.getElementById('edit-panel-color').value = this.value; updateEditPreview();">
@@ -997,7 +949,7 @@ async function showEditView(index) {
         </div>
       </div>
 
-      <!-- Tab: Nachrichten -->
+      <!-- TAB: Nachrichten -->
       <div id="edit-tab-messages" class="edit-tab-content hidden">
         <div class="form-group">
           <label for="edit-create-msg">Begrüßungsnachricht im Ticket</label>
@@ -1011,7 +963,7 @@ async function showEditView(index) {
         </div>
       </div>
 
-      <!-- Tab: Berechtigungen -->
+      <!-- TAB: Berechtigungen -->
       <div id="edit-tab-roles" class="edit-tab-content hidden">
         <div class="form-group">
           <label>Rollen, die ein Ticket öffnen dürfen (optional)</label>
@@ -1028,29 +980,30 @@ async function showEditView(index) {
         </div>
       </div>
 
-      <!-- Tab: Fortgeschritten -->
+      <!-- TAB: Fortgeschritten -->
       <div id="edit-tab-advanced" class="edit-tab-content hidden">
         <div class="form-group">
           <div class="switch-row">
             <label style="margin:0; font-size:0.85rem;">Überlauf-Kategorien aktivieren</label>
             <label class="switch"><input type="checkbox" id="edit-overflow-enabled" ${data.overflowEnabled ? 'checked' : ''}><span class="switch-slider"></span></label>
           </div>
+          <small>Wenn aktiv, werden Tickets auf mehrere Kategorien verteilt.</small>
         </div>
         <div class="form-group" id="edit-overflow-group" style="${data.overflowEnabled ? '' : 'display:none;'}">
           <label for="edit-ticket-overflow">Überlauf-Kategorien (mehrfach)</label>
-          <select id="edit-ticket-overflow" multiple style="height:auto;min-height:60px;"></select>
+          <select id="edit-ticket-overflow" multiple style="height:auto;min-height:60px; width:100%; background:var(--bg-base); border:1px solid var(--border-subtle); border-radius:8px; padding:8px; color:var(--text-primary);"></select>
           <small>Halte Strg (Cmd) gedrückt, um mehrere auszuwählen.</small>
         </div>
         <div class="form-group">
           <label for="edit-thread-mode">Thread-Modus</label>
-          <select id="edit-thread-mode">
+          <select id="edit-thread-mode" style="width:100%; background:var(--bg-base); border:1px solid var(--border-subtle); border-radius:8px; padding:8px 12px; color:var(--text-primary); min-height:38px;">
             <option value="none" ${data.threadMode === 'none' ? 'selected' : ''}>Keine Threads</option>
             <option value="thread" ${data.threadMode === 'thread' ? 'selected' : ''}>Öffentliche Threads</option>
             <option value="private" ${data.threadMode === 'private' ? 'selected' : ''}>Private Threads</option>
           </select>
         </div>
         <div class="form-group">
-          <label style="font-weight:600; font-size:0.8rem;">Transkript-Einstellungen</label>
+          <label style="font-weight:600; font-size:0.85rem;">Transkript-Einstellungen</label>
           <div class="switch-row">
             <label style="margin:0; font-size:0.85rem;">Transkripte speichern</label>
             <label class="switch"><input type="checkbox" id="edit-save-transcripts" ${data.saveTranscripts ? 'checked' : ''}><span class="switch-slider"></span></label>
@@ -1069,18 +1022,19 @@ async function showEditView(index) {
             <label style="margin:0; font-size:0.85rem;">Claim-System aktivieren</label>
             <label class="switch"><input type="checkbox" id="edit-claim-enabled" ${data.claimEnabled ? 'checked' : ''}><span class="switch-slider"></span></label>
           </div>
+          <small>Ermöglicht Teammitgliedern, Tickets zu übernehmen.</small>
         </div>
         <div class="form-group">
-          <label style="font-weight:600; font-size:0.8rem;">Buttons (für das Panel)</label>
+          <label style="font-weight:600; font-size:0.85rem;">Buttons (für das Panel)</label>
           <div id="edit-button-list"></div>
           <button type="button" class="add-button-btn" onclick="window.addButtonRow()">+ Button hinzufügen</button>
         </div>
       </div>
 
-      <!-- Tab: Optionen (verlinkte Kategorien) -->
+      <!-- TAB: Optionen (verlinkte Kategorien) -->
       <div id="edit-tab-options" class="edit-tab-content hidden">
         <div class="form-group">
-          <label style="font-weight:600; font-size:0.8rem;">Dropdown-Optionen (Kategorien)</label>
+          <label style="font-weight:600; font-size:0.85rem;">Dropdown-Optionen (Kategorien)</label>
           <div id="edit-options-list"></div>
           <button type="button" class="add-option-btn" onclick="window.addOptionRow()">+ Option hinzufügen</button>
           <small>Diese Optionen erscheinen im Dropdown-Menü des Panels.</small>
@@ -1089,7 +1043,7 @@ async function showEditView(index) {
 
       <!-- Speichern -->
       <div class="form-action" style="margin-top:1.2rem;padding-top:1.2rem;border-top:1px solid var(--border-subtle);">
-        <button class="btn btn-primary" onclick="saveEditView()">Speichern</button>
+        <button class="btn btn-primary" onclick="saveEditView()">💾 Speichern</button>
         <button class="btn btn-secondary" onclick="closeEditView()">Abbrechen</button>
         <span id="edit-save-status" class="hidden status-success"></span>
       </div>
@@ -1098,14 +1052,31 @@ async function showEditView(index) {
 
   editContent.innerHTML = html;
 
+  // --- Befüllen der dynamischen Elemente ---
+
   // Kategorien befüllen
   populateCategorySelects();
+
   // Rollen-Chips rendern
   renderEditRoleChips('edit-support-roles', data.supportRoles || []);
   renderEditRoleChips('edit-allowed-roles', data.allowedRoles || []);
   renderEditRoleChips('edit-denied-roles', data.deniedRoles || []);
+
+  // Kanal für das Panel befüllen (Textkanäle)
+  const panelChannelSelect = document.getElementById('edit-panel-channel');
+  if (panelChannelSelect) {
+    const textChannels = state.guildChannels.filter(c => c.type === 0);
+    panelChannelSelect.innerHTML = textChannels.length
+      ? textChannels.map(c => `<option value="${c.id}" ${c.id === data.panelChannelId ? 'selected' : ''}># ${escapeHtml(c.name)}</option>`).join('')
+      : `<option value="">Keine Textkanäle gefunden</option>`;
+    if (data.panelChannelId && !textChannels.some(c => c.id === data.panelChannelId)) {
+      panelChannelSelect.value = '';
+    }
+  }
+
   // Ausgewählte Kategorie setzen
   if (data.categoryId) document.getElementById('edit-ticket-category').value = data.categoryId;
+
   // Overflow-Kategorien setzen
   if (data.overflowCategories) {
     const overflowSelect = document.getElementById('edit-ticket-overflow');
@@ -1115,6 +1086,7 @@ async function showEditView(index) {
       });
     }
   }
+
   // Overflow-Toggle
   document.getElementById('edit-overflow-enabled').addEventListener('change', function() {
     document.getElementById('edit-overflow-group').style.display = this.checked ? '' : 'none';
@@ -1127,7 +1099,7 @@ async function showEditView(index) {
     window.addButtonRow({ label: 'Ticket öffnen', emoji: '🎫', color: '#ffffff', action: 'open' });
   }
 
-  // Optionen (verlinkte Kategorien) laden
+  // Optionen laden
   if (data.options && data.options.length) {
     data.options.forEach(opt => window.addOptionRow(opt));
   } else {
@@ -1140,7 +1112,7 @@ async function showEditView(index) {
   updateEditPreview();
 }
 
-// ------ Hilfsfunktionen für Bild-Upload in der Bearbeitungsansicht ------
+// ------ Hilfsfunktionen für Bild-Upload ------
 window.handleEditImageUpload = function(input) {
   const file = input.files?.[0];
   if (!file) return;
@@ -1191,7 +1163,7 @@ window.closeEditView = function() {
   renderTicketOverview();
 };
 
-// ------ Speichern der Bearbeitung ------
+// ------ Speichern der Bearbeitung (mit Kanal) ------
 window.saveEditView = async function() {
   const saveStatus = document.getElementById('edit-save-status');
   if (saveStatus) { saveStatus.classList.add('hidden'); saveStatus.textContent = '⏳ Speichern...'; saveStatus.classList.remove('hidden'); }
@@ -1199,6 +1171,7 @@ window.saveEditView = async function() {
   // Daten aus allen Tabs sammeln
   const enabled = document.getElementById('edit-panel-enabled').checked;
   const panelName = document.getElementById('edit-panel-name').value.trim();
+  const panelChannelId = document.getElementById('edit-panel-channel')?.value || '';
   const supportRoles = getEditSelectedRoles('edit-support-roles');
   const categoryId = document.getElementById('edit-ticket-category').value;
   const title = document.getElementById('edit-panel-title').value.trim();
@@ -1236,6 +1209,7 @@ window.saveEditView = async function() {
     const newData = {
       enabled,
       panelName,
+      panelChannelId, // <-- NEU gespeichert
       supportRoles,
       categoryId,
       title,
