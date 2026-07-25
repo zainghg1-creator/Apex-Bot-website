@@ -1406,7 +1406,7 @@ window.closeEditView = function() {
 };
 
 // ============================================================
-// VERIFICATION PANEL SENDEN
+// VERIFICATION PANEL SENDEN (mit Debug-Log)
 // ============================================================
 async function sendVerificationPanel() {
   if (!state.activeGuildId) { showToast('Kein Server ausgewählt.', 'error'); return; }
@@ -1421,6 +1421,8 @@ async function sendVerificationPanel() {
   const color = document.getElementById('verification-color').value;
   const image = document.getElementById('verification-image').value;
   const buttonLabel = document.getElementById('verification-button-label').value;
+
+  console.log('📤 Sende Verifizierungs-Panel mit:', { channelId, method, roleId, title, description, color, image, buttonLabel });
 
   try {
     const response = await apiFetch(`/guild/${state.activeGuildId}/verification/send-panel`, {
