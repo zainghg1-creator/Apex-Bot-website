@@ -38,7 +38,8 @@ app.set('trust proxy', 1);
 
 // --- Logger für jede Anfrage ---
 app.use((req, res, next) => {
-  console.log(`📥 ${req.method} ${req.url} – Session: ${req.session?.user ? req.session.user.username : '❌ keine'}`);
+  const sessionInfo = req.session?.user ? req.session.user.username : '❌ keine';
+  console.log(`📥 ${req.method} ${req.url} – Session: ${sessionInfo}`);
   next();
 });
 
@@ -53,7 +54,7 @@ if (!MONGODB_URI) {
   process.exit(1);
 }
 
-// Mongoose verbinden (wird auch für den Store benötigt)
+// Mongoose verbinden
 mongoose.connect(MONGODB_URI, { dbName: 'apex' })
   .then(() => console.log('✅ MongoDB verbunden (für Session-Store)'))
   .catch(err => console.error('❌ MongoDB Verbindungsfehler:', err));
@@ -62,7 +63,7 @@ const sessionStore = MongoStore.create({
   mongoUrl: MONGODB_URI,
   dbName: 'apex',
   collectionName: 'sessions',
-  ttl: 24 * 60 * 60, // 1 Tag
+  ttl: 24 * 60 * 60,
   autoRemove: 'native'
 });
 
@@ -72,10 +73,10 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: NODE_ENV === 'production', // auf Vercel immer HTTPS
+    secure: NODE_ENV === 'production',
     httpOnly: true,
     sameSite: 'lax',
-    maxAge: 24 * 60 * 60 * 1000 // 1 Tag
+    maxAge: 24 * 60 * 60 * 1000
   }
 }));
 
@@ -87,8 +88,9 @@ app.get('/', (req, res) => {
 });
 
 app.get('/dashboard.html', (req, res) => {
+  console.log(`📊 /dashboard.html aufgerufen – Session: ${req.session?.user ? '✅ vorhanden' : '❌ fehlt'}`);
   if (!req.session?.user) {
-    console.log('⛔ Zugriff auf dashboard.html ohne Session – leite zu / um');
+    console.log('⛔ Keine Session – leite zu / um');
     return res.redirect('/');
   }
   res.sendFile(path.join(__dirname, 'dashboard.html'));
@@ -112,11 +114,14 @@ app.get('/auth/discord/login', (req, res) => {
 
 app.get('/auth/discord/callback', async (req, res) => {
   const { code } = req.query;
+  console.log(`🔁 Callback erhalten – Code: ${code ? code.substring(0, 10) + '...' : '❌ kein Code'}`);
+  console.log(`📦 Aktuelle Session vor Token: ${req.session?.user ? '✅ vorhanden' : '❌ fehlt'}`);
+  
   if (!code) {
     console.log('❌ Kein Code in der Callback-URL');
     return res.redirect('/?error=missing_code');
   }
-  console.log('🔁 Callback erhalten, Code:', code.substring(0, 10) + '...');
+  
   try {
     const tokenRes = await fetch(`${DISCORD_API}/oauth2/token`, {
       method: 'POST',
@@ -129,24 +134,29 @@ app.get('/auth/discord/callback', async (req, res) => {
         redirect_uri: REDIRECT_URI
       })
     });
+    
     if (!tokenRes.ok) {
       const errorText = await tokenRes.text();
       console.error('❌ Token exchange fehlgeschlagen:', tokenRes.status, errorText);
       return res.redirect('/?error=token_exchange_failed');
     }
+    
     const tokenData = await tokenRes.json();
     console.log('✅ Token erhalten');
 
     const userRes = await fetch(`${DISCORD_API}/users/@me`, {
       headers: { Authorization: `Bearer ${tokenData.access_token}` }
     });
+    
     if (!userRes.ok) {
       console.error('❌ User fetch fehlgeschlagen:', userRes.status);
       return res.redirect('/?error=user_fetch_failed');
     }
+    
     const user = await userRes.json();
-    console.log('👤 User eingeloggt:', user.username);
+    console.log(`👤 User eingeloggt: ${user.username} (${user.id})`);
 
+    // Session speichern
     req.session.accessToken = tokenData.access_token;
     req.session.user = {
       id: user.id,
@@ -154,9 +164,18 @@ app.get('/auth/discord/callback', async (req, res) => {
       avatar: user.avatar,
       discriminator: user.discriminator
     };
+
     // Session wird automatisch in MongoDB gespeichert
-    console.log('✅ Session gespeichert, User:', req.session.user.username);
-    res.redirect('/dashboard.html');
+    // Wir speichern explizit, um sicherzustellen, dass es klappt
+    req.session.save((err) => {
+      if (err) {
+        console.error('❌ Fehler beim Speichern der Session:', err);
+        return res.redirect('/?error=session_save_failed');
+      }
+      console.log(`✅ Session gespeichert für ${user.username} – Session-ID: ${req.sessionID}`);
+      console.log(`🔍 Session-Inhalt:`, req.session.user);
+      res.redirect('/dashboard.html');
+    });
   } catch (err) {
     console.error('❌ OAuth Fehler:', err);
     res.redirect('/?error=auth_failed');
