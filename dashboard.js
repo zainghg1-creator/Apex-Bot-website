@@ -64,7 +64,10 @@ function showState(stateEl) {
 }
 
 function showToast(message, type = 'success') {
-  if (!DOM.toastContainer) return;
+  if (!DOM.toastContainer) {
+    console.warn('Toast container nicht gefunden');
+    return;
+  }
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   const icon = type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ';
@@ -101,7 +104,7 @@ function formatGuildCreatedDate(guildId) {
 }
 
 // ============================================================
-// API FUNCTIONS – VERBESSERTE FEHLERBEHANDLUNG
+// API FUNCTIONS (verbessert)
 // ============================================================
 async function apiFetch(endpoint, options = {}) {
   try {
@@ -110,28 +113,26 @@ async function apiFetch(endpoint, options = {}) {
       headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
     });
     if (!res.ok) {
-      // Bei 401 nicht umleiten, sondern Fehler werfen, der dann im UI angezeigt wird
+      // Bei 401: nicht umleiten, sondern Fehler anzeigen
       if (res.status === 401) {
-        throw new Error('SESSION_EXPIRED');
+        showToast('⛔ Sitzung abgelaufen – bitte neu einloggen.', 'error');
+        // Optional: Login-Button anzeigen oder Seite neuladen
+        // window.location.href = '/'; // nicht mehr automatisch
+        return null;
       }
-      let errorMsg = `HTTP ${res.status}`;
+      // Andere HTTP-Fehler
+      let errorMsg;
       try {
-        const errorData = await res.json();
-        errorMsg = errorData.error || errorMsg;
-      } catch (_) {}
+        const errorJson = await res.json();
+        errorMsg = errorJson.error || `HTTP ${res.status}`;
+      } catch {
+        errorMsg = `HTTP ${res.status}`;
+      }
       throw new Error(errorMsg);
     }
-    return res.json();
+    return await res.json();
   } catch (err) {
-    // Netzwerkfehler oder andere Exceptions abfangen
-    if (err.message === 'SESSION_EXPIRED') {
-      showToast('⛔ Sitzung abgelaufen – bitte neu einloggen.', 'error');
-      // Optional: Weiterleitung zum Login nach kurzer Verzögerung
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 2000);
-      throw err; // damit aufrufende Funktion es merkt
-    }
+    // Netzwerkfehler etc.
     showToast('Netzwerkfehler: ' + err.message, 'error');
     throw err;
   }
@@ -147,11 +148,13 @@ async function getCachedTicketConfig(forceRefresh = false) {
   }
   try {
     const config = await apiFetch(`/guild/${state.activeGuildId}/config`);
+    if (!config) return null;
     state.ticketConfigCache = config.tickets || {};
     state.ticketConfigCacheGuildId = state.activeGuildId;
     return state.ticketConfigCache;
   } catch (err) {
     console.error('Fehler beim Laden der Ticket-Config:', err);
+    showToast('Fehler beim Laden der Ticket-Konfiguration', 'error');
     return null;
   }
 }
@@ -168,17 +171,25 @@ async function loadDashboard() {
   try {
     const data = await apiFetch('/guilds');
     if (!data) {
-      // Wenn data null ist (z.B. bei Fehler) – wird bereits in apiFetch behandelt
-      DOM.errorMessage.textContent = 'Keine Daten vom Server erhalten.';
+      // data ist null, wenn 401 oder anderer Fehler, der null zurückgibt
+      DOM.errorMessage.textContent = 'Keine gültige Sitzung – bitte melde dich erneut an.';
+      showState(DOM.errorState);
+      return;
+    }
+    // Prüfen, ob user vorhanden ist
+    if (!data.user) {
+      DOM.errorMessage.textContent = 'Benutzerinformationen fehlen. Bitte neu einloggen.';
       showState(DOM.errorState);
       return;
     }
     renderUser(data.user);
-    renderGuilds(data.guilds, data.clientId || CONFIG.CLIENT_ID);
+    // Sicherstellen, dass guilds ein Array ist
+    const guilds = data.guilds || [];
+    renderGuilds(guilds, data.clientId || CONFIG.CLIENT_ID);
   } catch (err) {
-    // Fehler wird bereits in apiFetch getoastet, aber wir zeigen auch den Error-State
     DOM.errorMessage.textContent = err.message || 'Fehler beim Laden der Server';
     showState(DOM.errorState);
+    showToast('Fehler: ' + (err.message || 'Unbekannt'), 'error');
   }
 }
 
@@ -249,13 +260,14 @@ async function openManagement(guildId, name, iconUrl) {
   DOM.overviewOwnerAvatar.classList.add('hidden');
   DOM.overviewOwnerAvatar.src = '';
   DOM.overviewCreated.textContent = formatGuildCreatedDate(guildId);
-  if (state.guildRoles.length === 0 || state.guildChannels.length === 0) {
-    await loadRolesAndChannels(guildId);
-  } else {
-    renderAllSelects();
-  }
+  
+  // Rollen und Kanäle laden
+  await loadRolesAndChannels(guildId);
+  // Ticket Config laden
   await getCachedTicketConfig(true);
+  // Serverdetails laden
   await loadGuildDetails(guildId);
+  // Moduleinstellungen laden
   await loadAllModuleSettings(guildId);
 }
 
@@ -273,12 +285,20 @@ async function loadGuildDetails(guildId) {
       DOM.overviewBoosts.textContent = data.boosts ?? '0';
       DOM.overviewBots.textContent = data.botCount ?? data.bots ?? 'N/A';
       renderGuildOwner(data.owner);
+    } else {
+      // Fallback, wenn data null ist
+      DOM.overviewMembers.textContent = 'Fehler';
+      DOM.overviewBoosts.textContent = 'Fehler';
+      DOM.overviewBots.textContent = 'Fehler';
+      renderGuildOwner(null);
     }
-  } catch {
+  } catch (err) {
+    console.error('Fehler beim Laden der Guild-Details:', err);
     DOM.overviewMembers.textContent = 'N/A';
     DOM.overviewBoosts.textContent = 'N/A';
     DOM.overviewBots.textContent = 'N/A';
     renderGuildOwner(null);
+    showToast('Fehler beim Laden der Serverdetails', 'error');
   }
 }
 
@@ -306,11 +326,13 @@ async function loadRolesAndChannels(guildId) {
       apiFetch(`/guild/${guildId}/roles`).catch(() => []),
       apiFetch(`/guild/${guildId}/channels`).catch(() => [])
     ]);
-    state.guildRoles = roles || [];
-    state.guildChannels = channels || [];
-  } catch {
+    state.guildRoles = (roles && Array.isArray(roles)) ? roles : [];
+    state.guildChannels = (channels && Array.isArray(channels)) ? channels : [];
+  } catch (err) {
+    console.error('Fehler beim Laden von Rollen/Kanälen:', err);
     state.guildRoles = [];
     state.guildChannels = [];
+    showToast('Fehler beim Laden von Rollen/Kanälen', 'error');
   }
   DOM.overviewRoles.textContent = state.guildRoles.length;
   DOM.overviewChannels.textContent = state.guildChannels.length;
@@ -325,6 +347,7 @@ function renderAllSelects() {
 function renderChannelSelect(selectId, filterType) {
   const el = document.getElementById(selectId);
   if (!el) return;
+  // Nur Kanäle vom Typ filterType (0 = Text, 2 = Voice, 4 = Kategorie)
   const relevant = state.guildChannels.filter(c => c.type === filterType);
   if (relevant.length === 0) {
     el.innerHTML = `<option value="">Keine Textkanäle gefunden</option>`;
@@ -336,11 +359,11 @@ function renderChannelSelect(selectId, filterType) {
 function renderRoleChips(containerId, selectedIds = [], singleSelect = false) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  if (state.guildRoles.length === 0) {
+  if (!state.guildRoles || state.guildRoles.length === 0) {
     el.innerHTML = `<span class="chip-empty">Keine Rollen gefunden</span>`;
     return;
   }
-  const selectedSet = new Set(selectedIds);
+  const selectedSet = new Set(selectedIds || []);
   el.innerHTML = state.guildRoles.map(r => {
     const isSelected = selectedSet.has(r.id);
     return `<div class="role-chip ${isSelected ? 'selected' : ''}" data-role-id="${r.id}" onclick="toggleRoleChip('${containerId}', '${r.id}', ${singleSelect})">
@@ -350,7 +373,8 @@ function renderRoleChips(containerId, selectedIds = [], singleSelect = false) {
   }).join('');
 }
 
-function toggleRoleChip(containerId, roleId, singleSelect) {
+// Diese Funktion muss global sein, weil sie im HTML onclick aufgerufen wird
+window.toggleRoleChip = function(containerId, roleId, singleSelect) {
   const el = document.getElementById(containerId);
   const chip = el.querySelector(`[data-role-id="${roleId}"]`);
   if (!chip) return;
@@ -360,7 +384,7 @@ function toggleRoleChip(containerId, roleId, singleSelect) {
   } else {
     chip.classList.toggle('selected');
   }
-}
+};
 
 function getSelectedRoleIds(containerId) {
   const el = document.getElementById(containerId);
@@ -468,6 +492,7 @@ const updateEmbedPreview = debounce((prefix) => {
 async function loadAllModuleSettings(guildId) {
   try {
     const config = await apiFetch(`/guild/${guildId}/config`).catch(() => ({}));
+    if (!config) return;
     applyWelcomeConfig(config.welcome || {});
     applyTeamlisteConfig(config.teamliste || {});
     applySimpleConfig('support', config.support || {});
@@ -612,8 +637,12 @@ async function saveModuleSettings(moduleName) {
         const channelEl = document.getElementById(`${moduleName}-channel`) || document.getElementById(`${moduleName}-log-channel`);
         payload = { enabled: enabledEl ? enabledEl.checked : true, channelId: channelEl ? channelEl.value : undefined };
     }
-    await apiFetch(`/guild/${state.activeGuildId}/config/${moduleName}`, { method: 'POST', body: JSON.stringify(payload) });
-    showToast(`${moduleName.charAt(0).toUpperCase() + moduleName.slice(1)} gespeichert!`, 'success');
+    const result = await apiFetch(`/guild/${state.activeGuildId}/config/${moduleName}`, { method: 'POST', body: JSON.stringify(payload) });
+    if (result && result.success) {
+      showToast(`${moduleName.charAt(0).toUpperCase() + moduleName.slice(1)} gespeichert!`, 'success');
+    } else {
+      showToast(`Fehler beim Speichern von ${moduleName}`, 'error');
+    }
     if (saveStatus) { saveStatus.textContent = '✓ Gespeichert'; saveStatus.classList.remove('hidden'); setTimeout(() => saveStatus.classList.add('hidden'), 3000); }
   } catch (err) {
     showToast(`Fehler: ${err.message}`, 'error');
@@ -672,11 +701,11 @@ function populateCategorySelects() {
 function renderEditRoleChips(containerId, selectedIds = [], singleSelect = false) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  if (state.guildRoles.length === 0) {
+  if (!state.guildRoles || state.guildRoles.length === 0) {
     el.innerHTML = `<span class="chip-empty">Keine Rollen gefunden</span>`;
     return;
   }
-  const selectedSet = new Set(selectedIds);
+  const selectedSet = new Set(selectedIds || []);
   el.innerHTML = state.guildRoles.map(r => {
     const isSelected = selectedSet.has(r.id);
     return `<div class="role-chip ${isSelected ? 'selected' : ''}" data-role-id="${r.id}" onclick="toggleEditRoleChip('${containerId}', '${r.id}', ${singleSelect})">
@@ -686,6 +715,7 @@ function renderEditRoleChips(containerId, selectedIds = [], singleSelect = false
   }).join('');
 }
 
+// Globale Funktion für onclick
 window.toggleEditRoleChip = function(containerId, roleId, singleSelect) {
   const el = document.getElementById(containerId);
   const chip = el.querySelector(`[data-role-id="${roleId}"]`);
@@ -816,7 +846,7 @@ function updateEditPreview() {
 }
 
 // ---- Panel in Discord senden ----
-async function sendPanelToChannel(channelId, panelIndex) {
+window.sendPanelToChannel = async function(channelId, panelIndex) {
   if (!state.activeGuildId) { showToast('Kein Server ausgewählt.', 'error'); return; }
   if (!channelId) { showToast('Bitte wähle einen Kanal aus.', 'error'); return; }
   if (panelIndex === undefined || panelIndex === null) { showToast('Bitte wähle ein Panel aus.', 'error'); return; }
@@ -834,7 +864,7 @@ async function sendPanelToChannel(channelId, panelIndex) {
   } catch (err) {
     showToast(`Fehler: ${err.message}`, 'error');
   }
-}
+};
 
 // ---- Übersicht rendern (GalaxyBot-Style) ----
 async function renderTicketOverview() {
@@ -932,7 +962,7 @@ window.deleteTicketOption = async function(index) {
   if (!confirm('Möchtest du dieses Panel wirklich löschen?')) return;
   try {
     const config = await apiFetch(`/guild/${state.activeGuildId}/config`);
-    if (!config.tickets || !config.tickets.options || !config.tickets.options[index]) return;
+    if (!config || !config.tickets || !config.tickets.options || !config.tickets.options[index]) return;
     config.tickets.options.splice(index, 1);
     await apiFetch(`/guild/${state.activeGuildId}/config/tickets`, { method: 'POST', body: JSON.stringify(config.tickets) });
     invalidateTicketCache();
@@ -1238,90 +1268,99 @@ async function showEditView(index) {
   } else {
     window.addOptionRow({ label: 'Allgemeiner Support', emoji: '💬', categoryId: '', supportRoles: [] });
   }
-
-  // ---- Speichern-Funktion für Edit View ----
-  window.saveEditView = async function() {
-    // Sammle Daten aus den Feldern
-    const panelData = {
-      enabled: document.getElementById('edit-panel-enabled').checked,
-      panelName: document.getElementById('edit-panel-name').value,
-      panelChannelId: document.getElementById('edit-panel-channel').value,
-      logChannelId: document.getElementById('edit-log-channel').value,
-      supportRoles: getEditSelectedRoles('edit-support-roles'),
-      categoryId: document.getElementById('edit-ticket-category').value,
-      title: document.getElementById('edit-panel-title').value,
-      description: document.getElementById('edit-panel-desc').value,
-      color: document.getElementById('edit-panel-color').value,
-      image: document.getElementById('edit-image-input')?.dataset.value || '',
-      creationMessage: document.getElementById('edit-create-msg').value,
-      channelNameTemplate: document.getElementById('edit-channel-template').value,
-      allowedRoles: getEditSelectedRoles('edit-allowed-roles'),
-      deniedRoles: getEditSelectedRoles('edit-denied-roles'),
-      maxTickets: parseInt(document.getElementById('edit-max-tickets').value) || 1,
-      overflowEnabled: document.getElementById('edit-overflow-enabled').checked,
-      overflowCategories: getSelectedOptions('edit-ticket-overflow'),
-      threadMode: document.getElementById('edit-thread-mode').value,
-      saveTranscripts: document.getElementById('edit-save-transcripts').checked,
-      saveImages: document.getElementById('edit-save-images').checked,
-      privateTranscripts: document.getElementById('edit-private-transcripts').checked,
-      claimEnabled: document.getElementById('edit-claim-enabled').checked,
-      buttons: collectButtons(),
-      options: collectOptions()
-    };
-
-    try {
-      // Lade aktuelle Tickets-Konfiguration
-      const config = await apiFetch(`/guild/${state.activeGuildId}/config`);
-      if (!config.tickets) config.tickets = {};
-      if (!config.tickets.options) config.tickets.options = [];
-
-      if (editingIndex !== null && config.tickets.options[editingIndex]) {
-        // Vorhandenes Panel überschreiben
-        config.tickets.options[editingIndex] = panelData;
-      } else {
-        // Neues Panel hinzufügen
-        config.tickets.options.push(panelData);
-      }
-
-      await apiFetch(`/guild/${state.activeGuildId}/config/tickets`, {
-        method: 'POST',
-        body: JSON.stringify(config.tickets)
-      });
-      invalidateTicketCache();
-      showToast('Panel gespeichert!', 'success');
-      closeEditView();
-      renderTicketOverview();
-    } catch (err) {
-      showToast('Fehler beim Speichern: ' + err.message, 'error');
-    }
-  };
-
-  window.closeEditView = function() {
-    editContainer.classList.add('hidden');
-    document.getElementById('ticket-overview-container').classList.remove('hidden');
-    renderTicketOverview();
-  };
-
-  window.switchToSelectedPanel = function() {
-    const select = document.getElementById('edit-panel-select');
-    const val = select.value;
-    if (val === 'new') {
-      openAddTicket();
-    } else {
-      openEditView(parseInt(val));
-    }
-  };
-
-  // Initiales Update der Vorschau
-  updateEditPreview();
 }
 
-// ---- Hilfsfunktionen für Edit-Bilder ----
+// ---- Edit speichern ----
+window.saveEditView = async function() {
+  const panelName = document.getElementById('edit-panel-name')?.value || 'Neues Panel';
+  const enabled = document.getElementById('edit-panel-enabled')?.checked ?? true;
+  const panelChannelId = document.getElementById('edit-panel-channel')?.value || '';
+  const logChannelId = document.getElementById('edit-log-channel')?.value || '';
+  const supportRoles = getEditSelectedRoles('edit-support-roles');
+  const categoryId = document.getElementById('edit-ticket-category')?.value || '';
+  const title = document.getElementById('edit-panel-title')?.value || 'Support Center';
+  const description = document.getElementById('edit-panel-desc')?.value || '';
+  const color = document.getElementById('edit-panel-color')?.value || '#ffffff';
+  const image = document.getElementById('edit-image-input')?.dataset.value || '';
+  const creationMessage = document.getElementById('edit-create-msg')?.value || '';
+  const channelNameTemplate = document.getElementById('edit-channel-template')?.value || '{panel.name}-{ticket.creator.username}';
+  const allowedRoles = getEditSelectedRoles('edit-allowed-roles');
+  const deniedRoles = getEditSelectedRoles('edit-denied-roles');
+  const maxTickets = parseInt(document.getElementById('edit-max-tickets')?.value) || 1;
+  const overflowEnabled = document.getElementById('edit-overflow-enabled')?.checked ?? false;
+  const overflowCategories = getSelectedOptions('edit-ticket-overflow');
+  const threadMode = document.getElementById('edit-thread-mode')?.value || 'none';
+  const saveTranscripts = document.getElementById('edit-save-transcripts')?.checked ?? false;
+  const saveImages = document.getElementById('edit-save-images')?.checked ?? false;
+  const privateTranscripts = document.getElementById('edit-private-transcripts')?.checked ?? false;
+  const claimEnabled = document.getElementById('edit-claim-enabled')?.checked ?? false;
+  const buttons = collectButtons();
+  const options = collectOptions();
+
+  const panelData = {
+    enabled,
+    panelName,
+    panelChannelId,
+    logChannelId,
+    supportRoles,
+    categoryId,
+    title,
+    description,
+    color,
+    image,
+    creationMessage,
+    channelNameTemplate,
+    allowedRoles,
+    deniedRoles,
+    maxTickets,
+    overflowEnabled,
+    overflowCategories,
+    threadMode,
+    saveTranscripts,
+    saveImages,
+    privateTranscripts,
+    claimEnabled,
+    buttons,
+    options
+  };
+
+  try {
+    const config = await apiFetch(`/guild/${state.activeGuildId}/config`);
+    if (!config) throw new Error('Konfiguration konnte nicht geladen werden');
+    if (!config.tickets) config.tickets = {};
+    if (!config.tickets.options) config.tickets.options = [];
+
+    if (editingIndex !== null && config.tickets.options[editingIndex]) {
+      config.tickets.options[editingIndex] = panelData;
+    } else {
+      config.tickets.options.push(panelData);
+    }
+
+    await apiFetch(`/guild/${state.activeGuildId}/config/tickets`, {
+      method: 'POST',
+      body: JSON.stringify(config.tickets)
+    });
+    invalidateTicketCache();
+    showToast('Panel gespeichert! ✅', 'success');
+    closeEditView();
+  } catch (err) {
+    showToast('Fehler beim Speichern: ' + err.message, 'error');
+  }
+};
+
+// ---- Edit schließen ----
+window.closeEditView = function() {
+  document.getElementById('ticket-overview-container').classList.remove('hidden');
+  editContainer.classList.add('hidden');
+  renderTicketOverview();
+};
+
+// ---- Bild-Upload für Edit ----
 window.handleEditImageUpload = function(input) {
   const file = input.files?.[0];
   if (!file) return;
   if (file.size > 5 * 1024 * 1024) {
-    showToast('Bild zu groß (max 5MB)', 'error');
+    showToast('Bild zu groß (max. 5MB)', 'error');
     input.value = '';
     return;
   }
@@ -1333,6 +1372,7 @@ window.handleEditImageUpload = function(input) {
     input.dataset.value = dataUrl;
     updateEditPreview();
   };
+  reader.onerror = () => showToast('Fehler beim Lesen der Datei', 'error');
   reader.readAsDataURL(file);
 };
 
@@ -1344,9 +1384,43 @@ window.clearEditImage = function() {
   updateEditPreview();
 };
 
+// ---- Switch to selected panel (edit toolbar) ----
+window.switchToSelectedPanel = function() {
+  const select = document.getElementById('edit-panel-select');
+  const val = select.value;
+  if (val === 'new') {
+    openAddTicket();
+  } else {
+    openEditView(parseInt(val));
+  }
+};
+
 // ============================================================
-// INIT – Dashboard laden
+// INIT
 // ============================================================
 document.addEventListener('DOMContentLoaded', function() {
   loadDashboard();
+
+  // Globale Funktionen für HTML-Onclick verfügbar machen
+  window.loadDashboard = loadDashboard;
+  window.openManagement = openManagement;
+  window.closeManagement = closeManagement;
+  window.switchTab = switchTab;
+  window.switchSubtab = switchSubtab;
+  window.saveModuleSettings = saveModuleSettings;
+  window.syncColor = syncColor;
+  window.syncColorHex = syncColorHex;
+  window.handleImageUpload = handleImageUpload;
+  window.clearImage = clearImage;
+  window.updateEmbedPreview = updateEmbedPreview;
+  window.sendPanelToChannel = sendPanelToChannel;
+  window.deleteTicketOption = deleteTicketOption;
+  window.openAddTicket = openAddTicket;
+  window.openEditView = openEditView;
+  window.saveEditView = saveEditView;
+  window.closeEditView = closeEditView;
+  window.switchEditTab = switchEditTab;
+  window.handleEditImageUpload = handleEditImageUpload;
+  window.clearEditImage = clearEditImage;
+  window.switchToSelectedPanel = switchToSelectedPanel;
 });
