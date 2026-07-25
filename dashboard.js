@@ -140,13 +140,17 @@ function invalidateTicketCache() {
 }
 
 // ============================================================
-// GUILD LIST
+// GUILD LIST – DAS LÄDT DIE SERVER
 // ============================================================
 async function loadDashboard() {
   showState(DOM.loadingState);
   try {
     const data = await apiFetch('/guilds');
-    if (!data) return;
+    if (!data) {
+      DOM.errorMessage.textContent = 'Keine Daten vom Server erhalten.';
+      showState(DOM.errorState);
+      return;
+    }
     renderUser(data.user);
     renderGuilds(data.guilds, data.clientId || CONFIG.CLIENT_ID);
   } catch (err) {
@@ -1206,184 +1210,4 @@ async function showEditView(index) {
   if (data.options && data.options.length) {
     data.options.forEach(opt => window.addOptionRow(opt));
   } else {
-    window.addOptionRow({ label: 'Allgemeiner Support', emoji: '🎫', categoryId: '' });
-  }
-
-  switchEditTab('general');
-  updateEditPreview();
-}
-
-// ---- Bild-Upload Hilfsfunktionen ----
-window.handleEditImageUpload = function(input) {
-  const file = input.files?.[0];
-  if (!file) return;
-  if (file.size > 5 * 1024 * 1024) {
-    showToast('Bild zu groß (max. 5MB)', 'error');
-    input.value = '';
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const preview = document.getElementById('edit-image-preview');
-    if (preview) preview.src = e.target.result;
-    input.dataset.value = e.target.result;
-    updateEditPreview();
-  };
-  reader.readAsDataURL(file);
-};
-
-window.clearEditImage = function() {
-  const input = document.getElementById('edit-image-input');
-  if (input) { input.value = ''; input.dataset.value = ''; }
-  const preview = document.getElementById('edit-image-preview');
-  if (preview) preview.src = '';
-  updateEditPreview();
-};
-
-// ---- Panel wechseln ----
-window.switchToSelectedPanel = async function() {
-  const select = document.getElementById('edit-panel-select');
-  if (!select) return;
-  const val = select.value;
-  if (val === 'new') {
-    editingIndex = null;
-    showEditView(null);
-  } else {
-    const index = parseInt(val);
-    editingIndex = index;
-    showEditView(index);
-  }
-};
-
-// ---- Bearbeitungsansicht schließen ----
-window.closeEditView = function() {
-  document.getElementById('ticket-overview-container').classList.remove('hidden');
-  editContainer.classList.add('hidden');
-  editContent.innerHTML = '';
-  editingIndex = null;
-  renderTicketOverview();
-};
-
-// ---- Speichern der Bearbeitung ----
-window.saveEditView = async function() {
-  const saveStatus = document.getElementById('edit-save-status');
-  if (saveStatus) { saveStatus.classList.add('hidden'); saveStatus.textContent = '⏳ Speichern...'; saveStatus.classList.remove('hidden'); }
-
-  const enabled = document.getElementById('edit-panel-enabled').checked;
-  const panelName = document.getElementById('edit-panel-name').value.trim();
-  const panelChannelId = document.getElementById('edit-panel-channel')?.value || '';
-  const logChannelId = document.getElementById('edit-log-channel')?.value || '';
-  const supportRoles = getEditSelectedRoles('edit-support-roles');
-  const categoryId = document.getElementById('edit-ticket-category').value;
-  const title = document.getElementById('edit-panel-title').value.trim();
-  const description = document.getElementById('edit-panel-desc').value.trim();
-  const color = document.getElementById('edit-panel-color').value;
-  const imageInput = document.getElementById('edit-image-input');
-  const image = imageInput?.dataset.value || '';
-  const creationMessage = document.getElementById('edit-create-msg').value.trim();
-  const channelNameTemplate = document.getElementById('edit-channel-template').value.trim() || '{panel.name}-{ticket.creator.username}';
-  const allowedRoles = getEditSelectedRoles('edit-allowed-roles');
-  const deniedRoles = getEditSelectedRoles('edit-denied-roles');
-  const maxTickets = parseInt(document.getElementById('edit-max-tickets').value) || 1;
-  const overflowEnabled = document.getElementById('edit-overflow-enabled').checked;
-  const overflowSelect = document.getElementById('edit-ticket-overflow');
-  const overflowCategories = overflowSelect ? Array.from(overflowSelect.selectedOptions).map(o => o.value) : [];
-  const threadMode = document.getElementById('edit-thread-mode').value;
-  const saveTranscripts = document.getElementById('edit-save-transcripts').checked;
-  const saveImages = document.getElementById('edit-save-images').checked;
-  const privateTranscripts = document.getElementById('edit-private-transcripts').checked;
-  const claimEnabled = document.getElementById('edit-claim-enabled').checked;
-  const buttons = collectButtons().filter(b => b.label.trim());
-  const options = collectOptions().filter(o => o.label.trim());
-
-  if (!panelName) {
-    showToast('Bitte gib einen Panel-Namen ein.', 'error');
-    if (saveStatus) saveStatus.textContent = '✕ Fehler';
-    return;
-  }
-
-  try {
-    const config = await apiFetch(`/guild/${state.activeGuildId}/config`);
-    if (!config.tickets) config.tickets = {};
-    if (!config.tickets.options) config.tickets.options = [];
-
-    const newData = {
-      enabled,
-      panelName,
-      panelChannelId,
-      logChannelId,
-      supportRoles,
-      categoryId,
-      title,
-      description,
-      color,
-      image,
-      creationMessage,
-      channelNameTemplate,
-      allowedRoles,
-      deniedRoles,
-      maxTickets,
-      overflowEnabled,
-      overflowCategories,
-      threadMode,
-      saveTranscripts,
-      saveImages,
-      privateTranscripts,
-      claimEnabled,
-      buttons,
-      options
-    };
-
-    if (editingIndex !== null) {
-      config.tickets.options[editingIndex] = newData;
-    } else {
-      config.tickets.options.push(newData);
-    }
-
-    await apiFetch(`/guild/${state.activeGuildId}/config/tickets`, {
-      method: 'POST',
-      body: JSON.stringify(config.tickets)
-    });
-
-    invalidateTicketCache();
-    showToast(editingIndex !== null ? 'Panel aktualisiert!' : 'Panel erstellt!', 'success');
-    if (saveStatus) saveStatus.textContent = '✓ Gespeichert';
-    closeEditView();
-  } catch (err) {
-    showToast(`Fehler: ${err.message}`, 'error');
-    if (saveStatus) saveStatus.textContent = '✕ Fehler';
-  }
-};
-
-// ---- Event Listener für Ticket-Tab ----
-document.addEventListener('DOMContentLoaded', function() {
-  const ticketTabBtn = document.querySelector('.tab-btn[data-tab="tickets"]');
-  if (ticketTabBtn) {
-    ticketTabBtn.addEventListener('click', function() {
-      setTimeout(() => { if (state.activeGuildId) renderTicketOverview(); }, 50);
-    });
-  }
-  const overlay = document.getElementById('manage-overlay');
-  if (overlay) {
-    const observer = new MutationObserver(() => {
-      if (!overlay.classList.contains('hidden')) {
-        const activeTab = document.querySelector('.tab-btn.active[data-tab="tickets"]');
-        if (activeTab && state.activeGuildId) renderTicketOverview();
-      }
-    });
-    observer.observe(overlay, { attributes: true, attributeFilter: ['class'] });
-  }
-});
-
-// ============================================================
-// INIT
-// ============================================================
-document.addEventListener('DOMContentLoaded', loadDashboard);
-
-// Funktionen global verfügbar machen
-window.switchEditTab = switchEditTab;
-window.renderTicketOverview = renderTicketOverview;
-window.addOptionRow = addOptionRow;
-window.updateEditPreview = updateEditPreview;
-window.switchToSelectedPanel = switchToSelectedPanel;
-window.sendPanelToChannel = sendPanelToChannel;
+    window.addOptionRow({ label: 'Allgemeiner Support
