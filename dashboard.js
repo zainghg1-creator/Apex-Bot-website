@@ -101,19 +101,40 @@ function formatGuildCreatedDate(guildId) {
 }
 
 // ============================================================
-// API FUNCTIONS
+// API FUNCTIONS – VERBESSERTE FEHLERBEHANDLUNG
 // ============================================================
 async function apiFetch(endpoint, options = {}) {
-  const res = await fetch(`${CONFIG.API_BASE}${endpoint}`, {
-    ...options,
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
-  });
-  if (!res.ok) {
-    if (res.status === 401) { window.location.href = '/'; return null; }
-    const error = await res.json().catch(() => ({ error: 'unknown_error' }));
-    throw new Error(error.error || `HTTP ${res.status}`);
+  try {
+    const res = await fetch(`${CONFIG.API_BASE}${endpoint}`, {
+      ...options,
+      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
+    });
+    if (!res.ok) {
+      // Bei 401 nicht umleiten, sondern Fehler werfen, der dann im UI angezeigt wird
+      if (res.status === 401) {
+        throw new Error('SESSION_EXPIRED');
+      }
+      let errorMsg = `HTTP ${res.status}`;
+      try {
+        const errorData = await res.json();
+        errorMsg = errorData.error || errorMsg;
+      } catch (_) {}
+      throw new Error(errorMsg);
+    }
+    return res.json();
+  } catch (err) {
+    // Netzwerkfehler oder andere Exceptions abfangen
+    if (err.message === 'SESSION_EXPIRED') {
+      showToast('⛔ Sitzung abgelaufen – bitte neu einloggen.', 'error');
+      // Optional: Weiterleitung zum Login nach kurzer Verzögerung
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 2000);
+      throw err; // damit aufrufende Funktion es merkt
+    }
+    showToast('Netzwerkfehler: ' + err.message, 'error');
+    throw err;
   }
-  return res.json();
 }
 
 // ============================================================
@@ -147,6 +168,7 @@ async function loadDashboard() {
   try {
     const data = await apiFetch('/guilds');
     if (!data) {
+      // Wenn data null ist (z.B. bei Fehler) – wird bereits in apiFetch behandelt
       DOM.errorMessage.textContent = 'Keine Daten vom Server erhalten.';
       showState(DOM.errorState);
       return;
@@ -154,6 +176,7 @@ async function loadDashboard() {
     renderUser(data.user);
     renderGuilds(data.guilds, data.clientId || CONFIG.CLIENT_ID);
   } catch (err) {
+    // Fehler wird bereits in apiFetch getoastet, aber wir zeigen auch den Error-State
     DOM.errorMessage.textContent = err.message || 'Fehler beim Laden der Server';
     showState(DOM.errorState);
   }
@@ -180,7 +203,10 @@ function renderUser(user) {
 }
 
 function renderGuilds(guilds, clientId) {
-  if (!guilds || guilds.length === 0) { showState(DOM.emptyState); return; }
+  if (!guilds || !Array.isArray(guilds) || guilds.length === 0) {
+    showState(DOM.emptyState);
+    return;
+  }
   DOM.guildList.innerHTML = '';
   guilds.forEach(guild => {
     const card = document.createElement('div');
@@ -1210,4 +1236,117 @@ async function showEditView(index) {
   if (data.options && data.options.length) {
     data.options.forEach(opt => window.addOptionRow(opt));
   } else {
-    window.addOptionRow({ label: 'Allgemeiner Support
+    window.addOptionRow({ label: 'Allgemeiner Support', emoji: '💬', categoryId: '', supportRoles: [] });
+  }
+
+  // ---- Speichern-Funktion für Edit View ----
+  window.saveEditView = async function() {
+    // Sammle Daten aus den Feldern
+    const panelData = {
+      enabled: document.getElementById('edit-panel-enabled').checked,
+      panelName: document.getElementById('edit-panel-name').value,
+      panelChannelId: document.getElementById('edit-panel-channel').value,
+      logChannelId: document.getElementById('edit-log-channel').value,
+      supportRoles: getEditSelectedRoles('edit-support-roles'),
+      categoryId: document.getElementById('edit-ticket-category').value,
+      title: document.getElementById('edit-panel-title').value,
+      description: document.getElementById('edit-panel-desc').value,
+      color: document.getElementById('edit-panel-color').value,
+      image: document.getElementById('edit-image-input')?.dataset.value || '',
+      creationMessage: document.getElementById('edit-create-msg').value,
+      channelNameTemplate: document.getElementById('edit-channel-template').value,
+      allowedRoles: getEditSelectedRoles('edit-allowed-roles'),
+      deniedRoles: getEditSelectedRoles('edit-denied-roles'),
+      maxTickets: parseInt(document.getElementById('edit-max-tickets').value) || 1,
+      overflowEnabled: document.getElementById('edit-overflow-enabled').checked,
+      overflowCategories: getSelectedOptions('edit-ticket-overflow'),
+      threadMode: document.getElementById('edit-thread-mode').value,
+      saveTranscripts: document.getElementById('edit-save-transcripts').checked,
+      saveImages: document.getElementById('edit-save-images').checked,
+      privateTranscripts: document.getElementById('edit-private-transcripts').checked,
+      claimEnabled: document.getElementById('edit-claim-enabled').checked,
+      buttons: collectButtons(),
+      options: collectOptions()
+    };
+
+    try {
+      // Lade aktuelle Tickets-Konfiguration
+      const config = await apiFetch(`/guild/${state.activeGuildId}/config`);
+      if (!config.tickets) config.tickets = {};
+      if (!config.tickets.options) config.tickets.options = [];
+
+      if (editingIndex !== null && config.tickets.options[editingIndex]) {
+        // Vorhandenes Panel überschreiben
+        config.tickets.options[editingIndex] = panelData;
+      } else {
+        // Neues Panel hinzufügen
+        config.tickets.options.push(panelData);
+      }
+
+      await apiFetch(`/guild/${state.activeGuildId}/config/tickets`, {
+        method: 'POST',
+        body: JSON.stringify(config.tickets)
+      });
+      invalidateTicketCache();
+      showToast('Panel gespeichert!', 'success');
+      closeEditView();
+      renderTicketOverview();
+    } catch (err) {
+      showToast('Fehler beim Speichern: ' + err.message, 'error');
+    }
+  };
+
+  window.closeEditView = function() {
+    editContainer.classList.add('hidden');
+    document.getElementById('ticket-overview-container').classList.remove('hidden');
+    renderTicketOverview();
+  };
+
+  window.switchToSelectedPanel = function() {
+    const select = document.getElementById('edit-panel-select');
+    const val = select.value;
+    if (val === 'new') {
+      openAddTicket();
+    } else {
+      openEditView(parseInt(val));
+    }
+  };
+
+  // Initiales Update der Vorschau
+  updateEditPreview();
+}
+
+// ---- Hilfsfunktionen für Edit-Bilder ----
+window.handleEditImageUpload = function(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) {
+    showToast('Bild zu groß (max 5MB)', 'error');
+    input.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    const preview = document.getElementById('edit-image-preview');
+    if (preview) preview.src = dataUrl;
+    input.dataset.value = dataUrl;
+    updateEditPreview();
+  };
+  reader.readAsDataURL(file);
+};
+
+window.clearEditImage = function() {
+  const input = document.getElementById('edit-image-input');
+  if (input) { input.value = ''; input.dataset.value = ''; }
+  const preview = document.getElementById('edit-image-preview');
+  if (preview) preview.src = '';
+  updateEditPreview();
+};
+
+// ============================================================
+// INIT – Dashboard laden
+// ============================================================
+document.addEventListener('DOMContentLoaded', function() {
+  loadDashboard();
+});
