@@ -1210,4 +1210,6 @@ async function showEditView(index) {
   if (data.options && data.options.length) {
     data.options.forEach(opt => window.addOptionRow(opt));
   } else {
-    window.addOptionRow({ label: 'Allgemeiner Support
+    window.addOptionRow({ label: 'Allgemeiner Support', emoji: '🎫', categoryId: '', supportRoles: [] });
+  }
+}
