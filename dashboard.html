@@ -1024,6 +1024,150 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    /* ===== TICKET SYSTEM ===== */
+    .ticket-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 0.4rem 0 1rem;
+    }
+    .ticket-count {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      font-weight: 600;
+    }
+
+    .ticket-icon-badge svg,
+    .ticket-card-meta-row svg,
+    .edit-tab-btn svg,
+    .edit-toolbar label svg,
+    .edit-preview-label svg,
+    .ticket-add-icon svg,
+    .ticket-empty-state svg,
+    .btn svg,
+    .button-remove svg,
+    .option-remove svg,
+    .add-button-btn svg,
+    .add-option-btn svg,
+    .h2-icon svg,
+    .back-link svg {
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+
+    .ticket-card { display: flex; flex-direction: column; gap: 12px; }
+    .ticket-card-header { display: flex; align-items: flex-start; gap: 10px; }
+    .ticket-icon-badge {
+      width: 38px; height: 38px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-subtle);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .ticket-icon-badge svg { width: 18px; height: 18px; stroke: var(--text-primary); }
+    .ticket-card-titles { flex: 1; min-width: 0; padding-top: 2px; }
+
+    .ticket-status-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 0.62rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase;
+      padding: 4px 9px; border-radius: 20px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-dim);
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+    .ticket-status-pill .status-dot { width: 6px; height: 6px; background: var(--text-dim); box-shadow: none; }
+    .ticket-status-pill.active { color: var(--text-primary); border-color: var(--border-active); }
+    .ticket-status-pill.active .status-dot { background: #ffffff; box-shadow: 0 0 6px rgba(255,255,255,0.7); }
+
+    .ticket-card-meta { display: flex; flex-direction: column; gap: 6px; }
+    .ticket-card-meta-row { display: flex; align-items: center; gap: 7px; font-size: 0.75rem; color: var(--text-muted); }
+    .ticket-card-meta-row svg { width: 14px; height: 14px; stroke: var(--text-dim); }
+
+    .ticket-card-footer {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding-top: 10px; border-top: 1px solid var(--border-subtle); flex-wrap: wrap;
+    }
+    .ticket-quick-toggle { display: flex; align-items: center; gap: 8px; font-size: 0.72rem; color: var(--text-muted); font-weight: 600; }
+
+    .btn svg { width: 15px; height: 15px; }
+    .btn-icon-only { width: 40px; padding: 0; flex: 0 0 auto !important; }
+
+    .guild-card.ticket-add-card {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 8px; min-height: 170px;
+      border-style: dashed; cursor: pointer; background: transparent; text-align: center;
+    }
+    .guild-card.ticket-add-card:hover { border-color: var(--border-active); background: rgba(255,255,255,0.02); }
+    .ticket-add-icon {
+      width: 46px; height: 46px; border-radius: 50%;
+      border: 1px dashed var(--border-subtle);
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s ease;
+    }
+    .ticket-add-icon svg { width: 20px; height: 20px; stroke: var(--text-muted); }
+    .guild-card.ticket-add-card:hover .ticket-add-icon svg { stroke: var(--text-primary); }
+
+    .ticket-empty-state {
+      grid-column: 1 / -1;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 10px; padding: 3rem 1.5rem;
+      border: 1px dashed var(--border-subtle); border-radius: 16px;
+      color: var(--text-muted); text-align: center;
+    }
+    .ticket-empty-state svg { width: 30px; height: 30px; stroke: var(--text-dim); stroke-width: 1.5; }
+
+    .button-remove svg, .option-remove svg { width: 14px; height: 14px; }
+    .add-button-btn svg, .add-option-btn svg { width: 12px; height: 12px; margin-right: 3px; vertical-align: -2px; }
+
+    .h2-icon { display: inline-flex; vertical-align: -5px; margin-right: 8px; }
+    .h2-icon svg { width: 20px; height: 20px; }
+    .back-link svg { width: 14px; height: 14px; vertical-align: -2px; margin-right: 2px; }
+
+    /* Panel-Editor */
+    .edit-toolbar {
+      display: flex; gap: 12px; align-items: center; margin-bottom: 18px; flex-wrap: wrap;
+      background: var(--bg-surface); padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border-subtle);
+    }
+    .edit-toolbar label {
+      font-weight: 600; color: var(--text-muted); font-size: 0.8rem;
+      display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+    }
+    .edit-toolbar label svg { width: 14px; height: 14px; }
+    .edit-toolbar select {
+      flex: 1; min-width: 140px;
+      background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 8px;
+      padding: 8px 12px; color: var(--text-primary); min-height: 38px; font-size: 0.8rem;
+    }
+
+    .edit-preview-wrap {
+      margin-bottom: 20px; background: var(--bg-surface); border-radius: 12px; padding: 16px; border: 1px solid var(--border-subtle);
+    }
+    .edit-preview-label {
+      font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 6px;
+      margin-bottom: 8px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em;
+    }
+    .edit-preview-label svg { width: 13px; height: 13px; }
+
+    .edit-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border-subtle); margin-bottom: 1.2rem; flex-wrap: wrap; }
+    .edit-tab-btn {
+      display: flex; align-items: center; gap: 6px;
+      background: transparent; border: none; color: var(--text-muted);
+      padding: 8px 14px; font-weight: 600; cursor: pointer;
+      border-bottom: 2px solid transparent; transition: all 0.2s ease;
+      font-family: inherit; font-size: 0.78rem;
+    }
+    .edit-tab-btn svg { width: 14px; height: 14px; }
+    .edit-tab-btn:hover { color: var(--text-primary); }
+    .edit-tab-hint { color: var(--text-dim); font-size: 0.74rem; margin: -4px 0 12px; }
+
     /* ===== MOBILE ===== */
     @media (max-width: 767px) {
       .sidebar {
@@ -1548,21 +1692,24 @@
       </div>
 
       <!-- ========================================================= -->
-      <!-- TICKET SYSTEM – NEUE ÜBERSICHT MIT KARTEN                 -->
+      <!-- TICKET SYSTEM – ÜBERSICHT MIT KARTEN                       -->
       <!-- ========================================================= -->
       <div id="mod-tickets" class="module-page hidden">
-        <h2>🎫 Ticket System</h2>
-        <p>Hier siehst du alle deine Ticket-Panels auf einen Blick.</p>
+        <h2><span class="h2-icon"><svg viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><line x1="12" y1="9" x2="12" y2="15"/></svg></span>Ticket System</h2>
+        <p>Erstelle Panels, über die Mitglieder per Knopfdruck ein Ticket in der richtigen Kategorie eröffnen.</p>
 
         <div id="ticket-overview-container">
+          <div class="ticket-toolbar">
+            <span class="ticket-count" id="ticket-panel-count">Lade...</span>
+          </div>
           <div id="ticket-overview-grid" class="guild-grid">
-            <div class="state-box" style="grid-column:1 / -1;">Lade Ticket-Kategorien...</div>
+            <div class="state-box" style="grid-column:1 / -1;"><span class="loading-spinner"></span> Lade Ticket-Panels...</div>
           </div>
         </div>
 
         <!-- Bearbeitungsansicht (wird von JS befüllt) -->
         <div id="ticket-edit-container" class="edit-panel-view hidden">
-          <a href="#" onclick="closeEditView(); return false;" class="back-link">← Zurück zur Übersicht</a>
+          <a href="#" onclick="closeEditView(); return false;" class="back-link"><svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Zurück zur Übersicht</a>
           <div id="edit-panel-header" style="margin-bottom:16px;"></div>
           <div id="ticket-edit-content"></div>
         </div>
