@@ -1439,13 +1439,31 @@
 
       <!-- ===== VERIFIZIERUNG ===== -->
       <div id="mod-verification" class="module-page hidden">
-        <h2>✅ Verifizierungs System<span class="soon-badge">Grundeinrichtung</span></h2>
+        <h2>✅ Verifizierungs System</h2>
+        <p>Konfiguriere das Verifizierungs-Panel für deinen Server.</p>
         <div class="panel-card">
           <div class="form-group">
             <div class="switch-row"><label>Verifizierung aktiv</label><label class="switch"><input type="checkbox" id="verification-enabled"><span class="switch-slider"></span></label></div>
           </div>
-          <div class="form-group"><label>Rolle nach Verifizierung</label><div id="verification-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span></div></div>
-          <div class="form-action"><button class="btn btn-primary" onclick="handleSaveClick('verification')">Speichern</button></div>
+          <div class="form-group">
+            <label>Verifizierungsmethode</label>
+            <select id="verification-method">
+              <option value="button">Button (Ein-Klick)</option>
+              <option value="math">Mathe-Aufgabe</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Kanal für das Verifizierungs-Panel</label>
+            <select id="verification-channel"></select>
+          </div>
+          <div class="form-group">
+            <label>Rolle nach Verifizierung</label>
+            <div id="verification-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span></div>
+          </div>
+          <div class="form-action">
+            <button class="btn btn-primary" onclick="sendVerificationPanel()">📤 Panel senden</button>
+            <button class="btn btn-secondary" onclick="handleSaveClick('verification')">💾 Speichern</button>
+          </div>
         </div>
       </div>
 
