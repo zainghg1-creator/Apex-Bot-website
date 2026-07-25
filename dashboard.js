@@ -679,19 +679,81 @@ function getEditSelectedRoles(containerId) {
 }
 
 // ---- Buttons ----
+const TPE_SWATCHES = [
+  { hex: '#5865f2', name: 'blue' },
+  { hex: '#6d7079', name: 'gray' },
+  { hex: '#23a55a', name: 'green' },
+  { hex: '#ef4444', name: 'red' }
+];
+
+window.tpeUpdateButtonPreview = function(rowId) {
+  const row = document.getElementById(rowId);
+  if (!row) return;
+  const label = row.querySelector('.btn-label')?.value || 'Button';
+  const emoji = row.querySelector('.btn-emoji')?.value || '';
+  const color = row.querySelector('.btn-color')?.value || '#5865f2';
+  const chip = row.querySelector('.tpe-btn-chip');
+  const headLabel = row.querySelector('.btn-action-label');
+  if (chip) chip.innerHTML = `${emoji ? escapeHtml(emoji) + ' ' : ''}${escapeHtml(label)}`;
+  if (chip) chip.style.background = color;
+  row.querySelectorAll('.tpe-swatch').forEach(sw => {
+    sw.classList.toggle('selected', sw.dataset.hex.toLowerCase() === color.toLowerCase());
+  });
+  if (headLabel && !headLabel.value) headLabel.placeholder = label || 'Button';
+};
+
+window.tpeSelectSwatch = function(rowId, hex) {
+  const row = document.getElementById(rowId);
+  if (!row) return;
+  const colorInput = row.querySelector('.btn-color');
+  if (colorInput) colorInput.value = hex;
+  window.tpeUpdateButtonPreview(rowId);
+};
+
 window.addButtonRow = function(data = null) {
   const container = document.getElementById('edit-button-list');
   if (!container) return;
   const rowId = `btn-${++buttonCounter}`;
   const row = document.createElement('div');
-  row.className = 'button-row';
+  row.className = 'tpe-btn-card';
   row.id = rowId;
+
+  const label = data ? (data.label || '') : 'Ticket öffnen';
+  const emoji = data ? (data.emoji || '') : '🎫';
+  const color = data ? (data.color || '#5865f2') : '#5865f2';
+  const action = data ? (data.action || '') : 'open';
+
+  const swatchesHtml = TPE_SWATCHES.map(sw => `
+    <div class="tpe-swatch ${sw.hex.toLowerCase() === color.toLowerCase() ? 'selected' : ''}" data-hex="${sw.hex}" style="background:${sw.hex}; color:${sw.hex};" onclick="tpeSelectSwatch('${rowId}', '${sw.hex}')"></div>
+  `).join('');
+
   row.innerHTML = `
-    <input type="text" placeholder="Label" class="btn-label" value="${data ? escapeHtml(data.label || '') : ''}" style="min-width:100px;">
-    <input type="text" placeholder="Emoji" class="btn-emoji" value="${data ? escapeHtml(data.emoji || '') : '🎫'}" style="max-width:70px;">
-    <input type="color" class="btn-color" value="${data ? (data.color || '#ffffff') : '#ffffff'}" style="width:36px;height:34px;padding:0;border:1px solid var(--border-subtle);border-radius:6px;background:var(--bg-base);cursor:pointer;">
-    <input type="text" placeholder="Aktion" class="btn-action" value="${data ? escapeHtml(data.action || '') : ''}" style="min-width:80px;">
-    <button type="button" class="button-remove" onclick="document.getElementById('${rowId}').remove()">✕</button>
+    <div class="tpe-btn-card-head">
+      <input type="text" class="btn-action-label" placeholder="${escapeHtml(label || 'Button')}" value="">
+      <button type="button" class="tpe-btn-remove" onclick="document.getElementById('${rowId}').remove()">✕</button>
+    </div>
+    <div class="tpe-btn-grid">
+      <div class="form-group">
+        <label>Emoji</label>
+        <input type="text" class="btn-emoji" value="${escapeHtml(emoji)}" oninput="tpeUpdateButtonPreview('${rowId}')">
+      </div>
+      <div class="form-group">
+        <label>Label</label>
+        <input type="text" class="btn-label" placeholder="z.B. Claim" value="${escapeHtml(label)}" oninput="tpeUpdateButtonPreview('${rowId}')">
+      </div>
+      <div class="form-group">
+        <label>Aktion</label>
+        <input type="text" class="btn-action" placeholder="z.B. open, close, claim" value="${escapeHtml(action)}">
+      </div>
+    </div>
+    <input type="color" class="btn-color hidden" value="${color}" style="display:none;">
+    <div class="tpe-color-row" style="margin-top:12px;">
+      ${swatchesHtml}
+    </div>
+    <div class="tpe-btn-preview">
+      <div class="tpe-btn-preview-label">Vorschau</div>
+      <span class="tpe-btn-chip" style="background:${color};">${emoji ? escapeHtml(emoji) + ' ' : ''}${escapeHtml(label || 'Button')}</span>
+    </div>
   `;
   container.appendChild(row);
 };
@@ -712,20 +774,20 @@ window.addOptionRow = function(data = null) {
   if (!container) return;
   const rowId = `opt-${++optionCounter}`;
   const row = document.createElement('div');
-  row.className = 'option-row';
+  row.className = 'option-row tpe-option-card';
   row.id = rowId;
 
   const supportRoles = data?.supportRoles || [];
 
   row.innerHTML = `
-    <div style="display:flex; flex-wrap:wrap; gap:6px; width:100%; align-items:center;">
+    <div style="display:flex; flex-wrap:wrap; gap:8px; width:100%; align-items:center;">
+      <input type="text" placeholder="Emoji" class="opt-emoji" value="${data ? escapeHtml(data.emoji || '') : '🎫'}" style="max-width:64px; text-align:center;">
       <input type="text" placeholder="Label" class="opt-label" value="${data ? escapeHtml(data.label || '') : ''}" style="flex:2; min-width:100px;">
-      <input type="text" placeholder="Emoji" class="opt-emoji" value="${data ? escapeHtml(data.emoji || '') : '🎫'}" style="max-width:70px;">
-      <select class="opt-category" style="flex:2; min-width:120px;"></select>
+      <select class="opt-category" style="flex:2; min-width:140px;"></select>
       <button type="button" class="option-remove" onclick="document.getElementById('${rowId}').remove()">✕</button>
     </div>
     <div class="option-support-roles">
-      <label>Support-Rollen (für diese Option):</label>
+      <label>Support-Rollen für diese Option</label>
       <div class="chip-select" id="opt-support-roles-${rowId}" style="margin-top:2px;"></div>
     </div>
   `;
@@ -758,6 +820,18 @@ function collectOptions() {
     };
   });
 }
+
+// ---- Farb-Swatches (Embed-Tab) ----
+window.tpeSelectPanelColor = function(hex) {
+  const colorInput = document.getElementById('edit-panel-color');
+  const hexInput = document.getElementById('edit-panel-color-hex');
+  if (colorInput) colorInput.value = hex;
+  if (hexInput) hexInput.value = hex;
+  document.querySelectorAll('#edit-tab-embed .tpe-swatch').forEach(sw => {
+    sw.classList.toggle('selected', (sw.dataset.hex || '').toLowerCase() === hex.toLowerCase());
+  });
+  updateEditPreview();
+};
 
 // ---- Live-Vorschau (Edit) ----
 function updateEditPreview() {
@@ -965,29 +1039,26 @@ async function showEditView(index) {
     };
   }
 
-  let html = `
-    <div class="panel-card">
-      <!-- Panel-Dropdown -->
-      <div class="edit-toolbar">
-        <label>📋 Panel:</label>
-        <select id="edit-panel-select">
-          ${panels.map((p, i) => `<option value="${i}" ${i === index ? 'selected' : ''}>${escapeHtml(p.panelName || p.label || 'Unbenannt')}</option>`).join('')}
-          ${index === null ? `<option value="new" selected>+ Neues Panel</option>` : ''}
-        </select>
-        <button class="btn btn-secondary" onclick="switchToSelectedPanel()" style="padding:4px 12px; min-height:32px; font-size:0.75rem;">Wechseln</button>
-      </div>
+  const textChannelsForHeader = state.guildChannels.filter(c => c.type === 0);
 
-      <!-- Vorschau -->
-      <div class="edit-preview-wrap">
-        <label style="font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.03em;">📺 Live-Vorschau</label>
-        <div class="embed-preview" id="edit-embed-preview" style="border-left-color:${data.color || '#ffffff'};">
-          <div class="embed-preview-title">${escapeHtml(data.title || 'Support Center')}</div>
-          <div class="embed-preview-desc">${escapeHtml(data.description || 'Wähle eine Kategorie aus.')}</div>
-          <img class="embed-preview-image ${data.image ? '' : 'hidden'}" src="${data.image || ''}">
-          <div class="embed-preview-footer">
-            <img src="apex_logo.png">
-            <span>Ticket System • Powered by Apex</span>
-          </div>
+  let html = `
+    <div class="tpe">
+
+      <!-- Header: Zurück / Panel-Auswahl / Kanal + Senden -->
+      <div class="tpe-header">
+        <button class="tpe-back" onclick="closeEditView()" title="Zurück">←</button>
+        <div class="tpe-header-titles">
+          <span class="tpe-title">Panel bearbeiten</span>
+          <select id="edit-panel-select" class="tpe-panel-select" onchange="switchToSelectedPanel()">
+            ${panels.map((p, i) => `<option value="${i}" ${i === index ? 'selected' : ''}>${escapeHtml(p.panelName || p.label || 'Unbenannt')}</option>`).join('')}
+            ${index === null ? `<option value="new" selected>+ Neues Panel</option>` : ''}
+          </select>
+        </div>
+        <div class="tpe-header-actions">
+          <select id="tpe-send-channel" class="tpe-channel-select">
+            ${textChannelsForHeader.length ? textChannelsForHeader.map(c => `<option value="${c.id}">#${escapeHtml(c.name)}</option>`).join('') : `<option value="">Keine Textkanäle</option>`}
+          </select>
+          <button class="btn btn-primary" onclick="sendPanelToChannel(document.getElementById('tpe-send-channel').value, editingIndex)">📤 Panel senden</button>
         </div>
       </div>
 
@@ -1003,157 +1074,239 @@ async function showEditView(index) {
 
       <!-- TAB: Allgemein -->
       <div id="edit-tab-general" class="edit-tab-content">
-        <div class="form-group">
-          <div class="switch-row">
-            <label style="font-weight:600; font-size:0.85rem;">Panel aktiv</label>
+
+        <div class="tpe-card">
+          <div class="tpe-card-head">
+            <div>
+              <div class="tpe-card-title">Panel aktiv</div>
+              <div class="tpe-card-sub">Deaktivierte Panels können nicht gesendet werden.</div>
+            </div>
             <label class="switch"><input type="checkbox" id="edit-panel-enabled" ${data.enabled ? 'checked' : ''}><span class="switch-slider"></span></label>
           </div>
+          <div class="form-group">
+            <label for="edit-panel-name">Panel-Name</label>
+            <input type="text" id="edit-panel-name" value="${escapeHtml(data.panelName || '')}" placeholder="z.B. Support">
+          </div>
+          <div class="form-group">
+            <label>Support-Rollen (Fallback)</label>
+            <div id="edit-support-roles" class="chip-select"></div>
+            <small>Werden verwendet, wenn keine options­pezifischen Rollen definiert sind.</small>
+          </div>
         </div>
-        <div class="form-group">
-          <label for="edit-panel-name">Panel-Name</label>
-          <input type="text" id="edit-panel-name" value="${escapeHtml(data.panelName || '')}" placeholder="z.B. Support">
+
+        <div class="tpe-card">
+          <div class="tpe-card-title">📍 Ticket-Standort</div>
+          <div class="form-group">
+            <label for="edit-panel-channel">Kanal für das Panel</label>
+            <select id="edit-panel-channel"></select>
+            <small>Hier wird das Ticket-Panel gesendet.</small>
+          </div>
+          <div class="form-group">
+            <label for="edit-log-channel">Log-Kanal</label>
+            <select id="edit-log-channel"></select>
+            <small>Logs und Transkripte werden hier gesendet.</small>
+          </div>
+          <div class="form-group">
+            <label for="edit-ticket-category">Kategorie für Tickets</label>
+            <select id="edit-ticket-category"></select>
+            <small>Tickets werden in dieser Kategorie erstellt.</small>
+          </div>
         </div>
-        <div class="form-group">
-          <label for="edit-panel-channel">📢 Kanal für das Panel</label>
-          <select id="edit-panel-channel"></select>
-          <small>Hier wird das Ticket-Panel gesendet.</small>
-        </div>
-        <div class="form-group">
-          <label for="edit-log-channel">📋 Log-Kanal</label>
-          <select id="edit-log-channel"></select>
-          <small>Logs und Transkripte werden hier gesendet.</small>
-        </div>
-        <div class="form-group">
-          <label>Support-Rollen (Fallback)</label>
-          <div id="edit-support-roles" class="chip-select"></div>
-          <small>Werden verwendet, wenn keine option-spezifischen Rollen definiert sind.</small>
-        </div>
-        <div class="form-group">
-          <label for="edit-ticket-category">📂 Kategorie für Tickets</label>
-          <select id="edit-ticket-category"></select>
-          <small>Tickets werden in dieser Kategorie erstellt.</small>
-        </div>
+
       </div>
 
       <!-- TAB: Embed -->
       <div id="edit-tab-embed" class="edit-tab-content hidden">
-        <div class="form-group">
-          <label for="edit-panel-title">Titel</label>
-          <input type="text" id="edit-panel-title" value="${escapeHtml(data.title || 'Support Center')}" placeholder="Support Center" oninput="updateEditPreview()">
-        </div>
-        <div class="form-group">
-          <label for="edit-panel-desc">Beschreibung</label>
-          <textarea id="edit-panel-desc" rows="3" placeholder="Wähle eine Kategorie aus." oninput="updateEditPreview()">${escapeHtml(data.description || '')}</textarea>
-        </div>
-        <div class="form-group">
-          <label>Bild (optional)</label>
-          <div class="image-upload">
-            <img id="edit-image-preview" class="image-preview" src="${data.image || ''}" alt="">
-            <div class="upload-btn-wrap"><label class="btn btn-secondary" for="edit-image-input">📤 Hochladen</label><input type="file" id="edit-image-input" accept="image/*" onchange="handleEditImageUpload(this)"></div>
-            <button class="btn btn-secondary" onclick="clearEditImage()">Entfernen</button>
+
+        <div class="tpe-card">
+          <div class="tpe-card-title" style="margin-bottom:12px;">📺 Live-Vorschau</div>
+          <div class="tpe-discord-preview">
+            <div class="tpe-discord-author">
+              <div class="tpe-discord-avatar">🎫</div>
+              <div class="tpe-discord-namerow">
+                <span class="tpe-discord-name">Tickety</span>
+                <span class="tpe-discord-app-badge">✓ App</span>
+                <span class="tpe-discord-time">Heute um 12:00</span>
+              </div>
+            </div>
+            <div class="embed-preview" id="edit-embed-preview" style="border-left-color:${data.color || '#6d5ef8'};">
+              <div class="embed-preview-title">${escapeHtml(data.title || 'Support Center')}</div>
+              <div class="embed-preview-desc">${escapeHtml(data.description || 'Wähle eine Kategorie aus.')}</div>
+              <img class="embed-preview-image ${data.image ? '' : 'hidden'}" src="${data.image || ''}">
+              <div class="embed-preview-footer">
+                <img src="apex_logo.png">
+                <span>Ticket System • Powered by Apex</span>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="edit-panel-title">Titel</label>
+            <input type="text" id="edit-panel-title" value="${escapeHtml(data.title || 'Support Center')}" placeholder="Support Center" oninput="updateEditPreview()">
+          </div>
+          <div class="form-group">
+            <label for="edit-panel-desc">Beschreibung</label>
+            <textarea id="edit-panel-desc" rows="3" placeholder="Wähle eine Kategorie aus." oninput="updateEditPreview()">${escapeHtml(data.description || '')}</textarea>
+          </div>
+          <div class="form-group">
+            <label>Bild (optional)</label>
+            <div class="image-upload">
+              <img id="edit-image-preview" class="image-preview" src="${data.image || ''}" alt="">
+              <div class="upload-btn-wrap"><label class="btn btn-secondary" for="edit-image-input">📤 Hochladen</label><input type="file" id="edit-image-input" accept="image/*" onchange="handleEditImageUpload(this)"></div>
+              <button class="btn btn-secondary" onclick="clearEditImage()">Entfernen</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Farbe</label>
+            <div class="tpe-color-row">
+              ${TPE_SWATCHES.map(sw => `<div class="tpe-swatch ${ (data.color || '#6d5ef8').toLowerCase() === sw.hex.toLowerCase() ? 'selected' : ''}" data-hex="${sw.hex}" style="background:${sw.hex}; color:${sw.hex};" onclick="tpeSelectPanelColor('${sw.hex}')"></div>`).join('')}
+              <input type="color" id="edit-panel-color" value="${data.color || '#6d5ef8'}" oninput="document.getElementById('edit-panel-color-hex').value = this.value; updateEditPreview();">
+              <input type="text" id="edit-panel-color-hex" value="${data.color || '#6d5ef8'}" oninput="document.getElementById('edit-panel-color').value = this.value; updateEditPreview();">
+            </div>
           </div>
         </div>
-        <div class="form-group">
-          <label>Farbe</label>
-          <div class="color-row">
-            <input type="color" id="edit-panel-color" value="${data.color || '#ffffff'}" oninput="document.getElementById('edit-panel-color-hex').value = this.value; updateEditPreview();">
-            <input type="text" id="edit-panel-color-hex" value="${data.color || '#ffffff'}" oninput="document.getElementById('edit-panel-color').value = this.value; updateEditPreview();">
-          </div>
-        </div>
+
       </div>
 
       <!-- TAB: Nachrichten -->
       <div id="edit-tab-messages" class="edit-tab-content hidden">
-        <div class="form-group">
-          <label for="edit-create-msg">Begrüßungsnachricht</label>
-          <textarea id="edit-create-msg" rows="3" placeholder="Hallo {user}, wir kümmern uns um dein Anliegen.">${escapeHtml(data.creationMessage || '')}</textarea>
-          <small>Platzhalter: <code>{user}</code>, <code>{username}</code></small>
+
+        <div class="tpe-card">
+          <div class="tpe-card-title" style="margin-bottom:12px;">💬 Begrüßungsnachricht</div>
+          <div class="tpe-discord-preview">
+            <div class="tpe-discord-author">
+              <div class="tpe-discord-avatar">🎫</div>
+              <div class="tpe-discord-namerow">
+                <span class="tpe-discord-name">Tickety</span>
+                <span class="tpe-discord-app-badge">✓ App</span>
+                <span class="tpe-discord-time">Heute um 12:00</span>
+              </div>
+            </div>
+            <div class="tpe-msg-bubble" id="tpe-message-preview">${escapeHtml(data.creationMessage || 'Hallo {user}, wir kümmern uns um dein Anliegen.')}</div>
+          </div>
+          <div class="form-group">
+            <label for="edit-create-msg">Nachrichtentext</label>
+            <textarea id="edit-create-msg" rows="3" placeholder="Hallo {user}, wir kümmern uns um dein Anliegen." oninput="document.getElementById('tpe-message-preview').textContent = this.value || 'Hallo {user}, wir kümmern uns um dein Anliegen.'">${escapeHtml(data.creationMessage || '')}</textarea>
+            <small>Platzhalter: <code>{user}</code>, <code>{username}</code></small>
+          </div>
+          <div class="form-group">
+            <label for="edit-channel-template">Kanalnamen-Vorlage</label>
+            <input type="text" id="edit-channel-template" value="${escapeHtml(data.channelNameTemplate || '{panel.name}-{ticket.creator.username}')}" placeholder="{panel.name}-{ticket.creator.username}">
+            <small>Platzhalter: <code>{panel.name}</code>, <code>{ticket.creator.username}</code>, <code>{ticket.id}</code></small>
+          </div>
         </div>
-        <div class="form-group">
-          <label for="edit-channel-template">Kanalnamen-Vorlage</label>
-          <input type="text" id="edit-channel-template" value="${escapeHtml(data.channelNameTemplate || '{panel.name}-{ticket.creator.username}')}" placeholder="{panel.name}-{ticket.creator.username}">
-          <small>Platzhalter: <code>{panel.name}</code>, <code>{ticket.creator.username}</code>, <code>{ticket.id}</code></small>
+
+        <div class="tpe-card">
+          <div class="tpe-card-title">🔘 Buttons</div>
+          <div class="tpe-card-sub" style="margin-bottom:14px;">Konfiguriere Emoji, Label, Farbe und Aktion jedes Buttons.</div>
+          <div id="edit-button-list"></div>
+          <button type="button" class="add-option-btn" onclick="window.addButtonRow()">+ Button hinzufügen</button>
         </div>
+
       </div>
 
       <!-- TAB: Berechtigungen -->
       <div id="edit-tab-roles" class="edit-tab-content hidden">
-        <div class="form-group">
-          <label>Rollen, die öffnen dürfen (optional)</label>
-          <div id="edit-allowed-roles" class="chip-select"></div>
-          <small>Leer lassen = jeder darf öffnen.</small>
+
+        <div class="tpe-card">
+          <div class="tpe-card-title">🔐 Zugriff</div>
+          <div class="form-group">
+            <label>Rollen, die öffnen dürfen (optional)</label>
+            <div id="edit-allowed-roles" class="chip-select"></div>
+            <small>Leer lassen = jeder darf öffnen.</small>
+          </div>
+          <div class="form-group">
+            <label>Rollen, die nicht öffnen dürfen (optional)</label>
+            <div id="edit-denied-roles" class="chip-select"></div>
+          </div>
         </div>
-        <div class="form-group">
-          <label>Rollen, die nicht öffnen dürfen (optional)</label>
-          <div id="edit-denied-roles" class="chip-select"></div>
+
+        <div class="tpe-card">
+          <div class="tpe-card-title">🎫 Ticket-Limit</div>
+          <div class="form-group">
+            <label>Max. Tickets pro User</label>
+            <div class="tpe-stepper">
+              <button type="button" onclick="document.getElementById('edit-max-tickets').stepDown(); if(document.getElementById('edit-max-tickets').value<1)document.getElementById('edit-max-tickets').value=1;">−</button>
+              <input type="number" id="edit-max-tickets" value="${data.maxTickets || 1}" min="1" step="1">
+              <button type="button" onclick="document.getElementById('edit-max-tickets').stepUp();">+</button>
+            </div>
+          </div>
         </div>
-        <div class="form-group">
-          <label for="edit-max-tickets">Max. Tickets pro User</label>
-          <input type="number" id="edit-max-tickets" value="${data.maxTickets || 1}" min="1" step="1">
-        </div>
+
       </div>
 
       <!-- TAB: Fortgeschritten -->
       <div id="edit-tab-advanced" class="edit-tab-content hidden">
-        <div class="form-group">
-          <div class="switch-row">
-            <label style="font-size:0.85rem;">Überlauf-Kategorien</label>
+
+        <div class="tpe-card">
+          <div class="tpe-card-head">
+            <div>
+              <div class="tpe-card-title">Überlauf-Kategorien</div>
+              <div class="tpe-card-sub">Wenn die Hauptkategorie voll ist, weichen neue Tickets hierauf aus.</div>
+            </div>
             <label class="switch"><input type="checkbox" id="edit-overflow-enabled" ${data.overflowEnabled ? 'checked' : ''}><span class="switch-slider"></span></label>
           </div>
-        </div>
-        <div class="form-group" id="edit-overflow-group" style="${data.overflowEnabled ? '' : 'display:none;'}">
-          <label for="edit-ticket-overflow">Überlauf-Kategorien</label>
-          <select id="edit-ticket-overflow" multiple style="height:auto;min-height:50px;"></select>
-          <small>Strg (Cmd) für Mehrfachauswahl.</small>
-        </div>
-        <div class="form-group">
-          <label for="edit-thread-mode">Thread-Modus</label>
-          <select id="edit-thread-mode">
-            <option value="none" ${data.threadMode === 'none' ? 'selected' : ''}>Keine</option>
-            <option value="thread" ${data.threadMode === 'thread' ? 'selected' : ''}>Öffentlich</option>
-            <option value="private" ${data.threadMode === 'private' ? 'selected' : ''}>Privat</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label style="font-weight:600; font-size:0.8rem;">Transkript-Einstellungen</label>
-          <div class="switch-row">
-            <label style="font-size:0.85rem;">Transkripte speichern</label>
-            <label class="switch"><input type="checkbox" id="edit-save-transcripts" ${data.saveTranscripts ? 'checked' : ''}><span class="switch-slider"></span></label>
-          </div>
-          <div class="switch-row">
-            <label style="font-size:0.85rem;">Bilder in Transkripten</label>
-            <label class="switch"><input type="checkbox" id="edit-save-images" ${data.saveImages ? 'checked' : ''}><span class="switch-slider"></span></label>
-          </div>
-          <div class="switch-row">
-            <label style="font-size:0.85rem;">Private Transkripte</label>
-            <label class="switch"><input type="checkbox" id="edit-private-transcripts" ${data.privateTranscripts ? 'checked' : ''}><span class="switch-slider"></span></label>
+          <div class="form-group" id="edit-overflow-group" style="${data.overflowEnabled ? '' : 'display:none;'}">
+            <label for="edit-ticket-overflow">Überlauf-Kategorien</label>
+            <select id="edit-ticket-overflow" multiple style="height:auto;min-height:50px;"></select>
+            <small>Strg (Cmd) für Mehrfachauswahl.</small>
           </div>
         </div>
-        <div class="form-group">
-          <div class="switch-row">
-            <label style="font-size:0.85rem;">Claim-System</label>
+
+        <div class="tpe-card">
+          <div class="tpe-card-title">🧵 Thread-Modus</div>
+          <div class="form-group">
+            <select id="edit-thread-mode">
+              <option value="none" ${data.threadMode === 'none' ? 'selected' : ''}>Keine</option>
+              <option value="thread" ${data.threadMode === 'thread' ? 'selected' : ''}>Öffentlich</option>
+              <option value="private" ${data.threadMode === 'private' ? 'selected' : ''}>Privat</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="tpe-card">
+          <div class="tpe-card-title">📄 Transkript-Einstellungen</div>
+          <div class="form-group">
+            <div class="switch-row">
+              <label style="font-size:0.85rem;">Transkripte speichern</label>
+              <label class="switch"><input type="checkbox" id="edit-save-transcripts" ${data.saveTranscripts ? 'checked' : ''}><span class="switch-slider"></span></label>
+            </div>
+            <div class="switch-row">
+              <label style="font-size:0.85rem;">Bilder in Transkripten</label>
+              <label class="switch"><input type="checkbox" id="edit-save-images" ${data.saveImages ? 'checked' : ''}><span class="switch-slider"></span></label>
+            </div>
+            <div class="switch-row">
+              <label style="font-size:0.85rem;">Private Transkripte</label>
+              <label class="switch"><input type="checkbox" id="edit-private-transcripts" ${data.privateTranscripts ? 'checked' : ''}><span class="switch-slider"></span></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="tpe-card">
+          <div class="tpe-card-head">
+            <div>
+              <div class="tpe-card-title">Claim-System</div>
+              <div class="tpe-card-sub">Support-Mitglieder können Tickets für sich beanspruchen.</div>
+            </div>
             <label class="switch"><input type="checkbox" id="edit-claim-enabled" ${data.claimEnabled ? 'checked' : ''}><span class="switch-slider"></span></label>
           </div>
         </div>
-        <div class="form-group">
-          <label style="font-weight:600; font-size:0.8rem;">Buttons</label>
-          <div id="edit-button-list"></div>
-          <button type="button" class="add-option-btn" onclick="window.addButtonRow()">+ Button hinzufügen</button>
-        </div>
+
       </div>
 
       <!-- TAB: Optionen -->
       <div id="edit-tab-options" class="edit-tab-content hidden">
-        <div class="form-group">
-          <label style="font-weight:600; font-size:0.8rem;">Dropdown-Optionen</label>
+
+        <div class="tpe-card">
+          <div class="tpe-card-title">📋 Dropdown-Optionen</div>
+          <div class="tpe-card-sub" style="margin-bottom:14px;">Jede Option kann eigene Support-Rollen und eine eigene Kategorie haben.</div>
           <div id="edit-options-list"></div>
           <button type="button" class="add-option-btn" onclick="window.addOptionRow()">+ Option hinzufügen</button>
-          <small>Jede Option kann eigene Support-Rollen haben.</small>
         </div>
+
       </div>
 
       <!-- Speichern -->
-      <div class="form-action" style="margin-top:1rem; padding-top:1rem; border-top:1px solid var(--border-subtle);">
+      <div class="tpe-footer">
         <button class="btn btn-primary" onclick="saveEditView()">💾 Speichern</button>
         <button class="btn btn-secondary" onclick="closeEditView()">Abbrechen</button>
         <span id="edit-save-status" class="hidden status-success"></span>
@@ -1204,7 +1357,7 @@ async function showEditView(index) {
   if (data.buttons && data.buttons.length) {
     data.buttons.forEach(btn => window.addButtonRow(btn));
   } else {
-    window.addButtonRow({ label: 'Ticket öffnen', emoji: '🎫', color: '#ffffff', action: 'open' });
+    window.addButtonRow({ label: 'Ticket öffnen', emoji: '🎫', color: '#5865f2', action: 'open' });
   }
 
   if (data.options && data.options.length) {
