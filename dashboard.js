@@ -1,6 +1,6 @@
 'use strict';
 
-console.log('✅ Tickety-style Dashboard geladen!');
+console.log('✅ GalaxyBot-Style Dashboard geladen!');
 
 // ============================================================
 // KONFIGURATION
@@ -164,6 +164,15 @@ function renderUser(user) {
       : 'https://cdn.discordapp.com/embed/avatars/0.png';
     DOM.userAvatar.alt = `${user.username}s Avatar`;
   }
+  // Sidebar user
+  const sidebarAvatar = document.getElementById('sidebar-user-avatar');
+  if (sidebarAvatar) {
+    sidebarAvatar.src = user.avatar
+      ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
+      : 'https://cdn.discordapp.com/embed/avatars/0.png';
+  }
+  const sidebarName = document.getElementById('sidebar-user-name');
+  if (sidebarName) sidebarName.textContent = user.username || 'User';
 }
 
 function renderGuilds(guilds, clientId) {
@@ -335,7 +344,7 @@ function getSelectedRoleIds(containerId) {
 function switchTab(tabName) {
   document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
   document.querySelectorAll('.module-page').forEach(page => page.classList.add('hidden'));
-  const activeBtn = document.querySelector(`[data-tab="${tabName}"]`);
+  const activeBtn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
   const activePage = document.getElementById(`mod-${tabName}`);
   if (activeBtn) activeBtn.classList.add('active');
   if (activePage) activePage.classList.remove('hidden');
@@ -356,7 +365,7 @@ function switchSubtab(moduleName, subName) {
 }
 
 // ============================================================
-// COLOR SYNC
+// COLOR SYNC (Welcome)
 // ============================================================
 function syncColor(prefix) {
   const color = document.getElementById(`${prefix}-color`).value;
@@ -376,7 +385,7 @@ function syncColorHex(prefix) {
 }
 
 // ============================================================
-// IMAGE UPLOAD
+// IMAGE UPLOAD (Welcome)
 // ============================================================
 function handleImageUpload(input, prefix) {
   const file = input.files?.[0];
@@ -424,7 +433,7 @@ const updateEmbedPreview = debounce((prefix) => {
 }, 200);
 
 // ============================================================
-// LOAD SETTINGS
+// LOAD SETTINGS (andere Module)
 // ============================================================
 async function loadAllModuleSettings(guildId) {
   try {
@@ -596,7 +605,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ============================================================
-// TICKET SYSTEM – WIE TICKETY
+// TICKET SYSTEM – GALAXYBOT-STYLE
 // ============================================================
 
 const ticketGrid = document.getElementById('ticket-overview-grid');
@@ -606,7 +615,7 @@ let editingIndex = null;
 let buttonCounter = 0;
 let optionCounter = 0;
 
-// ---- Tab-Navigation (Tickety-Stil) ----
+// ---- Tab-Navigation ----
 function switchEditTab(tabName) {
   document.querySelectorAll('.edit-tab-btn').forEach(btn => btn.classList.remove('active'));
   document.querySelectorAll('.edit-tab-content').forEach(el => el.classList.add('hidden'));
@@ -746,7 +755,7 @@ function collectOptions() {
   });
 }
 
-// ---- Live-Vorschau ----
+// ---- Live-Vorschau (Edit) ----
 function updateEditPreview() {
   const preview = document.getElementById('edit-embed-preview');
   if (!preview) return;
@@ -797,7 +806,7 @@ async function sendPanelToChannel(channelId, panelIndex) {
   }
 }
 
-// ---- Übersicht rendern ----
+// ---- Übersicht rendern (GalaxyBot-Style) ----
 async function renderTicketOverview() {
   if (!ticketGrid) return;
   if (!state.activeGuildId) {
@@ -816,7 +825,7 @@ async function renderTicketOverview() {
 
     if (panels.length === 0) {
       ticketGrid.innerHTML = `
-        <div class="panel-add-card" onclick="openAddTicket()">
+        <div class="ticket-add-card" onclick="openAddTicket()">
           <div class="icon">＋</div>
           <div class="label">Neues Ticket-Panel</div>
           <div class="sub">Klicke hier, um ein neues Panel zu erstellen.</div>
@@ -827,23 +836,24 @@ async function renderTicketOverview() {
 
     // Toolbar
     const toolbarHtml = `
-      <div style="display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:16px; background:var(--bg-surface); padding:10px 14px; border-radius:10px; border:1px solid var(--border-subtle);">
-        <label style="font-size:0.75rem; font-weight:600; color:var(--text-muted);">Panel:</label>
-        <select id="send-panel-select" style="flex:1; min-width:120px; background:var(--bg-base); border:1px solid var(--border-subtle); border-radius:6px; padding:6px 10px; color:var(--text-primary); font-size:0.8rem; min-height:34px;">
+      <div class="ticket-toolbar">
+        <label>Panel:</label>
+        <select id="send-panel-select">
           ${panels.map((opt, i) => `<option value="${i}">${escapeHtml(opt.panelName || opt.label || 'Unbenannt')}</option>`).join('')}
         </select>
-        <label style="font-size:0.75rem; font-weight:600; color:var(--text-muted);">Kanal:</label>
-        <select id="send-channel-select" style="flex:1; min-width:140px; background:var(--bg-base); border:1px solid var(--border-subtle); border-radius:6px; padding:6px 10px; color:var(--text-primary); font-size:0.8rem; min-height:34px;">
+        <label>Kanal:</label>
+        <select id="send-channel-select">
           ${state.guildChannels.filter(c => c.type === 0).map(c => `<option value="${c.id}"># ${escapeHtml(c.name)}</option>`).join('')}
           ${state.guildChannels.filter(c => c.type === 0).length === 0 ? '<option value="">Keine Textkanäle</option>' : ''}
         </select>
-        <button class="btn btn-primary" onclick="sendPanelToChannel(document.getElementById('send-channel-select').value, parseInt(document.getElementById('send-panel-select').value))" style="padding:6px 16px; min-height:34px; font-size:0.8rem;">
+        <button class="btn btn-primary" onclick="sendPanelToChannel(document.getElementById('send-channel-select').value, parseInt(document.getElementById('send-panel-select').value))">
           📤 Abschicken
         </button>
       </div>
     `;
 
-    let html = toolbarHtml + `<div style="display:grid; grid-template-columns:1fr; gap:14px;">`;
+    let html = toolbarHtml;
+    html += `<div class="ticket-grid">`;
 
     panels.forEach((panel, index) => {
       const emoji = panel.emoji || '🎫';
@@ -853,21 +863,18 @@ async function renderTicketOverview() {
       const optionCount = (panel.options || []).length;
 
       html += `
-        <div class="panel-card" style="border-left: 4px solid ${isActive ? '#22c55e' : '#ef4444'};">
-          <div class="panel-card-header">
-            <div class="panel-card-title">
-              <span class="emoji">${escapeHtml(emoji)}</span>
-              ${escapeHtml(label)}
-            </div>
-            <span class="panel-card-status ${isActive ? 'active' : ''}">
+        <div class="ticket-card" style="border-left-color: ${isActive ? '#22c55e' : '#ef4444'};">
+          <div class="header">
+            <div class="title"><span class="emoji">${escapeHtml(emoji)}</span> ${escapeHtml(label)}</div>
+            <span class="status-pill ${isActive ? 'active' : ''}">
               <span class="dot"></span> ${isActive ? 'Aktiv' : 'Inaktiv'}
             </span>
           </div>
-          <div class="panel-card-meta">
+          <div class="meta">
             <span>📂 ${escapeHtml(categoryName)}</span>
             <span>📋 ${optionCount} Option${optionCount !== 1 ? 'en' : ''}</span>
           </div>
-          <div class="panel-card-actions">
+          <div class="actions">
             <button class="btn btn-secondary" onclick="openEditView(${index})">✏️ Bearbeiten</button>
             <button class="btn btn-danger" onclick="deleteTicketOption(${index})">🗑️ Löschen</button>
           </div>
@@ -876,7 +883,7 @@ async function renderTicketOverview() {
     });
 
     html += `
-      <div class="panel-add-card" onclick="openAddTicket()">
+      <div class="ticket-add-card" onclick="openAddTicket()">
         <div class="icon">＋</div>
         <div class="label">Neues Ticket-Panel</div>
         <div class="sub">Klicke hier, um ein neues Panel zu erstellen.</div>
@@ -1350,7 +1357,7 @@ window.saveEditView = async function() {
 
 // ---- Event Listener für Ticket-Tab ----
 document.addEventListener('DOMContentLoaded', function() {
-  const ticketTabBtn = document.querySelector('[data-tab="tickets"]');
+  const ticketTabBtn = document.querySelector('.tab-btn[data-tab="tickets"]');
   if (ticketTabBtn) {
     ticketTabBtn.addEventListener('click', function() {
       setTimeout(() => { if (state.activeGuildId) renderTicketOverview(); }, 50);
