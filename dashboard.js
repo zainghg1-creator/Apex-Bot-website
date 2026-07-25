@@ -487,6 +487,11 @@ function applyVerificationConfig(cfg) {
   setSelectValue('verification-method', cfg.method || 'button');
   setSelectValue('verification-channel', cfg.channelId || '');
   renderRoleChips('verification-roles', cfg.roleId ? [cfg.roleId] : [], true);
+  setValue('verification-title', cfg.title || '');
+  setValue('verification-description', cfg.description || '');
+  setColor('verification', cfg.color || '#6d5ef8');
+  setValue('verification-image', cfg.image || '');
+  setValue('verification-button-label', cfg.buttonLabel || '');
 }
 
 function applySimpleConfig(prefix, cfg) {
@@ -585,7 +590,12 @@ async function saveModuleSettings(moduleName) {
           enabled: document.getElementById('verification-enabled').checked,
           method: document.getElementById('verification-method').value,
           channelId: document.getElementById('verification-channel').value,
-          roleId: getSelectedRoleIds('verification-roles')[0] || null
+          roleId: getSelectedRoleIds('verification-roles')[0] || null,
+          title: document.getElementById('verification-title').value,
+          description: document.getElementById('verification-description').value,
+          color: document.getElementById('verification-color').value,
+          image: document.getElementById('verification-image').value,
+          buttonLabel: document.getElementById('verification-button-label').value
         };
         break;
       default:
@@ -1391,10 +1401,26 @@ async function sendVerificationPanel() {
   const roleId = getSelectedRoleIds('verification-roles')[0];
   if (!channelId) { showToast('Bitte wähle einen Kanal aus.', 'error'); return; }
   if (!roleId) { showToast('Bitte wähle eine Rolle aus.', 'error'); return; }
+
+  const title = document.getElementById('verification-title').value;
+  const description = document.getElementById('verification-description').value;
+  const color = document.getElementById('verification-color').value;
+  const image = document.getElementById('verification-image').value;
+  const buttonLabel = document.getElementById('verification-button-label').value;
+
   try {
     const response = await apiFetch(`/guild/${state.activeGuildId}/verification/send-panel`, {
       method: 'POST',
-      body: JSON.stringify({ channelId, method, roleId })
+      body: JSON.stringify({
+        channelId,
+        method,
+        roleId,
+        title,
+        description,
+        color,
+        image,
+        buttonLabel
+      })
     });
     if (response && response.success) {
       showToast('Verifizierungs-Panel erfolgreich gesendet!', 'success');
