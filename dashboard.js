@@ -1213,3 +1213,15 @@ async function showEditView(index) {
     window.addOptionRow({ label: 'Allgemeiner Support', emoji: '🎫', categoryId: '', supportRoles: [] });
   }
 }
+
+// ---- Bearbeitungsansicht schließen ----
+window.closeEditView = function() {
+  editContainer.classList.add('hidden');
+  document.getElementById('ticket-overview-container').classList.remove('hidden');
+  editingIndex = null;
+};
+
+// ============================================================
+// START
+// ============================================================
+loadDashboard();
