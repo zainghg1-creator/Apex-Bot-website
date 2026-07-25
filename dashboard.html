@@ -1440,11 +1440,18 @@
       <!-- ===== VERIFIZIERUNG ===== -->
       <div id="mod-verification" class="module-page hidden">
         <h2>✅ Verifizierungs System</h2>
-        <p>Konfiguriere das Verifizierungs-Panel für deinen Server.</p>
+        <p>Konfiguriere das Verifizierungs-Panel – inklusive Embed und Button-Text.</p>
+
         <div class="panel-card">
+          <!-- Aktiv/Inaktiv -->
           <div class="form-group">
-            <div class="switch-row"><label>Verifizierung aktiv</label><label class="switch"><input type="checkbox" id="verification-enabled"><span class="switch-slider"></span></label></div>
+            <div class="switch-row">
+              <label>Verifizierung aktiv</label>
+              <label class="switch"><input type="checkbox" id="verification-enabled"><span class="switch-slider"></span></label>
+            </div>
           </div>
+
+          <!-- Methode -->
           <div class="form-group">
             <label>Verifizierungsmethode</label>
             <select id="verification-method">
@@ -1452,6 +1459,8 @@
               <option value="math">Mathe-Aufgabe</option>
             </select>
           </div>
+
+          <!-- Kanal & Rolle -->
           <div class="form-group">
             <label>Kanal für das Verifizierungs-Panel</label>
             <select id="verification-channel"></select>
@@ -1460,6 +1469,36 @@
             <label>Rolle nach Verifizierung</label>
             <div id="verification-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span></div>
           </div>
+
+          <!-- Embed-Bearbeitung -->
+          <div style="border-top:1px solid var(--border-subtle); margin:1rem 0 0.5rem; padding-top:1rem;">
+            <div style="font-weight:700; margin-bottom:0.5rem;">📝 Embed anpassen</div>
+            <div class="form-group">
+              <label>Titel</label>
+              <input type="text" id="verification-title" placeholder="🔐 Verifizierung">
+            </div>
+            <div class="form-group">
+              <label>Beschreibung</label>
+              <textarea id="verification-description" rows="2" placeholder="Klicke auf den Button, um dich zu verifizieren."></textarea>
+            </div>
+            <div class="form-group">
+              <label>Farbe</label>
+              <div class="color-row">
+                <input type="color" id="verification-color" value="#6d5ef8">
+                <input type="text" id="verification-color-hex" value="#6d5ef8" oninput="document.getElementById('verification-color').value=this.value;">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Bild-URL (optional)</label>
+              <input type="text" id="verification-image" placeholder="https://example.com/bild.png">
+            </div>
+            <div class="form-group">
+              <label>Button-Text</label>
+              <input type="text" id="verification-button-label" placeholder="Verifizieren">
+            </div>
+          </div>
+
+          <!-- Aktionen -->
           <div class="form-action">
             <button class="btn btn-primary" onclick="sendVerificationPanel()">📤 Panel senden</button>
             <button class="btn btn-secondary" onclick="handleSaveClick('verification')">💾 Speichern</button>
