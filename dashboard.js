@@ -1,6 +1,6 @@
 'use strict';
 
-console.log('✅ NEUE dashboard.js wurde geladen! (Debug-Version)');
+console.log('✅ NEUE dashboard.js mit Live-Vorschau!');
 
 // ============================================================
 // KONFIGURATION
@@ -37,7 +37,7 @@ const DOM = {
 };
 
 // ============================================================
-// STATE (erweitert um Cache)
+// STATE
 // ============================================================
 let state = {
   activeGuildId: null,
@@ -72,14 +72,11 @@ function showState(stateEl) {
 
 function showToast(message, type = 'success') {
   if (!DOM.toastContainer) return;
-  
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   const icon = type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ';
   toast.innerHTML = `<span style="margin-right:8px;">${icon}</span> ${message}`;
-  
   DOM.toastContainer.appendChild(toast);
-  
   setTimeout(() => {
     toast.style.opacity = '0';
     toast.style.transform = 'translateX(20px)';
@@ -95,22 +92,15 @@ function debounce(fn, delay = 300) {
   };
 }
 
-// ============================================================
-// DISCORD SNOWFLAKE HELPERS
-// ============================================================
 const DISCORD_EPOCH = 1420070400000n;
-
 function snowflakeToDate(id) {
   try {
     const snowflake = BigInt(id);
     const timestampMs = Number((snowflake >> 22n) + DISCORD_EPOCH);
     const date = new Date(timestampMs);
     return isNaN(date.getTime()) ? null : date;
-  } catch (err) {
-    return null;
-  }
+  } catch { return null; }
 }
-
 function formatGuildCreatedDate(guildId) {
   const date = snowflakeToDate(guildId);
   if (!date) return 'N/A';
@@ -128,16 +118,11 @@ async function apiFetch(endpoint, options = {}) {
       ...(options.headers || {})
     }
   });
-  
   if (!res.ok) {
-    if (res.status === 401) {
-      window.location.href = '/';
-      return null;
-    }
+    if (res.status === 401) { window.location.href = '/'; return null; }
     const error = await res.json().catch(() => ({ error: 'unknown_error' }));
     throw new Error(error.error || `HTTP ${res.status}`);
   }
-  
   return res.json();
 }
 
@@ -146,13 +131,9 @@ async function apiFetch(endpoint, options = {}) {
 // ============================================================
 async function getCachedTicketConfig(forceRefresh = false) {
   if (!state.activeGuildId) return null;
-  
-  if (!forceRefresh && 
-      state.ticketConfigCache && 
-      state.ticketConfigCacheGuildId === state.activeGuildId) {
+  if (!forceRefresh && state.ticketConfigCache && state.ticketConfigCacheGuildId === state.activeGuildId) {
     return state.ticketConfigCache;
   }
-  
   try {
     const config = await apiFetch(`/guild/${state.activeGuildId}/config`);
     state.ticketConfigCache = config.tickets || {};
@@ -163,7 +144,6 @@ async function getCachedTicketConfig(forceRefresh = false) {
     return null;
   }
 }
-
 function invalidateTicketCache() {
   state.ticketConfigCache = null;
   state.ticketConfigCacheGuildId = null;
@@ -173,13 +153,10 @@ function invalidateTicketCache() {
 // GUILD LIST
 // ============================================================
 async function loadDashboard() {
-  console.log('loadDashboard wurde aufgerufen');
   showState(DOM.loadingState);
-  
   try {
     const data = await apiFetch('/guilds');
     if (!data) return;
-    
     renderUser(data.user);
     renderGuilds(data.guilds, data.clientId || CONFIG.CLIENT_ID);
   } catch (err) {
@@ -187,7 +164,6 @@ async function loadDashboard() {
     showState(DOM.errorState);
   }
 }
-
 function renderUser(user) {
   if (!user) return;
   if (DOM.userName) DOM.userName.textContent = user.username;
@@ -198,22 +174,14 @@ function renderUser(user) {
     DOM.userAvatar.alt = `${user.username}s Avatar`;
   }
 }
-
 function renderGuilds(guilds, clientId) {
-  if (!guilds || guilds.length === 0) {
-    showState(DOM.emptyState);
-    return;
-  }
-  
+  if (!guilds || guilds.length === 0) { showState(DOM.emptyState); return; }
   DOM.guildList.innerHTML = '';
-  
   guilds.forEach(guild => {
     const card = document.createElement('div');
     card.className = 'guild-card';
-    
     const iconSrc = guild.icon || 'https://cdn.discordapp.com/embed/avatars/0.png';
     const isManaged = guild.botIstDrauf;
-    
     card.innerHTML = `
       <div class="guild-info">
         <img src="${iconSrc}" class="guild-icon" alt="${escapeHtml(guild.name)} Icon" width="48" height="48" loading="lazy">
@@ -226,10 +194,8 @@ function renderGuilds(guilds, clientId) {
         }
       </div>
     `;
-    
     DOM.guildList.appendChild(card);
   });
-  
   showState(DOM.guildList);
 }
 
@@ -237,15 +203,12 @@ function renderGuilds(guilds, clientId) {
 // MANAGEMENT OVERLAY
 // ============================================================
 async function openManagement(guildId, name, iconUrl) {
-  console.log('openManagement aufgerufen für:', guildId);
   state.activeGuildId = guildId;
   DOM.activeGuildName.textContent = name;
   DOM.activeGuildIcon.src = iconUrl;
   DOM.activeGuildIcon.alt = `${name} Icon`;
-  
   DOM.manageOverlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
-  
   DOM.overviewMembers.textContent = '...';
   DOM.overviewBoosts.textContent = '...';
   DOM.overviewBots.textContent = '...';
@@ -254,29 +217,22 @@ async function openManagement(guildId, name, iconUrl) {
   DOM.overviewOwnerName.textContent = '...';
   DOM.overviewOwnerAvatar.classList.add('hidden');
   DOM.overviewOwnerAvatar.src = '';
-  
   DOM.overviewCreated.textContent = formatGuildCreatedDate(guildId);
-  
   if (state.guildRoles.length === 0 || state.guildChannels.length === 0) {
     await loadRolesAndChannels(guildId);
   } else {
     renderAllSelects();
     renderCategorySelects();
   }
-  
   await getCachedTicketConfig(true);
   await loadGuildDetails(guildId);
   await loadAllModuleSettings(guildId);
-  
-  console.log('Management vollständig geladen');
 }
-
 function closeManagement() {
   state.activeGuildId = null;
   DOM.manageOverlay.classList.add('hidden');
   document.body.style.overflow = '';
 }
-
 async function loadGuildDetails(guildId) {
   try {
     const data = await apiFetch(`/guild/${guildId}`);
@@ -286,14 +242,13 @@ async function loadGuildDetails(guildId) {
       DOM.overviewBots.textContent = data.botCount ?? data.bots ?? 'N/A';
       renderGuildOwner(data.owner);
     }
-  } catch (err) {
+  } catch {
     DOM.overviewMembers.textContent = 'N/A';
     DOM.overviewBoosts.textContent = 'N/A';
     DOM.overviewBots.textContent = 'N/A';
     renderGuildOwner(null);
   }
 }
-
 function renderGuildOwner(owner) {
   if (!owner) {
     DOM.overviewOwnerName.textContent = 'N/A';
@@ -301,7 +256,6 @@ function renderGuildOwner(owner) {
     DOM.overviewOwnerAvatar.src = '';
     return;
   }
-  
   DOM.overviewOwnerName.textContent = owner.username || 'Unbekannt';
   DOM.overviewOwnerAvatar.src = owner.avatar
     ? `https://cdn.discordapp.com/avatars/${owner.id}/${owner.avatar}.png`
@@ -311,57 +265,39 @@ function renderGuildOwner(owner) {
 }
 
 // ============================================================
-// ROLES & CHANNELS (mit Cache)
+// ROLES & CHANNELS
 // ============================================================
 async function loadRolesAndChannels(guildId) {
-  console.log('loadRolesAndChannels aufgerufen');
   try {
     const [roles, channels] = await Promise.all([
       apiFetch(`/guild/${guildId}/roles`).catch(() => []),
       apiFetch(`/guild/${guildId}/channels`).catch(() => [])
     ]);
-    
     state.guildRoles = roles || [];
     state.guildChannels = channels || [];
-    console.log('Rollen geladen:', state.guildRoles.length, 'Kanäle:', state.guildChannels.length);
-  } catch (err) {
+  } catch {
     state.guildRoles = [];
     state.guildChannels = [];
   }
-  
   DOM.overviewRoles.textContent = state.guildRoles.length;
   DOM.overviewChannels.textContent = state.guildChannels.length;
-  
   renderAllSelects();
   renderCategorySelects();
 }
-
 function renderAllSelects() {
-  const selectIds = [
-    'join-channel', 'leave-channel', 'ticket-panel-channel',
-    'teamliste-channel', 'support-channel', 'moderation-log-channel',
-    'teamupdate-channel'
-  ];
-  
+  const selectIds = ['join-channel', 'leave-channel', 'ticket-panel-channel', 'teamliste-channel', 'support-channel', 'moderation-log-channel', 'teamupdate-channel'];
   selectIds.forEach(id => renderChannelSelect(id, 0));
 }
-
 function renderChannelSelect(selectId, filterType) {
   const el = document.getElementById(selectId);
   if (!el) return;
-  
   const relevant = state.guildChannels.filter(c => c.type === filterType);
-  
   if (relevant.length === 0) {
     el.innerHTML = `<option value="">Keine Textkanäle gefunden</option>`;
     return;
   }
-  
-  el.innerHTML = relevant
-    .map(c => `<option value="${c.id}"># ${escapeHtml(c.name)}</option>`)
-    .join('');
+  el.innerHTML = relevant.map(c => `<option value="${c.id}"># ${escapeHtml(c.name)}</option>`).join('');
 }
-
 function renderCategorySelects() {
   const ids = ['ticket-location-category', 'ticket-overflow-categories', 'ticket-modal-category'];
   ids.forEach(id => {
@@ -375,88 +311,60 @@ function renderCategorySelects() {
     el.innerHTML = categories.map(c => `<option value="${c.id}">📁 ${escapeHtml(c.name)}</option>`).join('');
   });
 }
-
 function renderRoleChips(containerId, selectedIds = [], singleSelect = false) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  
   if (state.guildRoles.length === 0) {
     el.innerHTML = `<span class="chip-empty">Keine Rollen gefunden</span>`;
     return;
   }
-  
   const selectedSet = new Set(selectedIds);
-  
-  el.innerHTML = state.guildRoles
-    .map(r => {
-      const isSelected = selectedSet.has(r.id);
-      return `<div class="role-chip ${isSelected ? 'selected' : ''}" 
-                    data-role-id="${r.id}" 
-                    role="option" 
-                    aria-selected="${isSelected}"
-                    onclick="toggleRoleChip('${containerId}', '${r.id}', ${singleSelect})">
-                <span class="chip-icon" aria-hidden="true">@</span>
-                <span class="chip-label">${escapeHtml(r.name)}</span>
-              </div>`;
-    })
-    .join('');
+  el.innerHTML = state.guildRoles.map(r => {
+    const isSelected = selectedSet.has(r.id);
+    return `<div class="role-chip ${isSelected ? 'selected' : ''}" data-role-id="${r.id}" role="option" aria-selected="${isSelected}" onclick="toggleRoleChip('${containerId}', '${r.id}', ${singleSelect})">
+      <span class="chip-icon">@</span>
+      <span class="chip-label">${escapeHtml(r.name)}</span>
+    </div>`;
+  }).join('');
 }
-
 function toggleRoleChip(containerId, roleId, singleSelect) {
   const el = document.getElementById(containerId);
   const chip = el.querySelector(`[data-role-id="${roleId}"]`);
   if (!chip) return;
-  
   if (singleSelect) {
-    el.querySelectorAll('.role-chip').forEach(c => {
-      c.classList.remove('selected');
-      c.setAttribute('aria-selected', 'false');
-    });
+    el.querySelectorAll('.role-chip').forEach(c => c.classList.remove('selected'));
     chip.classList.add('selected');
-    chip.setAttribute('aria-selected', 'true');
   } else {
     chip.classList.toggle('selected');
-    chip.setAttribute('aria-selected', chip.classList.contains('selected') ? 'true' : 'false');
   }
 }
-
 function getSelectedRoleIds(containerId) {
   const el = document.getElementById(containerId);
   if (!el) return [];
-  return Array.from(el.querySelectorAll('.role-chip.selected'))
-    .map(c => c.dataset.roleId);
+  return Array.from(el.querySelectorAll('.role-chip.selected')).map(c => c.dataset.roleId);
 }
 
 // ============================================================
 // TABS & SUBTABS
 // ============================================================
 function switchTab(tabName) {
-  console.log('switchTab aufgerufen:', tabName);
   document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
   document.querySelectorAll('.module-page').forEach(page => page.classList.add('hidden'));
-  
   const activeBtn = document.querySelector(`[data-tab="${tabName}"]`);
   const activePage = document.getElementById(`mod-${tabName}`);
-  
   if (activeBtn) activeBtn.classList.add('active');
   if (activePage) activePage.classList.remove('hidden');
-
   if (tabName === 'tickets' && state.activeGuildId) {
-    console.log('Ticket-Tab aktiv, rendere Übersicht');
     setTimeout(() => renderTicketOverview(), 50);
   }
 }
-
 function switchSubtab(moduleName, subName) {
   const container = document.getElementById(`mod-${moduleName}`);
   if (!container) return;
-  
   container.querySelectorAll('.subtab-btn').forEach(btn => btn.classList.remove('active'));
   container.querySelectorAll('.subpage').forEach(page => page.classList.add('hidden'));
-  
   const activeBtn = container.querySelector(`[data-sub="${subName}"]`);
   const activePage = document.getElementById(`${moduleName}-${subName}-page`);
-  
   if (activeBtn) activeBtn.classList.add('active');
   if (activePage) activePage.classList.remove('hidden');
 }
@@ -468,15 +376,12 @@ function syncColor(prefix) {
   const color = document.getElementById(`${prefix}-color`).value;
   const hexInput = document.getElementById(`${prefix}-color-hex`);
   const preview = document.getElementById(`${prefix}-preview`);
-  
   if (hexInput) hexInput.value = color;
   if (preview) preview.style.borderLeftColor = color;
 }
-
 function syncColorHex(prefix) {
   let hex = document.getElementById(`${prefix}-color-hex`).value.trim();
   if (!hex.startsWith('#')) hex = `#${hex}`;
-  
   if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
     document.getElementById(`${prefix}-color`).value = hex;
     const preview = document.getElementById(`${prefix}-preview`);
@@ -490,13 +395,11 @@ function syncColorHex(prefix) {
 function handleImageUpload(input, prefix) {
   const file = input.files?.[0];
   if (!file) return;
-  
   if (file.size > 5 * 1024 * 1024) {
     showToast('Bild ist zu groß (max. 5MB)', 'error');
     input.value = '';
     return;
   }
-  
   const reader = new FileReader();
   reader.onload = (e) => {
     const dataUrl = e.target.result;
@@ -508,21 +411,13 @@ function handleImageUpload(input, prefix) {
   reader.onerror = () => showToast('Fehler beim Lesen der Datei', 'error');
   reader.readAsDataURL(file);
 }
-
 function clearImage(prefix) {
   const input = document.getElementById(`${prefix}-image-input`);
-  if (input) {
-    input.value = '';
-    input.dataset.value = '';
-  }
+  if (input) { input.value = ''; input.dataset.value = ''; }
   const previewImg = document.getElementById(`${prefix}-image-preview`);
   if (previewImg) previewImg.src = '';
   updateEmbedPreview(prefix);
 }
-
-// ============================================================
-// EMBED PREVIEW
-// ============================================================
 const updateEmbedPreview = debounce((prefix) => {
   const titleEl = document.getElementById(`${prefix}-title`) || document.getElementById(`${prefix}-panel-title`);
   const descEl = document.getElementById(`${prefix}-text`) || document.getElementById(`${prefix}-panel-desc`);
@@ -532,78 +427,32 @@ const updateEmbedPreview = debounce((prefix) => {
   const previewThumb = document.getElementById(`${prefix}-preview-thumb`);
   const imageInput = document.getElementById(`${prefix}-image-input`);
   const avatarThumbToggle = document.getElementById(`${prefix}-avatar-thumb`);
-  
-  if (previewTitle && titleEl) {
-    previewTitle.textContent = titleEl.value || titleEl.placeholder;
-  }
-  
-  if (previewDesc && descEl) {
-    previewDesc.textContent = descEl.value || descEl.placeholder;
-  }
-  
+  if (previewTitle && titleEl) previewTitle.textContent = titleEl.value || titleEl.placeholder;
+  if (previewDesc && descEl) previewDesc.textContent = descEl.value || descEl.placeholder;
   if (previewImage) {
     const val = imageInput?.dataset.value;
-    if (val) {
-      previewImage.src = val;
-      previewImage.classList.remove('hidden');
-    } else {
-      previewImage.classList.add('hidden');
-    }
+    if (val) { previewImage.src = val; previewImage.classList.remove('hidden'); }
+    else { previewImage.classList.add('hidden'); }
   }
-  
-  if (previewThumb) {
-    previewThumb.style.display = avatarThumbToggle && !avatarThumbToggle.checked ? 'none' : '';
-  }
+  if (previewThumb) previewThumb.style.display = avatarThumbToggle && !avatarThumbToggle.checked ? 'none' : '';
 }, 200);
 
 // ============================================================
-// TICKET OPTIONS
+// TICKET OPTIONS (global – wird nur noch für die Übersicht verwendet)
 // ============================================================
 function addTicketOption(data = null) {
-  state.ticketOptionCount++;
-  const id = `ticket-opt-${state.ticketOptionCount}`;
-  const list = document.getElementById('ticket-options-list');
-  if (!list) return;
-  
-  const row = document.createElement('div');
-  row.className = 'option-row';
-  row.id = id;
-  
-  row.innerHTML = `
-    <input type="text" placeholder="Label, z.B. Allgemeiner Support" class="opt-label" value="${data ? escapeHtml(data.label || '') : ''}">
-    <input type="text" placeholder="Emoji (optional)" class="opt-emoji" style="max-width:90px;" value="${data ? escapeHtml(data.emoji || '') : ''}">
-    <select class="opt-category"></select>
-    <button type="button" class="option-remove" onclick="document.getElementById('${id}').remove()" aria-label="Kategorie entfernen">✕</button>
-  `;
-  
-  list.appendChild(row);
-  
-  const select = row.querySelector('.opt-category');
-  const cats = state.guildChannels.filter(c => c.type === 4);
-  
-  select.innerHTML = cats.length
-    ? cats.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')
-    : `<option value="">Keine Kategorien gefunden</option>`;
-  
-  if (data && data.categoryId) select.value = data.categoryId;
+  // Wird nicht mehr benötigt, da Optionen jetzt pro Panel in der Bearbeitungsansicht verwaltet werden.
 }
-
 function collectTicketOptions() {
-  return Array.from(document.querySelectorAll('#ticket-options-list .option-row')).map(row => ({
-    label: row.querySelector('.opt-label')?.value || '',
-    emoji: row.querySelector('.opt-emoji')?.value || '',
-    categoryId: row.querySelector('.opt-category')?.value || ''
-  }));
+  return [];
 }
 
 // ============================================================
 // LOAD SETTINGS
 // ============================================================
 async function loadAllModuleSettings(guildId) {
-  console.log('loadAllModuleSettings aufgerufen');
   try {
     const config = await apiFetch(`/guild/${guildId}/config`).catch(() => ({}));
-    
     applyWelcomeConfig(config.welcome || {});
     applyTicketConfig(config.tickets || {});
     applyTeamlisteConfig(config.teamliste || {});
@@ -613,15 +462,11 @@ async function loadAllModuleSettings(guildId) {
     applySimpleConfig('stats', config.stats || {});
     applyVerificationConfig(config.verification || {});
     applySimpleConfig('antinuke', config.antinuke || {});
-  } catch (err) {
-    console.error('Fehler beim Laden der Konfiguration:', err);
-  }
+  } catch (err) { console.error('Fehler beim Laden der Konfiguration:', err); }
 }
-
 function applyWelcomeConfig(cfg) {
   const j = cfg.join || {};
   const l = cfg.leave || {};
-  
   setChecked('join-enabled', j.enabled ?? true);
   setSelectValue('join-mode', j.mode || 'embed');
   setValue('join-title', j.title || '');
@@ -631,7 +476,6 @@ function applyWelcomeConfig(cfg) {
   setImage('join', j.image);
   setSelectValue('join-channel', j.channelId || '');
   renderRoleChips('join-roles', j.roles || []);
-  
   setChecked('leave-enabled', l.enabled ?? false);
   setSelectValue('leave-mode', l.mode || 'embed');
   setValue('leave-title', l.title || '');
@@ -640,11 +484,9 @@ function applyWelcomeConfig(cfg) {
   setChecked('leave-avatar-thumb', l.useAvatarThumbnail ?? true);
   setImage('leave', l.image);
   setSelectValue('leave-channel', l.channelId || '');
-  
   updateEmbedPreview('join');
   updateEmbedPreview('leave');
 }
-
 function applyTicketConfig(cfg) {
   setSelectValue('ticket-panel-channel', cfg.panelChannelId || '');
   setValue('ticket-panel-title', cfg.title || '');
@@ -652,12 +494,6 @@ function applyTicketConfig(cfg) {
   setColor('ticket', cfg.color || '#ffffff');
   setValue('ticket-create-msg', cfg.creationMessage || '');
   setImage('ticket', cfg.image);
-
-  document.getElementById('ticket-options-list').innerHTML = '';
-  state.ticketOptionCount = 0;
-  const options = cfg.options?.length ? cfg.options : [{ label: 'Allgemeiner Support', emoji: '🎫', categoryId: '' }];
-  options.forEach(opt => addTicketOption(opt));
-
   setChecked('ticket-panel-enabled', cfg.enabled ?? true);
   setValue('ticket-panel-name', cfg.panelName || '');
   renderRoleChips('ticket-support-roles', cfg.supportRoles || []);
@@ -668,56 +504,35 @@ function applyTicketConfig(cfg) {
   setChecked('ticket-save-images', cfg.saveImages ?? false);
   setChecked('ticket-private-transcripts', cfg.privateTranscripts ?? false);
   setValue('ticket-channel-name-template', cfg.channelNameTemplate || '{panel.name}-{ticket.creator.username}');
-
   updateEmbedPreview('ticket');
 }
-
 function getSelectedOptions(selectId) {
   const el = document.getElementById(selectId);
   if (!el) return [];
   return Array.from(el.selectedOptions).map(opt => opt.value);
 }
-
 function setSelectMultiple(selectId, values) {
   const el = document.getElementById(selectId);
   if (!el) return;
-  Array.from(el.options).forEach(opt => {
-    opt.selected = values.includes(opt.value);
-  });
+  Array.from(el.options).forEach(opt => { opt.selected = values.includes(opt.value); });
 }
-
 function applyTeamlisteConfig(cfg) {
   setSelectValue('teamliste-channel', cfg.channelId || '');
   renderRoleChips('teamliste-roles', cfg.roles || []);
 }
-
 function applyVerificationConfig(cfg) {
   setChecked('verification-enabled', cfg.enabled ?? false);
   renderRoleChips('verification-roles', cfg.roleId ? [cfg.roleId] : [], true);
 }
-
 function applySimpleConfig(prefix, cfg) {
   setChecked(`${prefix}-enabled`, cfg.enabled ?? false);
   const channelId = cfg.channelId || cfg.logChannelId || '';
   const el = document.getElementById(`${prefix}-channel`) || document.getElementById(`${prefix}-log-channel`);
   if (el) setSelectValue(el.id, channelId);
 }
-
-function setValue(id, val) {
-  const el = document.getElementById(id);
-  if (el) el.value = val;
-}
-
-function setChecked(id, val) {
-  const el = document.getElementById(id);
-  if (el) el.checked = !!val;
-}
-
-function setSelectValue(id, val) {
-  const el = document.getElementById(id);
-  if (el) el.value = val;
-}
-
+function setValue(id, val) { const el = document.getElementById(id); if (el) el.value = val; }
+function setChecked(id, val) { const el = document.getElementById(id); if (el) el.checked = !!val; }
+function setSelectValue(id, val) { const el = document.getElementById(id); if (el) el.value = val; }
 function setColor(prefix, color) {
   const colorEl = document.getElementById(`${prefix}-color`);
   const hexEl = document.getElementById(`${prefix}-color-hex`);
@@ -726,7 +541,6 @@ function setColor(prefix, color) {
   const preview = document.getElementById(`${prefix}-preview`);
   if (preview) preview.style.borderLeftColor = color || '#ffffff';
 }
-
 function setImage(prefix, url) {
   const preview = document.getElementById(`${prefix}-image-preview`);
   const input = document.getElementById(`${prefix}-image-input`);
@@ -735,18 +549,12 @@ function setImage(prefix, url) {
 }
 
 // ============================================================
-// SAVE SETTINGS
+// SAVE SETTINGS (global)
 // ============================================================
 async function saveModuleSettings(moduleName) {
   const saveStatus = document.getElementById(`${moduleName}-save-status`);
-  if (saveStatus) {
-    saveStatus.classList.add('hidden');
-    saveStatus.textContent = '⏳ Speichern...';
-    saveStatus.classList.remove('hidden');
-  }
-  
+  if (saveStatus) { saveStatus.classList.add('hidden'); saveStatus.textContent = '⏳ Speichern...'; saveStatus.classList.remove('hidden'); }
   let payload = {};
-  
   try {
     switch (moduleName) {
       case 'welcome':
@@ -774,7 +582,6 @@ async function saveModuleSettings(moduleName) {
           }
         };
         break;
-        
       case 'tickets':
         payload = {
           panelChannelId: document.getElementById('ticket-panel-channel').value,
@@ -783,7 +590,6 @@ async function saveModuleSettings(moduleName) {
           color: document.getElementById('ticket-color').value,
           image: document.getElementById('ticket-image-input')?.dataset.value || '',
           creationMessage: document.getElementById('ticket-create-msg').value,
-          options: collectTicketOptions().filter(opt => opt.label.trim()),
           enabled: document.getElementById('ticket-panel-enabled').checked,
           panelName: document.getElementById('ticket-panel-name').value,
           supportRoles: getSelectedRoleIds('ticket-support-roles'),
@@ -797,50 +603,27 @@ async function saveModuleSettings(moduleName) {
         };
         invalidateTicketCache();
         break;
-        
       case 'teamliste':
         payload = {
           channelId: document.getElementById('teamliste-channel').value,
           roles: getSelectedRoleIds('teamliste-roles')
         };
         break;
-        
       case 'verification':
         const roles = getSelectedRoleIds('verification-roles');
-        payload = {
-          enabled: document.getElementById('verification-enabled').checked,
-          roleId: roles[0] || null
-        };
+        payload = { enabled: document.getElementById('verification-enabled').checked, roleId: roles[0] || null };
         break;
-        
       default:
         const enabledEl = document.getElementById(`${moduleName}-enabled`);
         const channelEl = document.getElementById(`${moduleName}-channel`) || document.getElementById(`${moduleName}-log-channel`);
-        payload = {
-          enabled: enabledEl ? enabledEl.checked : true,
-          channelId: channelEl ? channelEl.value : undefined
-        };
+        payload = { enabled: enabledEl ? enabledEl.checked : true, channelId: channelEl ? channelEl.value : undefined };
     }
-    
-    await apiFetch(`/guild/${state.activeGuildId}/config/${moduleName}`, {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
-    
+    await apiFetch(`/guild/${state.activeGuildId}/config/${moduleName}`, { method: 'POST', body: JSON.stringify(payload) });
     showToast(`${moduleName.charAt(0).toUpperCase() + moduleName.slice(1)} erfolgreich gespeichert!`, 'success');
-    
-    if (saveStatus) {
-      saveStatus.textContent = '✓ Gespeichert';
-      saveStatus.classList.remove('hidden');
-      setTimeout(() => saveStatus.classList.add('hidden'), 3000);
-    }
+    if (saveStatus) { saveStatus.textContent = '✓ Gespeichert'; saveStatus.classList.remove('hidden'); setTimeout(() => saveStatus.classList.add('hidden'), 3000); }
   } catch (err) {
     showToast(`Fehler beim Speichern: ${err.message}`, 'error');
-    if (saveStatus) {
-      saveStatus.textContent = '✕ Fehler';
-      saveStatus.classList.remove('hidden');
-      setTimeout(() => saveStatus.classList.add('hidden'), 3000);
-    }
+    if (saveStatus) { saveStatus.textContent = '✕ Fehler'; saveStatus.classList.remove('hidden'); setTimeout(() => saveStatus.classList.add('hidden'), 3000); }
   }
 }
 
@@ -848,21 +631,15 @@ async function saveModuleSettings(moduleName) {
 // KEYBOARD SUPPORT
 // ============================================================
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && !DOM.manageOverlay.classList.contains('hidden')) {
-    closeManagement();
-  }
-  
+  if (e.key === 'Escape' && !DOM.manageOverlay.classList.contains('hidden')) closeManagement();
   if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
     const activeTab = document.querySelector('.tab-btn.active');
-    if (activeTab) {
-      const moduleName = activeTab.dataset.tab;
-      if (moduleName) saveModuleSettings(moduleName);
-    }
+    if (activeTab) { const moduleName = activeTab.dataset.tab; if (moduleName) saveModuleSettings(moduleName); }
   }
 });
 
 // ============================================================
-// NEUE FUNKTIONEN FÜR DIE TICKET-ÜBERSICHT & BEARBEITUNG
+// TICKET ÜBERSICHT & BEARBEITUNGSANSICHT MIT LIVE-VORSCHAU
 // ============================================================
 
 const ticketGrid = document.getElementById('ticket-overview-grid');
@@ -871,23 +648,23 @@ const editContent = document.getElementById('ticket-edit-content');
 let editingIndex = null;
 let isEditViewOpen = false;
 let buttonCounter = 0;
+let optionCounter = 0;
 
 // ------ Tab-Navigation für die Bearbeitungsansicht ------
 function switchEditTab(tabName) {
-  console.log('switchEditTab:', tabName);
   document.querySelectorAll('.edit-tab-btn').forEach(btn => btn.classList.remove('active'));
   document.querySelectorAll('.edit-tab-content').forEach(el => el.classList.add('hidden'));
-  
   const activeBtn = document.querySelector(`.edit-tab-btn[data-edit-tab="${tabName}"]`);
   const activeContent = document.getElementById(`edit-tab-${tabName}`);
-  
   if (activeBtn) activeBtn.classList.add('active');
   if (activeContent) activeContent.classList.remove('hidden');
+  // Vorschau aktualisieren
+  updateEditPreview();
 }
 
-// ------ Hilfsfunktionen ------
+// ------ Hilfsfunktionen für die Bearbeitungsansicht ------
 function populateCategorySelects() {
-  const ids = ['edit-ticket-category', 'edit-ticket-overflow'];
+  const ids = ['edit-ticket-category', 'edit-ticket-overflow', 'edit-option-category'];
   ids.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -906,19 +683,14 @@ function renderEditRoleChips(containerId, selectedIds = [], singleSelect = false
     return;
   }
   const selectedSet = new Set(selectedIds);
-  el.innerHTML = state.guildRoles
-    .map(r => {
-      const isSelected = selectedSet.has(r.id);
-      return `<div class="role-chip ${isSelected ? 'selected' : ''}" 
-                    data-role-id="${r.id}" 
-                    onclick="toggleEditRoleChip('${containerId}', '${r.id}', ${singleSelect})">
-                <span class="chip-icon">@</span>
-                <span class="chip-label">${escapeHtml(r.name)}</span>
-              </div>`;
-    })
-    .join('');
+  el.innerHTML = state.guildRoles.map(r => {
+    const isSelected = selectedSet.has(r.id);
+    return `<div class="role-chip ${isSelected ? 'selected' : ''}" data-role-id="${r.id}" onclick="toggleEditRoleChip('${containerId}', '${r.id}', ${singleSelect})">
+      <span class="chip-icon">@</span>
+      <span class="chip-label">${escapeHtml(r.name)}</span>
+    </div>`;
+  }).join('');
 }
-
 window.toggleEditRoleChip = function(containerId, roleId, singleSelect) {
   const el = document.getElementById(containerId);
   const chip = el.querySelector(`[data-role-id="${roleId}"]`);
@@ -930,14 +702,13 @@ window.toggleEditRoleChip = function(containerId, roleId, singleSelect) {
     chip.classList.toggle('selected');
   }
 };
-
 function getEditSelectedRoles(containerId) {
   const el = document.getElementById(containerId);
   if (!el) return [];
-  return Array.from(el.querySelectorAll('.role-chip.selected'))
-    .map(c => c.dataset.roleId);
+  return Array.from(el.querySelectorAll('.role-chip.selected')).map(c => c.dataset.roleId);
 }
 
+// ------ Buttons (für Panel) ------
 window.addButtonRow = function(data = null) {
   const container = document.getElementById('edit-button-list');
   if (!container) return;
@@ -954,7 +725,6 @@ window.addButtonRow = function(data = null) {
   `;
   container.appendChild(row);
 };
-
 function collectButtons() {
   const rows = document.querySelectorAll('#edit-button-list .button-row');
   return Array.from(rows).map(row => ({
@@ -965,20 +735,78 @@ function collectButtons() {
   }));
 }
 
+// ------ Optionen (Kategorien) für das Panel ------
+window.addOptionRow = function(data = null) {
+  const container = document.getElementById('edit-options-list');
+  if (!container) return;
+  const rowId = `opt-${++optionCounter}`;
+  const row = document.createElement('div');
+  row.className = 'option-row';
+  row.id = rowId;
+  row.innerHTML = `
+    <input type="text" placeholder="Label, z.B. Support" class="opt-label" value="${data ? escapeHtml(data.label || '') : ''}" style="flex:2;">
+    <input type="text" placeholder="Emoji" class="opt-emoji" value="${data ? escapeHtml(data.emoji || '') : '🎫'}" style="max-width:80px;">
+    <select class="opt-category" style="flex:2;"></select>
+    <button type="button" class="option-remove" onclick="document.getElementById('${rowId}').remove()" aria-label="Option entfernen">✕</button>
+  `;
+  container.appendChild(row);
+  // Kategorien für dieses Select befüllen
+  const select = row.querySelector('.opt-category');
+  const categories = state.guildChannels.filter(c => c.type === 4);
+  select.innerHTML = categories.length
+    ? categories.map(c => `<option value="${c.id}">📁 ${escapeHtml(c.name)}</option>`).join('')
+    : `<option value="">Keine Kategorien gefunden</option>`;
+  if (data && data.categoryId) select.value = data.categoryId;
+};
+function collectOptions() {
+  const rows = document.querySelectorAll('#edit-options-list .option-row');
+  return Array.from(rows).map(row => ({
+    label: row.querySelector('.opt-label')?.value || '',
+    emoji: row.querySelector('.opt-emoji')?.value || '🎫',
+    categoryId: row.querySelector('.opt-category')?.value || ''
+  }));
+}
+
+// ============================================================
+// LIVE-VORSCHAU (für die Bearbeitungsansicht)
+// ============================================================
+function updateEditPreview() {
+  const preview = document.getElementById('edit-embed-preview');
+  if (!preview) return;
+
+  const title = document.getElementById('edit-panel-title')?.value || 'Support Center';
+  const desc = document.getElementById('edit-panel-desc')?.value || 'Wähle eine Kategorie, um ein Ticket zu öffnen.';
+  const color = document.getElementById('edit-panel-color')?.value || '#ffffff';
+  const imageInput = document.getElementById('edit-image-input');
+  const image = imageInput?.dataset.value || '';
+
+  const titleEl = preview.querySelector('.discord-embed-title');
+  const descEl = preview.querySelector('.discord-embed-desc');
+  const imgEl = preview.querySelector('.discord-embed-image');
+
+  if (titleEl) titleEl.textContent = title;
+  if (descEl) descEl.textContent = desc;
+  preview.style.borderLeftColor = color;
+
+  if (imgEl) {
+    if (image) {
+      imgEl.src = image;
+      imgEl.classList.remove('hidden');
+    } else {
+      imgEl.classList.add('hidden');
+      imgEl.src = '';
+    }
+  }
+}
+
 // ------ Übersicht rendern ------
 async function renderTicketOverview() {
-  console.log('renderTicketOverview aufgerufen');
-  if (!ticketGrid) {
-    console.warn('ticketGrid nicht gefunden');
-    return;
-  }
+  if (!ticketGrid) return;
   if (!state.activeGuildId) {
     ticketGrid.innerHTML = `<div class="state-box" style="grid-column:1/-1;">Bitte wähle zuerst einen Server aus.</div>`;
     return;
   }
-
   ticketGrid.innerHTML = `<div class="state-box" style="grid-column:1/-1;"><span class="loading-spinner"></span> Lade Ticket-Kategorien...</div>`;
-
   try {
     const tickets = await getCachedTicketConfig();
     if (!tickets) {
@@ -986,7 +814,6 @@ async function renderTicketOverview() {
       return;
     }
     const options = tickets.options || [];
-
     if (options.length === 0) {
       ticketGrid.innerHTML = `
         <div class="guild-card add-card" onclick="openAddTicket()">
@@ -997,13 +824,11 @@ async function renderTicketOverview() {
       `;
       return;
     }
-
     let html = '';
     options.forEach((opt, index) => {
       const emoji = opt.emoji || '🎫';
       const label = opt.label || 'Unbenannt';
       const categoryName = state.guildChannels.find(c => c.id === opt.categoryId)?.name || 'Keine Kategorie';
-
       html += `
         <div class="guild-card">
           <div class="guild-info">
@@ -1020,7 +845,6 @@ async function renderTicketOverview() {
         </div>
       `;
     });
-
     html += `
       <div class="guild-card add-card" onclick="openAddTicket()">
         <div style="font-size:3rem; line-height:1;">＋</div>
@@ -1028,7 +852,6 @@ async function renderTicketOverview() {
         <div style="color:var(--text-muted); font-size:0.85rem;">Klicke hier, um eine weitere Kategorie zu erstellen.</div>
       </div>
     `;
-
     ticketGrid.innerHTML = html;
   } catch (err) {
     ticketGrid.innerHTML = `<div class="state-box error" style="grid-column:1/-1;">Fehler beim Laden: ${err.message}</div>`;
@@ -1036,25 +859,14 @@ async function renderTicketOverview() {
 }
 
 // ------ Neues Ticket / Bearbeiten ------
-window.openAddTicket = function() {
-  console.log('openAddTicket');
-  editingIndex = null;
-  showEditView(null);
-};
+window.openAddTicket = function() { editingIndex = null; showEditView(null); };
+window.openEditView = function(index) { editingIndex = index; showEditView(index); };
 
-window.openEditView = function(index) {
-  console.log('openEditView für Index:', index);
-  editingIndex = index;
-  showEditView(index);
-};
-
-// ------ Bearbeitungsansicht mit Tabs ------
+// ------ Bearbeitungsansicht mit Embed-Vorschau und Live-Aktualisierung ------
 async function showEditView(index) {
-  console.log('showEditView für Index:', index);
   document.getElementById('ticket-overview-container').classList.add('hidden');
   editContainer.classList.remove('hidden');
   isEditViewOpen = true;
-
   editContent.innerHTML = `<div style="text-align:center;padding:3rem;"><span class="loading-spinner"></span> Lade Ticket-Einstellungen...</div>`;
 
   const tickets = await getCachedTicketConfig();
@@ -1063,7 +875,6 @@ async function showEditView(index) {
     return;
   }
   const options = tickets.options || [];
-
   let data = null;
   if (index !== null && options[index]) {
     data = options[index];
@@ -1089,28 +900,56 @@ async function showEditView(index) {
       saveImages: false,
       privateTranscripts: false,
       claimEnabled: false,
-      buttons: []
+      buttons: [],
+      options: []
     };
   }
 
+  // --- HTML mit Embed-Vorschau und Tabs ---
   let html = `
     <div class="card form-card" style="max-width:100%;">
-      <h3 style="font-size:1rem; font-weight:700; margin-bottom:0.5rem;">${index !== null ? 'Ticket bearbeiten' : 'Neues Ticket hinzufügen'}</h3>
+
+      <!-- Panel-Dropdown -->
+      <div style="display:flex; gap:12px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
+        <label style="font-weight:600; color:var(--text-muted); font-size:0.8rem;">Panel wechseln:</label>
+        <select id="edit-panel-select" style="flex:1; background:var(--bg-base); border:1px solid var(--border-subtle); border-radius:8px; padding:8px 12px; color:var(--text-primary); min-height:38px; font-size:0.85rem;">
+          ${options.map((opt, i) => `<option value="${i}" ${i === index ? 'selected' : ''}>${escapeHtml(opt.panelName || opt.label || 'Unbenannt')}</option>`).join('')}
+          ${index === null ? `<option value="new" selected>+ Neues Panel</option>` : ''}
+        </select>
+        <button class="btn btn-secondary" onclick="switchToSelectedPanel()" style="flex-shrink:0; padding:8px 14px; min-height:38px; font-size:0.8rem;">Wechseln</button>
+      </div>
+
+      <!-- Embed-Vorschau (LIVE) -->
+      <div style="margin-bottom:18px; background:var(--bg-surface); border-radius:10px; padding:14px; border:1px solid var(--border-subtle);">
+        <label style="font-weight:600; color:var(--text-muted); display:block; margin-bottom:8px; font-size:0.75rem;">📺 Live-Vorschau</label>
+        <div class="discord-embed" id="edit-embed-preview" style="border-left-color:${data.color || '#ffffff'};">
+          <div class="discord-embed-body">
+            <div class="discord-embed-title">${escapeHtml(data.title || 'Support Center')}</div>
+            <div class="discord-embed-desc">${escapeHtml(data.description || 'Wähle eine Kategorie, um ein Ticket zu öffnen.')}</div>
+            <img class="discord-embed-image ${data.image ? '' : 'hidden'}" src="${data.image || ''}" style="max-height:120px; width:100%; border-radius:6px; margin-top:6px; object-fit:cover;">
+            <div class="discord-embed-footer">
+              <img src="apex_logo.png" style="width:14px;height:14px;border-radius:50%;">
+              <span>Ticket System • Powered by Apex</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- Tab Navigation -->
-      <div style="display:flex; gap:4px; border-bottom:1px solid var(--border-subtle); margin-bottom:1.5rem; flex-wrap:wrap;">
-        <button class="edit-tab-btn active" data-edit-tab="general" onclick="switchEditTab('general')" style="background:transparent;border:none;color:var(--text-muted);padding:10px 16px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.85rem;">Allgemein</button>
-        <button class="edit-tab-btn" data-edit-tab="embed" onclick="switchEditTab('embed')" style="background:transparent;border:none;color:var(--text-muted);padding:10px 16px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.85rem;">Embed</button>
-        <button class="edit-tab-btn" data-edit-tab="messages" onclick="switchEditTab('messages')" style="background:transparent;border:none;color:var(--text-muted);padding:10px 16px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.85rem;">Nachrichten</button>
-        <button class="edit-tab-btn" data-edit-tab="roles" onclick="switchEditTab('roles')" style="background:transparent;border:none;color:var(--text-muted);padding:10px 16px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.85rem;">Berechtigungen</button>
-        <button class="edit-tab-btn" data-edit-tab="advanced" onclick="switchEditTab('advanced')" style="background:transparent;border:none;color:var(--text-muted);padding:10px 16px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.85rem;">Fortgeschritten</button>
+      <div style="display:flex; gap:4px; border-bottom:1px solid var(--border-subtle); margin-bottom:1rem; flex-wrap:wrap;">
+        <button class="edit-tab-btn active" data-edit-tab="general" onclick="switchEditTab('general')" style="background:transparent;border:none;color:var(--text-muted);padding:8px 14px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.8rem;">Allgemein</button>
+        <button class="edit-tab-btn" data-edit-tab="embed" onclick="switchEditTab('embed')" style="background:transparent;border:none;color:var(--text-muted);padding:8px 14px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.8rem;">Embed</button>
+        <button class="edit-tab-btn" data-edit-tab="messages" onclick="switchEditTab('messages')" style="background:transparent;border:none;color:var(--text-muted);padding:8px 14px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.8rem;">Nachrichten</button>
+        <button class="edit-tab-btn" data-edit-tab="roles" onclick="switchEditTab('roles')" style="background:transparent;border:none;color:var(--text-muted);padding:8px 14px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.8rem;">Berechtigungen</button>
+        <button class="edit-tab-btn" data-edit-tab="advanced" onclick="switchEditTab('advanced')" style="background:transparent;border:none;color:var(--text-muted);padding:8px 14px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.8rem;">Fortgeschritten</button>
+        <button class="edit-tab-btn" data-edit-tab="options" onclick="switchEditTab('options')" style="background:transparent;border:none;color:var(--text-muted);padding:8px 14px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;font-size:0.8rem;">Optionen</button>
       </div>
 
       <!-- Tab: Allgemein -->
       <div id="edit-tab-general" class="edit-tab-content">
         <div class="form-group">
           <div class="switch-row">
-            <label style="margin:0;">Panel aktiv</label>
+            <label style="margin:0; font-size:0.85rem;">Panel aktiv</label>
             <label class="switch"><input type="checkbox" id="edit-panel-enabled" ${data.enabled ? 'checked' : ''}><span class="switch-slider"></span></label>
           </div>
         </div>
@@ -1128,15 +967,15 @@ async function showEditView(index) {
         </div>
       </div>
 
-      <!-- Tab: Embed -->
+      <!-- Tab: Embed (hier werden die Vorschau-Felder bearbeitet) -->
       <div id="edit-tab-embed" class="edit-tab-content hidden">
         <div class="form-group">
           <label for="edit-panel-title">Panel-Titel</label>
-          <input type="text" id="edit-panel-title" value="${escapeHtml(data.title || 'Support Center')}" placeholder="Support Center">
+          <input type="text" id="edit-panel-title" value="${escapeHtml(data.title || 'Support Center')}" placeholder="Support Center" oninput="updateEditPreview()">
         </div>
         <div class="form-group">
           <label for="edit-panel-desc">Panel-Beschreibung</label>
-          <textarea id="edit-panel-desc" rows="3" placeholder="Wähle eine Kategorie, um ein Ticket zu öffnen.">${escapeHtml(data.description || '')}</textarea>
+          <textarea id="edit-panel-desc" rows="3" placeholder="Wähle eine Kategorie, um ein Ticket zu öffnen." oninput="updateEditPreview()">${escapeHtml(data.description || '')}</textarea>
         </div>
         <div class="form-group">
           <label>Panel-Bild (optional)</label>
@@ -1152,8 +991,8 @@ async function showEditView(index) {
         <div class="form-group">
           <label>Akzentfarbe (Embed)</label>
           <div class="color-row">
-            <input type="color" id="edit-panel-color" value="${data.color || '#ffffff'}" oninput="document.getElementById('edit-panel-color-hex').value = this.value">
-            <input type="text" id="edit-panel-color-hex" value="${data.color || '#ffffff'}" oninput="document.getElementById('edit-panel-color').value = this.value">
+            <input type="color" id="edit-panel-color" value="${data.color || '#ffffff'}" oninput="document.getElementById('edit-panel-color-hex').value = this.value; updateEditPreview();">
+            <input type="text" id="edit-panel-color-hex" value="${data.color || '#ffffff'}" oninput="document.getElementById('edit-panel-color').value = this.value; updateEditPreview();">
           </div>
         </div>
       </div>
@@ -1193,13 +1032,13 @@ async function showEditView(index) {
       <div id="edit-tab-advanced" class="edit-tab-content hidden">
         <div class="form-group">
           <div class="switch-row">
-            <label style="margin:0;">Überlauf-Kategorien aktivieren</label>
+            <label style="margin:0; font-size:0.85rem;">Überlauf-Kategorien aktivieren</label>
             <label class="switch"><input type="checkbox" id="edit-overflow-enabled" ${data.overflowEnabled ? 'checked' : ''}><span class="switch-slider"></span></label>
           </div>
         </div>
         <div class="form-group" id="edit-overflow-group" style="${data.overflowEnabled ? '' : 'display:none;'}">
           <label for="edit-ticket-overflow">Überlauf-Kategorien (mehrfach)</label>
-          <select id="edit-ticket-overflow" multiple style="height:auto;min-height:80px;"></select>
+          <select id="edit-ticket-overflow" multiple style="height:auto;min-height:60px;"></select>
           <small>Halte Strg (Cmd) gedrückt, um mehrere auszuwählen.</small>
         </div>
         <div class="form-group">
@@ -1211,35 +1050,45 @@ async function showEditView(index) {
           </select>
         </div>
         <div class="form-group">
-          <label style="font-weight:700;">Transkript-Einstellungen</label>
+          <label style="font-weight:600; font-size:0.8rem;">Transkript-Einstellungen</label>
           <div class="switch-row">
-            <label style="margin:0;">Transkripte speichern</label>
+            <label style="margin:0; font-size:0.85rem;">Transkripte speichern</label>
             <label class="switch"><input type="checkbox" id="edit-save-transcripts" ${data.saveTranscripts ? 'checked' : ''}><span class="switch-slider"></span></label>
           </div>
           <div class="switch-row">
-            <label style="margin:0;">Bilder in Transkripten</label>
+            <label style="margin:0; font-size:0.85rem;">Bilder in Transkripten</label>
             <label class="switch"><input type="checkbox" id="edit-save-images" ${data.saveImages ? 'checked' : ''}><span class="switch-slider"></span></label>
           </div>
           <div class="switch-row">
-            <label style="margin:0;">Private Transkripte</label>
+            <label style="margin:0; font-size:0.85rem;">Private Transkripte</label>
             <label class="switch"><input type="checkbox" id="edit-private-transcripts" ${data.privateTranscripts ? 'checked' : ''}><span class="switch-slider"></span></label>
           </div>
         </div>
         <div class="form-group">
           <div class="switch-row">
-            <label style="margin:0;">Claim-System aktivieren</label>
+            <label style="margin:0; font-size:0.85rem;">Claim-System aktivieren</label>
             <label class="switch"><input type="checkbox" id="edit-claim-enabled" ${data.claimEnabled ? 'checked' : ''}><span class="switch-slider"></span></label>
           </div>
         </div>
         <div class="form-group">
-          <label style="font-weight:700;">Buttons (für das Panel)</label>
+          <label style="font-weight:600; font-size:0.8rem;">Buttons (für das Panel)</label>
           <div id="edit-button-list"></div>
           <button type="button" class="add-button-btn" onclick="window.addButtonRow()">+ Button hinzufügen</button>
         </div>
       </div>
 
+      <!-- Tab: Optionen (verlinkte Kategorien) -->
+      <div id="edit-tab-options" class="edit-tab-content hidden">
+        <div class="form-group">
+          <label style="font-weight:600; font-size:0.8rem;">Dropdown-Optionen (Kategorien)</label>
+          <div id="edit-options-list"></div>
+          <button type="button" class="add-option-btn" onclick="window.addOptionRow()">+ Option hinzufügen</button>
+          <small>Diese Optionen erscheinen im Dropdown-Menü des Panels.</small>
+        </div>
+      </div>
+
       <!-- Speichern -->
-      <div class="form-action" style="margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid var(--border-subtle);">
+      <div class="form-action" style="margin-top:1.2rem;padding-top:1.2rem;border-top:1px solid var(--border-subtle);">
         <button class="btn btn-primary" onclick="saveEditView()">Speichern</button>
         <button class="btn btn-secondary" onclick="closeEditView()">Abbrechen</button>
         <span id="edit-save-status" class="hidden status-success"></span>
@@ -1255,8 +1104,9 @@ async function showEditView(index) {
   renderEditRoleChips('edit-support-roles', data.supportRoles || []);
   renderEditRoleChips('edit-allowed-roles', data.allowedRoles || []);
   renderEditRoleChips('edit-denied-roles', data.deniedRoles || []);
-  
+  // Ausgewählte Kategorie setzen
   if (data.categoryId) document.getElementById('edit-ticket-category').value = data.categoryId;
+  // Overflow-Kategorien setzen
   if (data.overflowCategories) {
     const overflowSelect = document.getElementById('edit-ticket-overflow');
     if (overflowSelect) {
@@ -1265,11 +1115,9 @@ async function showEditView(index) {
       });
     }
   }
-
   // Overflow-Toggle
   document.getElementById('edit-overflow-enabled').addEventListener('change', function() {
-    const group = document.getElementById('edit-overflow-group');
-    group.style.display = this.checked ? '' : 'none';
+    document.getElementById('edit-overflow-group').style.display = this.checked ? '' : 'none';
   });
 
   // Buttons laden
@@ -1279,11 +1127,20 @@ async function showEditView(index) {
     window.addButtonRow({ label: 'Ticket öffnen', emoji: '🎫', color: '#ffffff', action: 'open' });
   }
 
+  // Optionen (verlinkte Kategorien) laden
+  if (data.options && data.options.length) {
+    data.options.forEach(opt => window.addOptionRow(opt));
+  } else {
+    window.addOptionRow({ label: 'Allgemeiner Support', emoji: '🎫', categoryId: '' });
+  }
+
   // Aktiven Tab setzen
   switchEditTab('general');
+  // Vorschau initial aktualisieren
+  updateEditPreview();
 }
 
-// ------ Hilfsfunktionen für Bild-Upload ------
+// ------ Hilfsfunktionen für Bild-Upload in der Bearbeitungsansicht ------
 window.handleEditImageUpload = function(input) {
   const file = input.files?.[0];
   if (!file) return;
@@ -1297,23 +1154,35 @@ window.handleEditImageUpload = function(input) {
     const preview = document.getElementById('edit-image-preview');
     if (preview) preview.src = e.target.result;
     input.dataset.value = e.target.result;
+    updateEditPreview();
   };
   reader.readAsDataURL(file);
 };
-
 window.clearEditImage = function() {
   const input = document.getElementById('edit-image-input');
-  if (input) {
-    input.value = '';
-    input.dataset.value = '';
-  }
+  if (input) { input.value = ''; input.dataset.value = ''; }
   const preview = document.getElementById('edit-image-preview');
   if (preview) preview.src = '';
+  updateEditPreview();
+};
+
+// ------ Panel wechseln (Dropdown) ------
+window.switchToSelectedPanel = async function() {
+  const select = document.getElementById('edit-panel-select');
+  if (!select) return;
+  const val = select.value;
+  if (val === 'new') {
+    editingIndex = null;
+    showEditView(null);
+  } else {
+    const index = parseInt(val);
+    editingIndex = index;
+    showEditView(index);
+  }
 };
 
 // ------ Bearbeitungsansicht schließen ------
 window.closeEditView = function() {
-  console.log('closeEditView');
   document.getElementById('ticket-overview-container').classList.remove('hidden');
   editContainer.classList.add('hidden');
   editContent.innerHTML = '';
@@ -1324,32 +1193,24 @@ window.closeEditView = function() {
 
 // ------ Speichern der Bearbeitung ------
 window.saveEditView = async function() {
-  console.log('saveEditView');
   const saveStatus = document.getElementById('edit-save-status');
-  if (saveStatus) {
-    saveStatus.classList.remove('hidden');
-    saveStatus.textContent = '⏳ Speichern...';
-  }
+  if (saveStatus) { saveStatus.classList.add('hidden'); saveStatus.textContent = '⏳ Speichern...'; saveStatus.classList.remove('hidden'); }
 
   // Daten aus allen Tabs sammeln
   const enabled = document.getElementById('edit-panel-enabled').checked;
   const panelName = document.getElementById('edit-panel-name').value.trim();
   const supportRoles = getEditSelectedRoles('edit-support-roles');
   const categoryId = document.getElementById('edit-ticket-category').value;
-  
   const title = document.getElementById('edit-panel-title').value.trim();
   const description = document.getElementById('edit-panel-desc').value.trim();
   const color = document.getElementById('edit-panel-color').value;
   const imageInput = document.getElementById('edit-image-input');
   const image = imageInput?.dataset.value || '';
-  
   const creationMessage = document.getElementById('edit-create-msg').value.trim();
   const channelNameTemplate = document.getElementById('edit-channel-template').value.trim() || '{panel.name}-{ticket.creator.username}';
-  
   const allowedRoles = getEditSelectedRoles('edit-allowed-roles');
   const deniedRoles = getEditSelectedRoles('edit-denied-roles');
   const maxTickets = parseInt(document.getElementById('edit-max-tickets').value) || 1;
-  
   const overflowEnabled = document.getElementById('edit-overflow-enabled').checked;
   const overflowSelect = document.getElementById('edit-ticket-overflow');
   const overflowCategories = overflowSelect ? Array.from(overflowSelect.selectedOptions).map(o => o.value) : [];
@@ -1359,6 +1220,7 @@ window.saveEditView = async function() {
   const privateTranscripts = document.getElementById('edit-private-transcripts').checked;
   const claimEnabled = document.getElementById('edit-claim-enabled').checked;
   const buttons = collectButtons().filter(b => b.label.trim());
+  const options = collectOptions().filter(o => o.label.trim());
 
   if (!panelName) {
     showToast('Bitte gib einen Panel-Namen ein.', 'error');
@@ -1392,7 +1254,8 @@ window.saveEditView = async function() {
       saveImages,
       privateTranscripts,
       claimEnabled,
-      buttons
+      buttons,
+      options
     };
 
     if (editingIndex !== null) {
@@ -1418,7 +1281,6 @@ window.saveEditView = async function() {
 
 // ------ Ticket löschen ------
 window.deleteTicketOption = async function(index) {
-  console.log('deleteTicketOption für Index:', index);
   if (!confirm('Möchtest du dieses Ticket wirklich löschen?')) return;
   try {
     const config = await apiFetch(`/guild/${state.activeGuildId}/config`);
@@ -1438,13 +1300,10 @@ window.deleteTicketOption = async function(index) {
 
 // ------ Event Listener für Ticket-Tab ------
 document.addEventListener('DOMContentLoaded', function() {
-  console.log('DOMContentLoaded – Event Listener werden registriert');
   const ticketTabBtn = document.querySelector('[data-tab="tickets"]');
   if (ticketTabBtn) {
     ticketTabBtn.addEventListener('click', function() {
-      setTimeout(() => {
-        if (state.activeGuildId) renderTicketOverview();
-      }, 50);
+      setTimeout(() => { if (state.activeGuildId) renderTicketOverview(); }, 50);
     });
   }
   const overlay = document.getElementById('manage-overlay');
@@ -1467,3 +1326,6 @@ document.addEventListener('DOMContentLoaded', loadDashboard);
 // Funktionen global verfügbar machen
 window.switchEditTab = switchEditTab;
 window.renderTicketOverview = renderTicketOverview;
+window.addOptionRow = addOptionRow;
+window.updateEditPreview = updateEditPreview;
+window.switchToSelectedPanel = switchToSelectedPanel;
