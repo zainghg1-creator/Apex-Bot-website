@@ -923,15 +923,15 @@ header.scrolled {
 }
 
 .role-chip.selected {
-  background: var(--accent);
-  color: #000000;
-  border-color: var(--accent);
-  box-shadow: 0 2px 12px rgba(255, 255, 255, 0.15);
+  background: var(--accent-purple);
+  color: #ffffff;
+  border-color: var(--accent-purple);
+  box-shadow: 0 2px 12px rgba(109, 94, 248, 0.30);
 }
 
 .role-chip.selected .chip-icon {
-  opacity: 0.7;
-  color: #000000;
+  opacity: 0.85;
+  color: #ffffff;
 }
 
 .chip-empty {
