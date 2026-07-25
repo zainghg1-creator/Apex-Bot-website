@@ -1,6 +1,6 @@
 'use strict';
 
-console.log('✅ NEUE dashboard.js – Ticket-System mit Senden-Funktion!');
+console.log('✅ NEUE dashboard.js – Ticket-System mit Log-Kanal!');
 
 // ============================================================
 // KONFIGURATION
@@ -816,14 +816,12 @@ async function renderTicketOverview() {
       toolbarContainer.className = 'ticket-toolbar';
       container.prepend(toolbarContainer);
     }
-    // Zähler und neue Toolbar kombinieren
     toolbarContainer.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
         <span class="ticket-count" id="ticket-panel-count">${options.length} Panel${options.length !== 1 ? 's' : ''}</span>
         ${toolbarHtml}
       </div>
     `;
-    // Zähler-Referenz aktualisieren
     const newCountEl = toolbarContainer.querySelector('.ticket-count');
     if (newCountEl) newCountEl.textContent = `${options.length} Panel${options.length !== 1 ? 's' : ''}`;
 
@@ -922,7 +920,7 @@ window.toggleTicketStatus = async function(index, checked) {
 window.openAddTicket = function() { editingIndex = null; showEditView(null); };
 window.openEditView = function(index) { editingIndex = index; showEditView(index); };
 
-// ------ Bearbeitungsansicht mit ALLEN Einstellungen (inkl. Kanalauswahl) ------
+// ------ Bearbeitungsansicht mit ALLEN Einstellungen (inkl. Log-Kanal) ------
 async function showEditView(index) {
   document.getElementById('ticket-overview-container').classList.add('hidden');
   editContainer.classList.remove('hidden');
@@ -943,6 +941,7 @@ async function showEditView(index) {
       enabled: true,
       panelName: 'Neues Ticket',
       panelChannelId: '',
+      logChannelId: '', // NEU: Log-Kanal
       supportRoles: [],
       categoryId: '',
       title: 'Support Center',
@@ -1006,7 +1005,7 @@ async function showEditView(index) {
         <button class="edit-tab-btn" data-edit-tab="options" onclick="switchEditTab('options')"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Optionen</button>
       </div>
 
-      <!-- TAB: Allgemein (inkl. Kanalauswahl) -->
+      <!-- TAB: Allgemein (inkl. Kanalauswahl + Log-Kanal) -->
       <div id="edit-tab-general" class="edit-tab-content">
         <div class="form-group">
           <div class="switch-row">
@@ -1025,6 +1024,12 @@ async function showEditView(index) {
           <label for="edit-panel-channel">📢 Kanal für das Panel</label>
           <select id="edit-panel-channel" style="width:100%; background:var(--bg-base); border:1px solid var(--border-subtle); border-radius:8px; padding:8px 12px; color:var(--text-primary); min-height:38px;"></select>
           <small>Hier wird das Ticket-Panel (Embed) gesendet.</small>
+        </div>
+        <!-- NEU: Log-Kanal -->
+        <div class="form-group">
+          <label for="edit-log-channel">📋 Log-Kanal (Transkripte & Logs)</label>
+          <select id="edit-log-channel" style="width:100%; background:var(--bg-base); border:1px solid var(--border-subtle); border-radius:8px; padding:8px 12px; color:var(--text-primary); min-height:38px;"></select>
+          <small>Hier werden Logs (Ticket geöffnet/geschlossen) und Transkripte gesendet.</small>
         </div>
         <div class="form-group">
           <label>Support-Rollen (Zugriff)</label>
@@ -1193,6 +1198,18 @@ async function showEditView(index) {
     }
   }
 
+  // NEU: Log-Kanal befüllen (Textkanäle)
+  const logChannelSelect = document.getElementById('edit-log-channel');
+  if (logChannelSelect) {
+    const textChannels = state.guildChannels.filter(c => c.type === 0);
+    logChannelSelect.innerHTML = textChannels.length
+      ? textChannels.map(c => `<option value="${c.id}" ${c.id === data.logChannelId ? 'selected' : ''}># ${escapeHtml(c.name)}</option>`).join('')
+      : `<option value="">Keine Textkanäle gefunden</option>`;
+    if (data.logChannelId && !textChannels.some(c => c.id === data.logChannelId)) {
+      logChannelSelect.value = '';
+    }
+  }
+
   // Ausgewählte Kategorie setzen
   if (data.categoryId) document.getElementById('edit-ticket-category').value = data.categoryId;
 
@@ -1282,7 +1299,7 @@ window.closeEditView = function() {
   renderTicketOverview();
 };
 
-// ------ Speichern der Bearbeitung (mit Kanal) ------
+// ------ Speichern der Bearbeitung (mit Log-Kanal) ------
 window.saveEditView = async function() {
   const saveStatus = document.getElementById('edit-save-status');
   if (saveStatus) { saveStatus.classList.add('hidden'); saveStatus.textContent = '⏳ Speichern...'; saveStatus.classList.remove('hidden'); }
@@ -1291,6 +1308,7 @@ window.saveEditView = async function() {
   const enabled = document.getElementById('edit-panel-enabled').checked;
   const panelName = document.getElementById('edit-panel-name').value.trim();
   const panelChannelId = document.getElementById('edit-panel-channel')?.value || '';
+  const logChannelId = document.getElementById('edit-log-channel')?.value || ''; // NEU
   const supportRoles = getEditSelectedRoles('edit-support-roles');
   const categoryId = document.getElementById('edit-ticket-category').value;
   const title = document.getElementById('edit-panel-title').value.trim();
@@ -1329,6 +1347,7 @@ window.saveEditView = async function() {
       enabled,
       panelName,
       panelChannelId,
+      logChannelId, // NEU gespeichert
       supportRoles,
       categoryId,
       title,
