@@ -537,7 +537,7 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
 });
 
 // ============================================================
-// VERIFICATION PANEL SENDEN (MIT VOLLER EMBED-KONFIG)
+// VERIFICATION PANEL SENDEN (MIT VERBESSERTER FARBKONVERTIERUNG)
 // ============================================================
 app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req, res) => {
   const { guildId } = req.params;
@@ -552,6 +552,8 @@ app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req,
     buttonLabel
   } = req.body;
 
+  console.log('📤 Empfangene Farbdaten:', { color, raw: req.body });
+
   if (!channelId || !method || !roleId) {
     return res.status(400).json({ error: 'channelId, method und roleId sind erforderlich.' });
   }
@@ -562,13 +564,33 @@ app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req,
       return res.status(500).json({ error: 'BOT_TOKEN nicht konfiguriert.' });
     }
 
+    // ============================================================
+    // 🎨 ROBUSTE FARBKONVERTIERUNG
+    // ============================================================
+    let parsedColor = 0x6d5ef8; // Standard-Farbe (lila)
+    if (color) {
+      let hex = color.replace(/[^0-9a-fA-F]/g, ''); // nur hex-Zeichen
+      if (hex.length === 3) {
+        // Kurzform erweitern: #0f0 -> 00ff00
+        hex = hex.split('').map(c => c + c).join('');
+      }
+      if (hex.length === 6) {
+        parsedColor = parseInt(hex, 16);
+        console.log('✅ Geparste Farbe:', parsedColor, 'Hex:', hex);
+      } else {
+        console.warn('⚠️ Ungültige Farbe, verwende Standard:', hex);
+      }
+    } else {
+      console.warn('⚠️ Keine Farbe übergeben, verwende Standard.');
+    }
+
     // Embed mit benutzerdefinierten Werten
     const embed = {
       title: title || '🔐 Verifizierung',
       description: description || (method === 'button'
         ? 'Klicke auf den Button, um dich zu verifizieren.'
         : 'Beantworte die folgende Aufgabe, um dich zu verifizieren.'),
-      color: parseInt(color ? color.replace('#', '') : '6d5ef8', 16),
+      color: parsedColor,
       footer: { text: 'Verifizierungssystem • Powered by Apex' }
     };
 
@@ -601,6 +623,8 @@ app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req,
     } else {
       return res.status(400).json({ error: 'Ungültige Methode.' });
     }
+
+    console.log('📤 Sende an Discord:', { embed, components });
 
     const response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
       method: 'POST',
