@@ -565,7 +565,7 @@ app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req,
     }
 
     // ============================================================
-    // 🎨 ROBUSTE FARBKONVERTIERUNG (FALLBACK: DISCORD-BLAU, NICHT WEISS)
+    // 🎨 ROBUSTE FARBKONVERTIERUNG (FALLBACK: DISCORD-BLAU)
     // ============================================================
     let parsedColor = 0x5865f2; // Standard: Discord-Blau
     if (color) {
