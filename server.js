@@ -415,9 +415,7 @@ app.get('/api/test', (req, res) => {
 });
 
 // ============================================================
-// ============================================================
-// ⭐ NEU: Ticket-Panel in Discord senden
-// ============================================================
+// ⭐ TICKET-PANEL SENDEN (MIT EMBED + DROPDOWN)
 // ============================================================
 app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res) => {
   const { guildId } = req.params;
@@ -433,18 +431,32 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
     // 1. Konfiguration laden
     const config = await getGuildConfig(guildId);
     const tickets = config.tickets || {};
-    const options = tickets.options || [];
+    
+    // Die globale Liste aller Panels
+    const panels = tickets.options || [];
 
-    if (panelIndex < 0 || panelIndex >= options.length) {
+    if (panelIndex < 0 || panelIndex >= panels.length) {
       return res.status(404).json({ error: `Panel mit Index ${panelIndex} nicht gefunden.` });
     }
 
-    const panel = options[panelIndex];
+    const panel = panels[panelIndex];
     if (!panel) {
       return res.status(404).json({ error: 'Panel-Daten ungültig.' });
     }
 
-    // 2. Embed erstellen (mit Standardwerten)
+    // 2. Die verlinkten Kategorien aus dem Panel holen
+    const linkedOptions = panel.options || [];
+    
+    if (linkedOptions.length === 0) {
+      return res.status(400).json({
+        error: '⚠️ Dieses Panel hat keine verlinkten Kategorien!',
+        hint: 'Füge im Dashboard unter "Optionen" mindestens eine Kategorie hinzu.'
+      });
+    }
+
+    console.log('📋 Verlinkte Kategorien:', linkedOptions);
+
+    // 3. Embed erstellen
     const embed = {
       title: panel.title || 'Support Center',
       description: panel.description || 'Wähle eine Kategorie, um ein Ticket zu öffnen.',
@@ -455,12 +467,34 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
       timestamp: new Date().toISOString()
     };
 
-    // Falls ein Bild hinterlegt ist
     if (panel.image && panel.image.startsWith('http')) {
       embed.image = { url: panel.image };
     }
 
-    // 3. An Discord senden
+    // 4. Select Menu (Dropdown) erstellen
+    const selectOptions = linkedOptions.map(opt => {
+      const option = {
+        label: opt.label || 'Unbenannt',
+        value: opt.categoryId || 'no_category',
+        description: `Ticket in ${opt.label || 'dieser Kategorie'} öffnen`
+      };
+      if (opt.emoji) {
+        option.emoji = { name: opt.emoji };
+      }
+      return option;
+    });
+
+    const components = [{
+      type: 1, // Action Row
+      components: [{
+        type: 3, // Select Menu
+        custom_id: `ticket_select_${panelIndex}_${guildId}`,
+        placeholder: 'Wähle eine Kategorie aus...',
+        options: selectOptions
+      }]
+    }];
+
+    // 5. An Discord senden
     const botToken = process.env.BOT_TOKEN;
     if (!botToken) {
       console.error('❌ BOT_TOKEN fehlt in .env!');
@@ -474,11 +508,11 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        embeds: [embed]
+        embeds: [embed],
+        components: components
       })
     });
 
-    // 4. Antwort auswerten
     const responseData = await response.json();
 
     if (!response.ok) {
@@ -490,7 +524,11 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
     }
 
     console.log('✅ Panel gesendet, Nachricht-ID:', responseData.id);
-    res.json({ success: true, message: 'Panel wurde erfolgreich gesendet.', data: responseData });
+    res.json({ 
+      success: true, 
+      message: 'Panel wurde erfolgreich gesendet!', 
+      data: responseData 
+    });
 
   } catch (err) {
     console.error('❌ Fehler beim Senden des Panels:', err);
