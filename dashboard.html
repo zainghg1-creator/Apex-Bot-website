@@ -15,8 +15,10 @@
     :root {
       --bg-base: #000000;
       --bg-surface: #0a0a0a;
-      --border-subtle: rgba(255, 255, 255, 0.12);
-      --border-active: rgba(255, 255, 255, 0.4);
+      --bg-card: #141414;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-medium: rgba(255, 255, 255, 0.12);
+      --border-active: rgba(255, 255, 255, 0.25);
       --text-primary: #ffffff;
       --text-muted: #a1a1aa;
       --text-dim: #71717a;
@@ -37,8 +39,8 @@
       position: fixed;
       inset: 0;
       background-image:
-        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
       background-size: 40px 40px;
       z-index: -2;
       pointer-events: none;
@@ -52,27 +54,22 @@
       display: block;
     }
 
-    /* ===== HEADER mit APEX rechts ===== */
+    /* Header */
     header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 10px 4%;
-      backdrop-filter: blur(12px);
-      background: rgba(0, 0, 0, 0.85);
+      padding: 12px 4%;
+      backdrop-filter: blur(16px);
+      background: rgba(0, 0, 0, 0.8);
       border-bottom: 1px solid var(--border-subtle);
       position: sticky;
       top: 0;
       z-index: 100;
-      min-height: 56px;
-      gap: 8px;
+      min-height: 60px;
     }
 
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
+    .header-left { display: flex; align-items: center; gap: 12px; }
 
     .hamburger-btn {
       background: rgba(255,255,255,0.05);
@@ -89,12 +86,8 @@
       transition: all 0.2s ease;
       padding: 0;
       flex-shrink: 0;
-      touch-action: manipulation;
     }
-    .hamburger-btn:hover {
-      background: rgba(255,255,255,0.10);
-      border-color: var(--border-active);
-    }
+    .hamburger-btn:hover { background: rgba(255,255,255,0.10); border-color: var(--border-active); }
     .hamburger-btn span {
       display: block;
       width: 18px;
@@ -104,29 +97,19 @@
       transition: all 0.25s ease;
       transform-origin: center;
     }
-    .hamburger-btn.active span:nth-child(1) {
-      transform: translateY(6px) rotate(45deg);
-    }
-    .hamburger-btn.active span:nth-child(2) {
-      opacity: 0;
-      transform: scaleX(0);
-    }
-    .hamburger-btn.active span:nth-child(3) {
-      transform: translateY(-6px) rotate(-45deg);
-    }
+    .hamburger-btn.active span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+    .hamburger-btn.active span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+    .hamburger-btn.active span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
 
-    .brand-right {
+    .brand {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       text-decoration: none;
       color: var(--text-primary);
-      flex-shrink: 0;
-      margin-left: auto;
     }
-    .brand-right .brand-logo {
-      width: 28px;
-      height: 28px;
+    .brand-logo {
+      width: 30px; height: 30px;
       background: #000;
       border-radius: 50%;
       display: flex;
@@ -134,18 +117,13 @@
       justify-content: center;
       border: 1px solid rgba(255, 255, 255, 0.3);
     }
-    .brand-right .brand-logo svg { width: 14px; height: 14px; }
-    .brand-right .brand-name {
-      font-size: 0.9rem;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-    }
-    .brand-right .brand-name span { color: var(--text-muted); }
+    .brand-logo svg { width: 16px; height: 16px; }
+    .brand-name { font-size: 1rem; font-weight: 800; letter-spacing: -0.02em; }
 
     .nav-center {
       display: none;
       align-items: center;
-      gap: 16px;
+      gap: 24px;
       position: absolute;
       left: 50%;
       transform: translateX(-50%);
@@ -153,54 +131,59 @@
     .nav-link {
       color: var(--text-muted);
       text-decoration: none;
-      font-size: 0.8rem;
+      font-size: 0.85rem;
       font-weight: 600;
       transition: color 0.2s ease;
-      padding: 4px 0;
     }
     .nav-link:hover { color: var(--text-primary); }
 
     .user-chip {
       display: flex;
       align-items: center;
-      gap: 6px;
-      background: rgba(255, 255, 255, 0.05);
-      padding: 4px 6px 4px 4px;
+      gap: 8px;
+      background: rgba(255,255,255,0.05);
+      padding: 4px 8px 4px 4px;
       border-radius: 30px;
       border: 1px solid var(--border-subtle);
       flex-shrink: 0;
     }
     .user-chip img {
-      width: 26px;
-      height: 26px;
+      width: 28px;
+      height: 28px;
       border-radius: 50%;
       object-fit: cover;
       border: 1px solid var(--border-subtle);
     }
     #user-name {
-      font-size: 0.75rem;
+      font-size: 0.8rem;
       font-weight: 600;
       display: none;
     }
     .logout-btn {
       color: var(--text-muted);
       text-decoration: none;
-      font-size: 0.65rem;
+      font-size: 0.7rem;
       font-weight: 600;
-      padding: 3px 8px;
+      padding: 4px 10px;
       border-radius: 20px;
-      background: rgba(255, 255, 255, 0.05);
+      background: rgba(255,255,255,0.05);
       transition: all 0.2s ease;
     }
-    .logout-btn:hover {
-      color: var(--text-primary);
-      background: rgba(255, 255, 255, 0.12);
+    .logout-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.12); }
+
+    .brand-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
     }
 
-    /* Buttons */
     .btn {
-      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-      padding: 10px 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 18px;
       border-radius: 10px;
       font-size: 0.85rem;
       font-weight: 600;
@@ -210,18 +193,16 @@
       transition: all 0.2s ease;
       white-space: nowrap;
       font-family: inherit;
-      min-height: 44px;
-      min-width: 44px;
+      min-height: 42px;
       touch-action: manipulation;
     }
     .btn-primary { background: #ffffff; color: #000000; }
     .btn-primary:hover { background: #e4e4e7; transform: translateY(-2px); }
-    .btn-secondary { background: rgba(255, 255, 255, 0.05); color: var(--text-primary); border-color: var(--border-subtle); }
-    .btn-secondary:hover { background: rgba(255, 255, 255, 0.12); border-color: var(--border-active); transform: translateY(-2px); }
+    .btn-secondary { background: rgba(255,255,255,0.05); color: var(--text-primary); border-color: var(--border-subtle); }
+    .btn-secondary:hover { background: rgba(255,255,255,0.10); border-color: var(--border-active); transform: translateY(-2px); }
     .btn-danger { background: #ef4444; color: #ffffff; }
     .btn-danger:hover { background: #dc2626; transform: translateY(-2px); }
 
-    /* Container / page heading */
     .container {
       max-width: 1100px;
       margin: 0 auto;
@@ -229,23 +210,20 @@
       width: 100%;
     }
 
-    .page-heading { text-align: center; margin-bottom: 24px; }
-    .page-heading h2 { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 4px; }
-    .page-subtitle { color: var(--text-muted); font-size: 0.85rem; }
+    .page-heading { text-align: center; margin-bottom: 28px; }
+    .page-heading h2 { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 4px; }
+    .page-subtitle { color: var(--text-muted); font-size: 0.9rem; }
 
     .state-box {
       background: var(--bg-surface);
       padding: 2rem 1.5rem;
-      border-radius: 16px;
+      border-radius: 14px;
       text-align: center;
       color: var(--text-muted);
       border: 1px solid var(--border-subtle);
       font-size: 0.9rem;
     }
-    .state-box.error {
-      border-color: rgba(239, 68, 68, 0.3);
-      color: #fca5a5;
-    }
+    .state-box.error { border-color: rgba(239,68,68,0.3); color: #fca5a5; }
 
     .guild-grid {
       display: grid;
@@ -255,47 +233,31 @@
 
     .guild-card {
       background: var(--bg-surface);
-      padding: 1rem;
+      padding: 1.2rem;
       border-radius: 14px;
       border: 1px solid var(--border-subtle);
       display: flex;
       flex-direction: column;
-      align-items: stretch;
-      gap: 10px;
+      gap: 12px;
       transition: all 0.25s ease;
-      cursor: default;
     }
-    .guild-card:hover {
-      border-color: var(--border-active);
-      transform: translateY(-2px);
-    }
+    .guild-card:hover { border-color: var(--border-active); transform: translateY(-2px); }
     .guild-card.add-card {
       border-style: dashed;
-      border-color: var(--border-subtle);
       justify-content: center;
       align-items: center;
       text-align: center;
       cursor: pointer;
       background: transparent;
     }
-    .guild-card.add-card:hover {
-      border-color: var(--border-active);
-      background: rgba(255,255,255,0.02);
-    }
+    .guild-card.add-card:hover { border-color: var(--border-active); background: rgba(255,255,255,0.02); }
 
-    .guild-info {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      min-width: 0;
-      width: 100%;
-    }
+    .guild-info { display: flex; align-items: center; gap: 12px; min-width: 0; width: 100%; }
     .guild-icon {
-      width: 40px;
-      height: 40px;
+      width: 42px; height: 42px;
       border-radius: 50%;
       object-fit: cover;
-      background: rgba(255, 255, 255, 0.05);
+      background: rgba(255,255,255,0.05);
       border: 1px solid var(--border-subtle);
       flex-shrink: 0;
       font-size: 1.2rem;
@@ -306,44 +268,21 @@
     .guild-name {
       flex: 1;
       min-width: 0;
-      font-size: 0.9rem;
+      font-size: 0.95rem;
       font-weight: 700;
       line-height: 1.3;
       color: var(--text-primary);
       overflow: hidden;
       text-overflow: ellipsis;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      white-space: normal;
     }
-    .guild-detail {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-    .guild-detail span {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .guild-action {
-      display: flex;
-      gap: 6px;
-      margin-top: 4px;
-      flex-wrap: wrap;
-    }
-    .guild-action .btn {
-      flex: 1;
-      min-width: 50px;
-      padding: 6px 10px;
-      font-size: 0.75rem;
-      min-height: 36px;
-    }
+    .guild-detail { font-size: 0.8rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 2px; }
+    .guild-detail span { display: flex; align-items: center; gap: 4px; }
+    .guild-action { display: flex; gap: 6px; flex-wrap: wrap; }
+    .guild-action .btn { flex: 1; min-width: 50px; padding: 6px 12px; font-size: 0.75rem; min-height: 34px; }
 
-    /* ===== OVERLAY / SIDEBAR ===== */
+    .hidden { display: none !important; }
+
+    /* Overlay */
     .overlay {
       position: fixed;
       inset: 0;
@@ -353,6 +292,7 @@
       z-index: 200;
     }
 
+    /* Sidebar – wie Tickety */
     .sidebar {
       background: var(--bg-surface);
       border-bottom: 1px solid var(--border-subtle);
@@ -360,10 +300,10 @@
       display: flex;
       flex-direction: row;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       overflow-x: auto;
       flex-shrink: 0;
-      min-height: 52px;
+      min-height: 50px;
       scrollbar-width: thin;
       transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
     }
@@ -378,8 +318,7 @@
       margin-right: 6px;
     }
     .guild-icon-small {
-      width: 30px;
-      height: 30px;
+      width: 28px; height: 28px;
       border-radius: 50%;
       object-fit: cover;
       border: 1px solid var(--border-subtle);
@@ -396,7 +335,7 @@
     .sidebar-nav {
       display: flex;
       flex-direction: row;
-      gap: 4px;
+      gap: 2px;
       flex: 1;
       overflow-x: auto;
       padding: 2px 0;
@@ -408,9 +347,9 @@
       background: transparent;
       border: none;
       color: var(--text-muted);
-      padding: 5px 8px;
+      padding: 6px 10px;
       border-radius: 8px;
-      font-size: 0.68rem;
+      font-size: 0.7rem;
       font-weight: 600;
       cursor: pointer;
       font-family: inherit;
@@ -422,38 +361,11 @@
       flex-shrink: 0;
       min-height: 32px;
     }
-    .tab-btn:hover {
-      color: var(--text-primary);
-      background: rgba(255, 255, 255, 0.05);
-    }
-    .tab-btn.active {
-      background: #ffffff;
-      color: #000000;
-    }
-    .tab-btn.active .tab-icon svg {
-      stroke: #000000;
-    }
-    .tab-icon {
-      width: 14px;
-      height: 14px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-    .tab-icon svg {
-      width: 14px;
-      height: 14px;
-      stroke: var(--text-muted);
-      fill: none;
-      stroke-width: 2;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      transition: stroke 0.2s ease;
-    }
-    .tab-btn:hover .tab-icon svg {
-      stroke: var(--text-primary);
-    }
+    .tab-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.05); }
+    .tab-btn.active { background: #ffffff; color: #000000; }
+    .tab-btn.active .tab-icon svg { stroke: #000000; }
+    .tab-icon { width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .tab-icon svg { width: 14px; height: 14px; stroke: var(--text-muted); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
     .back-btn {
       flex-shrink: 0;
@@ -465,246 +377,199 @@
 
     .content-area {
       flex: 1;
-      padding: 1rem;
+      padding: 1.2rem;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
-      position: relative;
-    }
-
-    .hamburger-overlay-btn {
-      display: none;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      background: rgba(0,0,0,0.8);
-      backdrop-filter: blur(8px);
-      border: 1px solid var(--border-subtle);
-      border-radius: 8px;
-      width: 38px;
-      height: 38px;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      padding: 0;
-      margin-bottom: 12px;
-      flex-shrink: 0;
-      touch-action: manipulation;
-    }
-    .hamburger-overlay-btn span {
-      display: block;
-      width: 18px;
-      height: 2px;
-      background: var(--text-primary);
-      border-radius: 2px;
-      transition: all 0.25s ease;
-      transform-origin: center;
-    }
-    .hamburger-overlay-btn.active span:nth-child(1) {
-      transform: translateY(6px) rotate(45deg);
-    }
-    .hamburger-overlay-btn.active span:nth-child(2) {
-      opacity: 0;
-      transform: scaleX(0);
-    }
-    .hamburger-overlay-btn.active span:nth-child(3) {
-      transform: translateY(-6px) rotate(-45deg);
     }
 
     .content-area h2 {
-      font-size: 1.2rem;
+      font-size: 1.3rem;
       font-weight: 800;
       letter-spacing: -0.01em;
       margin-bottom: 4px;
     }
     .module-page > p {
       color: var(--text-muted);
-      font-size: 0.8rem;
-      margin-bottom: 0.8rem;
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
     }
 
-    /* Cards & Forms */
-    .card {
+    /* Tickety-style Panel Card */
+    .panel-card {
       background: var(--bg-surface);
       border: 1px solid var(--border-subtle);
       border-radius: 12px;
-      padding: 1rem;
+      padding: 1.2rem;
+      margin-bottom: 1rem;
+      transition: all 0.25s ease;
     }
-    .card h3 {
+    .panel-card:hover { border-color: var(--border-active); }
+    .panel-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .panel-card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .panel-card-title .emoji { font-size: 1.2rem; }
+    .panel-card-status {
       font-size: 0.65rem;
-      font-weight: 600;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--text-muted);
-      margin-bottom: 6px;
-    }
-    .card p {
-      font-size: 1.1rem;
-      font-weight: 800;
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-top: 0.8rem;
-    }
-    .stats-grid .card p { font-size: 1rem; }
-
-    .form-card {
-      margin-top: 0.8rem;
+      letter-spacing: 0.03em;
+      padding: 3px 10px;
+      border-radius: 20px;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-dim);
       display: flex;
-      flex-direction: column;
-      gap: 14px;
-      max-width: 100%;
-    }
-    .form-group {
-      display: flex;
-      flex-direction: column;
+      align-items: center;
       gap: 4px;
     }
-    .form-group label {
+    .panel-card-status.active { color: #22c55e; border-color: rgba(34,197,94,0.3); }
+    .panel-card-status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-dim); }
+    .panel-card-status.active .dot { background: #22c55e; }
+
+    .panel-card-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
       font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+    .panel-card-meta span { display: flex; align-items: center; gap: 4px; }
+
+    .panel-card-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .panel-card-actions .btn { padding: 6px 14px; font-size: 0.75rem; min-height: 32px; }
+
+    /* Card für "Neues Panel" */
+    .panel-add-card {
+      background: transparent;
+      border: 1px dashed var(--border-subtle);
+      border-radius: 12px;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      text-align: center;
+      min-height: 140px;
+    }
+    .panel-add-card:hover { border-color: var(--border-active); background: rgba(255,255,255,0.02); }
+    .panel-add-card .icon { font-size: 2rem; }
+    .panel-add-card .label { font-weight: 700; font-size: 1rem; color: var(--text-primary); }
+    .panel-add-card .sub { color: var(--text-muted); font-size: 0.8rem; }
+
+    /* Edit View – wie Tickety */
+    .edit-view { margin-top: 0.5rem; }
+    .edit-toolbar {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+      background: var(--bg-surface);
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border-subtle);
+    }
+    .edit-toolbar label {
       font-weight: 600;
       color: var(--text-muted);
+      font-size: 0.8rem;
+      flex-shrink: 0;
     }
-    .form-group input,
-    .form-group textarea,
-    .form-group select {
+    .edit-toolbar select {
+      flex: 1;
+      min-width: 140px;
+      background: var(--bg-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: var(--text-primary);
+      min-height: 36px;
+      font-size: 0.8rem;
+    }
+
+    /* Tickety Tabs */
+    .edit-tabs {
+      display: flex;
+      gap: 2px;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 1.2rem;
+      flex-wrap: wrap;
+    }
+    .edit-tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 8px 16px;
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s ease;
+      font-family: inherit;
+      font-size: 0.8rem;
+    }
+    .edit-tab-btn:hover { color: var(--text-primary); }
+    .edit-tab-btn.active { color: var(--text-primary); border-bottom-color: #ffffff; }
+    .edit-tab-content.hidden { display: none; }
+
+    .form-card {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-width: 100%;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
+    .form-group input, .form-group textarea, .form-group select {
       width: 100%;
       background: var(--bg-base);
       border: 1px solid var(--border-subtle);
       border-radius: 8px;
-      padding: 8px 10px;
+      padding: 8px 12px;
       color: var(--text-primary);
       outline: none;
       font-family: inherit;
-      font-size: 0.8rem;
+      font-size: 0.85rem;
       transition: all 0.2s ease;
-      appearance: none;
-      -webkit-appearance: none;
       min-height: 38px;
     }
+    .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+      border-color: var(--border-active);
+      box-shadow: 0 0 0 2px rgba(255,255,255,0.05);
+    }
+    .form-group textarea { resize: vertical; min-height: 60px; }
+    .form-group small { color: var(--text-dim); font-size: 0.7rem; }
     .form-group select {
+      appearance: none;
+      -webkit-appearance: none;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
       background-repeat: no-repeat;
       background-position: right 10px center;
       padding-right: 32px;
-      cursor: pointer;
     }
-    .form-group select:hover {
-      border-color: var(--border-active);
-      background-color: rgba(255, 255, 255, 0.02);
-    }
-    .form-group input:focus,
-    .form-group textarea:focus,
-    .form-group select:focus {
-      border-color: var(--border-active);
-      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05);
-    }
-    .form-group select option {
-      background: #000000;
-      color: #ffffff;
-      padding: 8px;
-    }
-    .form-group small {
-      color: var(--text-dim);
-      font-size: 0.65rem;
-    }
-    .form-action {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 4px;
-    }
-    .form-action .btn {
-      flex: 1;
-      min-width: 80px;
-      padding: 8px 14px;
-      font-size: 0.8rem;
-      min-height: 38px;
-    }
-
-    .status-success {
-      color: var(--text-primary);
-      font-size: 0.75rem;
-      font-weight: 600;
-    }
-    .hidden { display: none !important; }
-
-    .status-dot {
-      display: inline-block;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-    }
-    .status-dot.online {
-      background: #ffffff;
-      box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
-    }
-
-    footer {
-      text-align: center;
-      padding: 24px 16px;
-      border-top: 1px solid var(--border-subtle);
-      color: var(--text-dim);
-      font-size: 0.7rem;
-    }
-
-    .subtabs {
-      display: flex;
-      gap: 4px;
-      margin: 0.8rem 0 0.4rem;
-      border-bottom: 1px solid var(--border-subtle);
-      flex-wrap: wrap;
-    }
-    .subtab-btn {
-      background: transparent;
-      border: none;
-      color: var(--text-muted);
-      padding: 6px 2px;
-      font-size: 0.75rem;
-      font-weight: 700;
-      cursor: pointer;
-      font-family: inherit;
-      border-bottom: 2px solid transparent;
-      transition: all 0.2s ease;
-      flex-shrink: 0;
-    }
-    .subtab-btn:hover { color: var(--text-primary); }
-    .subtab-btn.active { color: var(--text-primary); border-bottom-color: #ffffff; }
-
-    .color-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .color-row input[type="color"] {
-      width: 38px;
-      height: 36px;
-      padding: 2px;
-      border: 1px solid var(--border-subtle);
-      border-radius: 6px;
-      background: var(--bg-base);
-      cursor: pointer;
-    }
-    .color-row input[type="text"] {
-      max-width: 100px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.75rem;
-    }
+    .form-group select option { background: #000; color: #fff; padding: 8px; }
 
     .switch-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 10px;
+      gap: 12px;
     }
-    .switch-row label { margin: 0; cursor: pointer; font-size: 0.8rem; }
+    .switch-row label { margin: 0; cursor: pointer; font-size: 0.85rem; }
     .switch {
       position: relative;
       width: 40px;
@@ -717,37 +582,28 @@
       border-radius: 30px; cursor: pointer; transition: 0.2s;
     }
     .switch-slider::before {
-      content: ''; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px;
-      background: var(--text-muted); border-radius: 50%; transition: 0.2s;
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      left: 3px;
+      top: 3px;
+      background: var(--text-muted);
+      border-radius: 50%;
+      transition: 0.2s;
     }
     .switch input:checked + .switch-slider { background: #ffffff; }
     .switch input:checked + .switch-slider::before { background: #000000; transform: translateX(18px); }
 
-    .image-upload {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .image-preview {
-      width: 56px;
-      height: 56px;
-      border-radius: 8px;
-      object-fit: cover;
-      background: var(--bg-base);
-      border: 1px solid var(--border-subtle);
-    }
-    .upload-btn-wrap input[type="file"] { display: none; }
-
     .chip-select {
       display: flex;
       flex-wrap: wrap;
-      gap: 4px;
+      gap: 6px;
       background: var(--bg-base);
       border: 1px solid var(--border-subtle);
       border-radius: 8px;
-      padding: 8px;
-      min-height: 38px;
+      padding: 10px;
+      min-height: 40px;
       transition: border-color 0.2s ease;
     }
     .chip-select:hover { border-color: var(--border-active); }
@@ -765,207 +621,81 @@
       user-select: none;
       transition: all 0.2s ease;
       color: var(--text-muted);
-      touch-action: manipulation;
     }
-    .role-chip .chip-icon {
-      font-size: 0.6rem;
-      opacity: 0.6;
-      font-weight: 800;
-    }
-    .role-chip:hover {
-      border-color: var(--border-active);
-      color: var(--text-primary);
-      background: rgba(255,255,255,0.08);
-    }
-    .role-chip.selected {
-      background: #ffffff;
-      color: #000000;
-      border-color: #ffffff;
-      box-shadow: 0 2px 8px rgba(255, 255, 255, 0.2);
-    }
-    .role-chip.selected .chip-icon { opacity: 0.8; color: #000000; }
-    .chip-empty { color: var(--text-dim); font-size: 0.75rem; padding: 4px 0; }
+    .role-chip:hover { border-color: var(--border-active); color: var(--text-primary); background: rgba(255,255,255,0.08); }
+    .role-chip.selected { background: #ffffff; color: #000000; border-color: #ffffff; box-shadow: 0 2px 8px rgba(255,255,255,0.15); }
+    .chip-empty { color: var(--text-dim); font-size: 0.8rem; padding: 4px 0; }
 
-    .button-row {
+    .color-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .color-row input[type="color"] { width: 38px; height: 36px; padding: 2px; border: 1px solid var(--border-subtle); border-radius: 6px; background: var(--bg-base); cursor: pointer; }
+    .color-row input[type="text"] { max-width: 100px; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; }
+
+    .image-upload { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .image-preview { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; background: var(--bg-base); border: 1px solid var(--border-subtle); }
+    .upload-btn-wrap input[type="file"] { display: none; }
+
+    .form-action { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
+    .form-action .btn { flex: 1; min-width: 100px; }
+
+    /* Option rows (wie bei Tickety) */
+    .option-row {
       display: flex;
       flex-wrap: wrap;
-      gap: 6px;
+      gap: 8px;
       align-items: center;
       background: var(--bg-base);
       border: 1px solid var(--border-subtle);
       border-radius: 8px;
-      padding: 8px;
+      padding: 10px;
+      margin-bottom: 8px;
     }
-    .button-row input,
-    .button-row select {
-      flex: 1;
-      min-width: 60px;
-      background: var(--bg-base);
-      border: 1px solid var(--border-subtle);
-      border-radius: 6px;
-      padding: 6px 8px;
-      color: var(--text-primary);
-      font-family: inherit;
-      font-size: 0.75rem;
-      min-height: 34px;
-    }
-    .button-remove {
-      background: transparent;
-      border: 1px solid var(--border-subtle);
-      color: var(--text-muted);
-      border-radius: 6px;
-      width: 30px;
-      height: 30px;
-      cursor: pointer;
-      font-size: 0.9rem;
-      flex-shrink: 0;
-      transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .button-remove:hover { color: #ff6b6b; border-color: #ff6b6b; }
-
-    .add-button-btn,
+    .option-row input, .option-row select { flex: 1; min-width: 80px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 6px 10px; color: var(--text-primary); font-family: inherit; font-size: 0.8rem; min-height: 34px; }
+    .option-remove { background: transparent; border: 1px solid var(--border-subtle); color: var(--text-muted); border-radius: 6px; width: 30px; height: 30px; cursor: pointer; font-size: 0.9rem; flex-shrink: 0; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; }
+    .option-remove:hover { color: #ff6b6b; border-color: #ff6b6b; }
     .add-option-btn {
       align-self: flex-start;
       background: rgba(255,255,255,0.05);
       border: 1px dashed var(--border-subtle);
       color: var(--text-muted);
-      padding: 6px 12px;
+      padding: 6px 14px;
       border-radius: 8px;
       cursor: pointer;
       font-family: inherit;
-      font-size: 0.75rem;
+      font-size: 0.8rem;
       font-weight: 600;
       transition: all 0.2s ease;
       min-height: 34px;
-      touch-action: manipulation;
     }
-    .add-button-btn:hover,
-    .add-option-btn:hover {
-      color: var(--text-primary);
-      border-color: var(--border-active);
-      background: rgba(255,255,255,0.06);
-    }
+    .add-option-btn:hover { color: var(--text-primary); border-color: var(--border-active); background: rgba(255,255,255,0.06); }
 
-    .option-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      align-items: center;
-      background: var(--bg-base);
-      border: 1px solid var(--border-subtle);
-      border-radius: 8px;
-      padding: 8px;
+    .option-support-roles {
+      width: 100%;
+      margin-top: 4px;
     }
-    .option-row input,
-    .option-row select {
-      flex: 1;
-      min-width: 60px;
-      background: var(--bg-base);
-      border: 1px solid var(--border-subtle);
-      border-radius: 6px;
-      padding: 6px 8px;
-      color: var(--text-primary);
-      font-family: inherit;
-      font-size: 0.75rem;
-      min-height: 34px;
-    }
-    .option-remove {
-      background: transparent;
-      border: 1px solid var(--border-subtle);
-      color: var(--text-muted);
-      border-radius: 6px;
-      width: 30px;
-      height: 30px;
-      cursor: pointer;
-      font-size: 0.9rem;
-      flex-shrink: 0;
-      transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .option-remove:hover { color: #ff6b6b; border-color: #ff6b6b; }
+    .option-support-roles label { font-size: 0.7rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 4px; }
 
-    /* Embed-Vorschau */
-    .discord-embed {
+    /* Discord Embed Preview */
+    .embed-preview {
       background: #2b2d31;
       border-left: 4px solid #ffffff;
       border-radius: 6px;
-      padding: 10px 12px;
+      padding: 12px 14px;
       font-family: 'Plus Jakarta Sans', sans-serif;
       color: #dbdee1;
-      display: flex;
-      gap: 10px;
-      justify-content: space-between;
     }
-    .discord-embed-body { flex: 1; min-width: 0; }
-    .discord-embed-title {
-      font-weight: 700;
-      color: #ffffff;
-      margin-bottom: 4px;
-      font-size: 0.85rem;
-    }
-    .discord-embed-desc {
-      font-size: 0.75rem;
-      line-height: 1.4;
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-    .discord-embed-thumb {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      object-fit: cover;
-      flex-shrink: 0;
-    }
-    .discord-embed-image {
-      width: 100%;
-      border-radius: 6px;
-      margin-top: 6px;
-      max-height: 100px;
-      object-fit: cover;
-    }
-    .discord-embed-footer {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-top: 6px;
-      font-size: 0.6rem;
-      color: #949ba4;
-    }
-    .discord-embed-footer img {
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-    }
+    .embed-preview-title { font-weight: 700; color: #ffffff; margin-bottom: 4px; font-size: 0.9rem; }
+    .embed-preview-desc { font-size: 0.8rem; line-height: 1.4; white-space: pre-wrap; word-break: break-word; }
+    .embed-preview-image { width: 100%; border-radius: 6px; margin-top: 8px; max-height: 120px; object-fit: cover; }
+    .embed-preview-image.hidden { display: none; }
+    .embed-preview-footer { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 0.65rem; color: #949ba4; }
+    .embed-preview-footer img { width: 14px; height: 14px; border-radius: 50%; }
 
-    .edit-tab-content.hidden { display: none; }
-    .edit-tab-btn.active {
-      color: var(--text-primary) !important;
-      border-bottom-color: #ffffff !important;
-    }
+    .edit-preview-wrap { margin-bottom: 18px; background: var(--bg-surface); border-radius: 10px; padding: 14px; border: 1px solid var(--border-subtle); }
 
-    .soon-badge {
-      display: inline-block;
-      font-size: 0.55rem;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: var(--text-dim);
-      background: rgba(255,255,255,0.06);
-      border: 1px solid var(--border-subtle);
-      padding: 2px 6px;
-      border-radius: 20px;
-      margin-left: 4px;
-      vertical-align: middle;
-    }
-
+    /* Toast */
     #toast-container {
       position: fixed;
-      bottom: 16px;
+      bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
       z-index: 999;
@@ -973,43 +703,30 @@
       flex-direction: column;
       gap: 8px;
       width: 92%;
-      max-width: 380px;
+      max-width: 400px;
       pointer-events: none;
     }
     .toast {
       background: #ffffff;
       color: #000000;
       font-weight: 700;
-      font-size: 0.8rem;
-      padding: 10px 16px;
+      font-size: 0.85rem;
+      padding: 12px 18px;
       border-radius: 10px;
       box-shadow: 0 8px 24px rgba(0,0,0,0.4);
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       animation: toast-in 0.3s ease, toast-out 0.3s ease 2.7s forwards;
       pointer-events: auto;
     }
     @keyframes toast-in { from { opacity: 0; transform: translateY(16px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
     @keyframes toast-out { from { opacity: 1; } to { opacity: 0; transform: translateY(-10px); } }
 
-    .edit-panel-view {
-      margin-top: 0.8rem;
-    }
-    .edit-panel-view .back-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      color: var(--text-muted);
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 0.8rem;
-      margin-bottom: 0.8rem;
-      transition: color 0.2s;
-      cursor: pointer;
-      padding: 4px 0;
-    }
-    .edit-panel-view .back-link:hover { color: var(--text-primary); }
+    .soon-badge { display: inline-block; font-size: 0.55rem; font-weight: 700; text-transform: uppercase; color: var(--text-dim); background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); padding: 2px 8px; border-radius: 20px; margin-left: 6px; vertical-align: middle; }
+
+    .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+    .status-dot.online { background: #ffffff; box-shadow: 0 0 8px rgba(255,255,255,0.6); }
 
     .loading-spinner {
       display: inline-block;
@@ -1024,149 +741,59 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ===== TICKET SYSTEM ===== */
-    .ticket-toolbar {
-      display: flex;
+    .menu-overlay-bg {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 245;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .menu-overlay-bg.open { opacity: 1; pointer-events: auto; }
+
+    .hamburger-overlay-btn {
+      display: none;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      width: 38px;
+      height: 38px;
+      flex-direction: column;
       align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin: 0.4rem 0 1rem;
-    }
-    .ticket-count {
-      font-size: 0.75rem;
-      color: var(--text-dim);
-      font-weight: 600;
-    }
-
-    .ticket-icon-badge svg,
-    .ticket-card-meta-row svg,
-    .edit-tab-btn svg,
-    .edit-toolbar label svg,
-    .edit-preview-label svg,
-    .ticket-add-icon svg,
-    .ticket-empty-state svg,
-    .btn svg,
-    .button-remove svg,
-    .option-remove svg,
-    .add-button-btn svg,
-    .add-option-btn svg,
-    .h2-icon svg,
-    .back-link svg {
-      fill: none;
-      stroke: currentColor;
-      stroke-width: 2;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      flex-shrink: 0;
-    }
-
-    .ticket-card { display: flex; flex-direction: column; gap: 12px; }
-    .ticket-card-header { display: flex; align-items: flex-start; gap: 10px; }
-    .ticket-icon-badge {
-      width: 38px; height: 38px;
-      border-radius: 10px;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid var(--border-subtle);
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-    .ticket-icon-badge svg { width: 18px; height: 18px; stroke: var(--text-primary); }
-    .ticket-card-titles { flex: 1; min-width: 0; padding-top: 2px; }
-
-    .ticket-status-pill {
-      display: inline-flex; align-items: center; gap: 5px;
-      font-size: 0.62rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase;
-      padding: 4px 9px; border-radius: 20px;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid var(--border-subtle);
-      color: var(--text-dim);
-      flex-shrink: 0;
-      white-space: nowrap;
-    }
-    .ticket-status-pill .status-dot { width: 6px; height: 6px; background: var(--text-dim); box-shadow: none; }
-    .ticket-status-pill.active { color: var(--text-primary); border-color: var(--border-active); }
-    .ticket-status-pill.active .status-dot { background: #ffffff; box-shadow: 0 0 6px rgba(255,255,255,0.7); }
-
-    .ticket-card-meta { display: flex; flex-direction: column; gap: 6px; }
-    .ticket-card-meta-row { display: flex; align-items: center; gap: 7px; font-size: 0.75rem; color: var(--text-muted); }
-    .ticket-card-meta-row svg { width: 14px; height: 14px; stroke: var(--text-dim); }
-
-    .ticket-card-footer {
-      display: flex; align-items: center; justify-content: space-between; gap: 10px;
-      padding-top: 10px; border-top: 1px solid var(--border-subtle); flex-wrap: wrap;
-    }
-    .ticket-quick-toggle { display: flex; align-items: center; gap: 8px; font-size: 0.72rem; color: var(--text-muted); font-weight: 600; }
-
-    .btn svg { width: 15px; height: 15px; }
-    .btn-icon-only { width: 40px; padding: 0; flex: 0 0 auto !important; }
-
-    .guild-card.ticket-add-card {
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 8px; min-height: 170px;
-      border-style: dashed; cursor: pointer; background: transparent; text-align: center;
-    }
-    .guild-card.ticket-add-card:hover { border-color: var(--border-active); background: rgba(255,255,255,0.02); }
-    .ticket-add-icon {
-      width: 46px; height: 46px; border-radius: 50%;
-      border: 1px dashed var(--border-subtle);
-      display: flex; align-items: center; justify-content: center;
+      justify-content: center;
+      gap: 4px;
+      cursor: pointer;
       transition: all 0.2s ease;
+      padding: 0;
+      margin-bottom: 12px;
+      flex-shrink: 0;
     }
-    .ticket-add-icon svg { width: 20px; height: 20px; stroke: var(--text-muted); }
-    .guild-card.ticket-add-card:hover .ticket-add-icon svg { stroke: var(--text-primary); }
+    .hamburger-overlay-btn span {
+      display: block;
+      width: 18px;
+      height: 2px;
+      background: var(--text-primary);
+      border-radius: 2px;
+      transition: all 0.25s ease;
+      transform-origin: center;
+    }
+    .hamburger-overlay-btn.active span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+    .hamburger-overlay-btn.active span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+    .hamburger-overlay-btn.active span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
 
-    .ticket-empty-state {
-      grid-column: 1 / -1;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 10px; padding: 3rem 1.5rem;
-      border: 1px dashed var(--border-subtle); border-radius: 16px;
-      color: var(--text-muted); text-align: center;
+    footer {
+      text-align: center;
+      padding: 24px 16px;
+      border-top: 1px solid var(--border-subtle);
+      color: var(--text-dim);
+      font-size: 0.7rem;
     }
-    .ticket-empty-state svg { width: 30px; height: 30px; stroke: var(--text-dim); stroke-width: 1.5; }
-
-    .button-remove svg, .option-remove svg { width: 14px; height: 14px; }
-    .add-button-btn svg, .add-option-btn svg { width: 12px; height: 12px; margin-right: 3px; vertical-align: -2px; }
-
-    .h2-icon { display: inline-flex; vertical-align: -5px; margin-right: 8px; }
-    .h2-icon svg { width: 20px; height: 20px; }
-    .back-link svg { width: 14px; height: 14px; vertical-align: -2px; margin-right: 2px; }
-
-    /* Panel-Editor */
-    .edit-toolbar {
-      display: flex; gap: 12px; align-items: center; margin-bottom: 18px; flex-wrap: wrap;
-      background: var(--bg-surface); padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border-subtle);
-    }
-    .edit-toolbar label {
-      font-weight: 600; color: var(--text-muted); font-size: 0.8rem;
-      display: flex; align-items: center; gap: 6px; flex-shrink: 0;
-    }
-    .edit-toolbar label svg { width: 14px; height: 14px; }
-    .edit-toolbar select {
-      flex: 1; min-width: 140px;
-      background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 8px;
-      padding: 8px 12px; color: var(--text-primary); min-height: 38px; font-size: 0.8rem;
-    }
-
-    .edit-preview-wrap {
-      margin-bottom: 20px; background: var(--bg-surface); border-radius: 12px; padding: 16px; border: 1px solid var(--border-subtle);
-    }
-    .edit-preview-label {
-      font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 6px;
-      margin-bottom: 8px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em;
-    }
-    .edit-preview-label svg { width: 13px; height: 13px; }
-
-    .edit-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border-subtle); margin-bottom: 1.2rem; flex-wrap: wrap; }
-    .edit-tab-btn {
-      display: flex; align-items: center; gap: 6px;
-      background: transparent; border: none; color: var(--text-muted);
-      padding: 8px 14px; font-weight: 600; cursor: pointer;
-      border-bottom: 2px solid transparent; transition: all 0.2s ease;
-      font-family: inherit; font-size: 0.78rem;
-    }
-    .edit-tab-btn svg { width: 14px; height: 14px; }
-    .edit-tab-btn:hover { color: var(--text-primary); }
-    .edit-tab-hint { color: var(--text-dim); font-size: 0.74rem; margin: -4px 0 12px; }
 
     /* ===== MOBILE ===== */
     @media (max-width: 767px) {
@@ -1189,78 +816,23 @@
         background: var(--bg-surface);
         box-shadow: 4px 0 30px rgba(0,0,0,0.8);
       }
-      .sidebar.open {
-        transform: translateX(0);
-        opacity: 1;
-      }
+      .sidebar.open { transform: translateX(0); opacity: 1; }
+      .sidebar-header { margin-bottom: 1rem; padding-bottom: 0.8rem; border-bottom: 1px solid var(--border-subtle); flex-shrink: 0; }
+      #active-guild-name { max-width: 140px; font-size: 0.9rem; }
+      .guild-icon-small { width: 34px; height: 34px; }
+      .sidebar-nav { flex-direction: column; overflow-y: auto; overflow-x: visible; flex: 1; gap: 2px; }
+      .tab-btn { padding: 10px 12px; font-size: 0.85rem; white-space: normal; border-radius: 10px; min-height: 44px; }
+      .tab-icon { width: 20px; height: 20px; }
+      .tab-icon svg { width: 20px; height: 20px; }
+      .back-btn { width: 100%; text-align: center; margin-top: auto; padding: 10px; font-size: 0.8rem; min-height: 44px; }
 
-      .sidebar-header {
-        margin-bottom: 1rem;
-        padding-bottom: 0.8rem;
-        border-bottom: 1px solid var(--border-subtle);
-        flex-shrink: 0;
-      }
-      #active-guild-name {
-        max-width: 140px;
-        font-size: 0.9rem;
-      }
-      .guild-icon-small {
-        width: 36px;
-        height: 36px;
-      }
-
-      .sidebar-nav {
-        flex-direction: column;
-        overflow-y: auto;
-        overflow-x: visible;
-        flex: 1;
-        gap: 2px;
-      }
-      .tab-btn {
-        padding: 10px 12px;
-        font-size: 0.85rem;
-        white-space: normal;
-        border-radius: 10px;
-        min-height: 44px;
-      }
-      .tab-icon {
-        width: 20px;
-        height: 20px;
-      }
-      .tab-icon svg {
-        width: 20px;
-        height: 20px;
-      }
-      .back-btn {
-        width: 100%;
-        text-align: center;
-        margin-top: auto;
-        padding: 10px;
-        font-size: 0.8rem;
-        min-height: 44px;
-      }
-
-      .hamburger-overlay-btn {
-        display: flex !important;
-      }
-
+      .hamburger-overlay-btn { display: flex !important; }
+      .menu-overlay-bg { display: block; }
       .nav-center { display: none; }
       #user-name { display: none; }
 
-      .menu-overlay-bg {
-        display: block;
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.6);
-        z-index: 245;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.3s ease;
-      }
-      .menu-overlay-bg.open {
-        opacity: 1;
-        pointer-events: auto;
-      }
+      .edit-tabs { gap: 2px; }
+      .edit-tab-btn { padding: 6px 10px; font-size: 0.7rem; }
     }
 
     @media (min-width: 768px) {
@@ -1268,15 +840,14 @@
       .hamburger-overlay-btn { display: none !important; }
       .menu-overlay-bg { display: none !important; }
       .sidebar {
-        width: 240px;
+        width: 230px;
         flex-direction: column;
         align-items: stretch;
         border-bottom: none;
         border-right: 1px solid var(--border-subtle);
-        padding: 1.2rem 0.8rem;
+        padding: 1rem 0.8rem;
         overflow-y: auto;
         height: 100%;
-        min-height: auto;
         flex-shrink: 0;
         position: static;
         transform: none !important;
@@ -1285,95 +856,41 @@
         box-shadow: none;
         background: var(--bg-surface);
       }
-      .sidebar-header {
-        margin-bottom: 1rem;
-        padding-bottom: 0.8rem;
-        border-bottom: 1px solid var(--border-subtle);
-        flex-shrink: 0;
-      }
-      .sidebar-nav {
-        flex-direction: column;
-        overflow-y: auto;
-        overflow-x: visible;
-        flex: 1;
-      }
-      .tab-btn {
-        padding: 10px 12px;
-        font-size: 0.85rem;
-        white-space: normal;
-      }
-      .tab-icon {
-        width: 18px;
-        height: 18px;
-      }
-      .tab-icon svg {
-        width: 18px;
-        height: 18px;
-      }
-      .back-btn {
-        width: 100%;
-        text-align: center;
-        margin-top: auto;
-      }
-      .overlay {
-        flex-direction: row;
-      }
-      .content-area {
-        padding: 1.5rem 2rem;
-      }
-      #user-name {
-        display: inline !important;
-      }
-      .guild-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-      .stats-grid {
-        grid-template-columns: repeat(3, 1fr);
-      }
+      .sidebar-header { margin-bottom: 1rem; padding-bottom: 0.8rem; border-bottom: 1px solid var(--border-subtle); flex-shrink: 0; }
+      .sidebar-nav { flex-direction: column; overflow-y: auto; overflow-x: visible; flex: 1; }
+      .tab-btn { padding: 10px 12px; font-size: 0.85rem; white-space: normal; }
+      .tab-icon { width: 18px; height: 18px; }
+      .tab-icon svg { width: 18px; height: 18px; }
+      .back-btn { width: 100%; text-align: center; margin-top: auto; }
+      .overlay { flex-direction: row; }
+      .content-area { padding: 1.5rem 2rem; }
+      #user-name { display: inline !important; }
+      .guild-grid { grid-template-columns: repeat(2, 1fr); }
       .brand-right .brand-name { font-size: 1rem; }
-      .brand-right .brand-logo { width: 32px; height: 32px; }
-      .brand-right .brand-logo svg { width: 16px; height: 16px; }
     }
 
     @media (min-width: 1024px) {
-      .guild-grid {
-        grid-template-columns: repeat(3, 1fr);
-      }
-      .stats-grid {
-        grid-template-columns: repeat(4, 1fr);
-      }
-      .container {
-        padding: 48px 24px 80px;
-      }
-      .content-area {
-        padding: 2rem 2.5rem;
-      }
+      .guild-grid { grid-template-columns: repeat(3, 1fr); }
+      .container { padding: 40px 24px 80px; }
+      .content-area { padding: 2rem 2.5rem; }
     }
 
     @media (max-width: 480px) {
       header { padding: 6px 3%; min-height: 48px; }
       .hamburger-btn { width: 34px; height: 34px; }
       .hamburger-btn span { width: 16px; height: 2px; }
-      .hamburger-overlay-btn { width: 34px; height: 34px; }
-      .hamburger-overlay-btn span { width: 16px; height: 2px; }
-      .brand-right .brand-logo { width: 24px; height: 24px; }
-      .brand-right .brand-logo svg { width: 12px; height: 12px; }
-      .brand-right .brand-name { font-size: 0.8rem; }
+      .brand-logo { width: 24px; height: 24px; }
+      .brand-logo svg { width: 12px; height: 12px; }
+      .brand-name { font-size: 0.8rem; }
       .user-chip img { width: 22px; height: 22px; }
       .logout-btn { font-size: 0.55rem; padding: 2px 6px; }
-      .content-area { padding: 0.6rem; }
-      .content-area h2 { font-size: 1rem; }
+      .content-area { padding: 0.8rem; }
+      .content-area h2 { font-size: 1.1rem; }
       .guild-card { padding: 0.8rem; }
-      .guild-name { font-size: 0.8rem; }
-      .btn { font-size: 0.7rem; padding: 6px 10px; min-height: 34px; }
+      .panel-card { padding: 0.8rem; }
+      .panel-add-card { padding: 1.2rem; min-height: 100px; }
+      .btn { font-size: 0.75rem; padding: 6px 12px; min-height: 34px; }
       .form-group input, .form-group textarea, .form-group select { font-size: 0.75rem; padding: 6px 8px; min-height: 34px; }
-      .card { padding: 0.7rem; }
-      .stats-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
-      .stats-grid .card p { font-size: 0.9rem; }
-      .discord-embed { padding: 8px 10px; }
-      .discord-embed-title { font-size: 0.75rem; }
-      .discord-embed-desc { font-size: 0.7rem; }
-      .sidebar { width: 240px; }
     }
   </style>
 </head>
@@ -1382,30 +899,17 @@
   <div class="bg-grid"></div>
   <canvas id="starfield"></canvas>
 
-  <!-- Overlay-Background für mobiles Menü -->
   <div id="menu-overlay-bg" class="menu-overlay-bg" onclick="closeMobileMenu()"></div>
 
-  <!-- ===== HEADER ===== -->
+  <!-- HEADER -->
   <header>
     <div class="header-left">
-      <button class="hamburger-btn" id="hamburger-btn" onclick="toggleMobileMenu()" aria-label="Menü öffnen/schließen">
+      <button class="hamburger-btn" id="hamburger-btn" onclick="toggleMobileMenu()" aria-label="Menü">
         <span></span>
         <span></span>
         <span></span>
       </button>
-    </div>
-
-    <nav class="nav-center">
-      <a href="/" class="nav-link">Startseite</a>
-    </nav>
-
-    <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
-      <div id="user-chip" class="user-chip">
-        <img id="user-avatar" src="" alt="Avatar">
-        <span id="user-name">Laden...</span>
-        <a href="/auth/logout" class="logout-btn">Abmelden</a>
-      </div>
-      <a href="/" class="brand-right">
+      <a href="/" class="brand">
         <div class="brand-logo">
           <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M50 18 L22 75 L38 75 L50 48 L62 75 L78 75 Z" fill="#FFFFFF"/>
@@ -1414,8 +918,20 @@
             <line x1="72" y1="20" x2="28" y2="80" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
           </svg>
         </div>
-        <span class="brand-name">APEX<span>.</span></span>
+        <span class="brand-name">APEX</span>
       </a>
+    </div>
+
+    <nav class="nav-center">
+      <a href="/" class="nav-link">Startseite</a>
+    </nav>
+
+    <div class="brand-right">
+      <div id="user-chip" class="user-chip">
+        <img id="user-avatar" src="" alt="Avatar">
+        <span id="user-name">Laden...</span>
+        <a href="/auth/logout" class="logout-btn">Abmelden</a>
+      </div>
     </div>
   </header>
 
@@ -1423,7 +939,7 @@
   <main class="container">
     <div class="page-heading">
       <h2>Wähle einen Server</h2>
-      <p class="page-subtitle">Wähle einen Server aus, um Module zu konfigurieren und den Bot zu verwalten.</p>
+      <p class="page-subtitle">Wähle einen Server aus, um Module zu konfigurieren.</p>
     </div>
 
     <div id="loading-state" class="state-box">Lade deine Server...</div>
@@ -1435,8 +951,10 @@
     <div id="guild-list" class="guild-grid hidden"></div>
   </main>
 
-  <!-- ===== SERVER MANAGEMENT OVERLAY ===== -->
+  <!-- SERVER MANAGEMENT OVERLAY -->
   <div id="manage-overlay" class="overlay hidden">
+
+    <!-- SIDEBAR -->
     <div class="sidebar" id="mobile-sidebar">
       <div class="sidebar-header">
         <img id="active-guild-icon" src="" class="guild-icon-small">
@@ -1477,10 +995,9 @@
       <button class="btn btn-secondary back-btn" onclick="closeManagement(); closeOverlayMenu();">← Server wechseln</button>
     </div>
 
+    <!-- CONTENT AREA -->
     <div class="content-area">
-
-      <!-- Hamburger-Button im Overlay (nur mobil) -->
-      <button class="hamburger-overlay-btn" id="hamburger-overlay-btn" onclick="toggleOverlayMenu()" aria-label="Menü öffnen/schließen">
+      <button class="hamburger-overlay-btn" id="hamburger-overlay-btn" onclick="toggleOverlayMenu()" aria-label="Menü">
         <span></span>
         <span></span>
         <span></span>
@@ -1490,42 +1007,41 @@
       <div id="mod-overview" class="module-page">
         <h2>Übersicht</h2>
         <p>Statistiken und allgemeiner Status des Bots auf deinem Server.</p>
-
-        <div class="stats-grid">
-          <div class="card">
-            <h3>👥 Mitglieder</h3>
-            <p id="overview-members">N/A</p>
+        <div class="stats-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap:12px;">
+          <div class="card" style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
+            <h3 style="font-size:0.65rem; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:4px;">👥 Mitglieder</h3>
+            <p id="overview-members" style="font-size:1.3rem; font-weight:800; font-family:'JetBrains Mono',monospace;">N/A</p>
           </div>
-          <div class="card">
-            <h3>💎 Boosts</h3>
-            <p id="overview-boosts">N/A</p>
+          <div class="card" style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
+            <h3 style="font-size:0.65rem; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:4px;">💎 Boosts</h3>
+            <p id="overview-boosts" style="font-size:1.3rem; font-weight:800; font-family:'JetBrains Mono',monospace;">N/A</p>
           </div>
-          <div class="card">
-            <h3>Bot Status</h3>
-            <p style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.85rem; font-weight: 600; display:flex; align-items:center; gap:6px;"><span class="status-dot online"></span> Online</p>
+          <div class="card" style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
+            <h3 style="font-size:0.65rem; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:4px;">🤖 Bots</h3>
+            <p id="overview-bots" style="font-size:1.3rem; font-weight:800; font-family:'JetBrains Mono',monospace;">N/A</p>
           </div>
-          <div class="card">
-            <h3>🤖 Bots</h3>
-            <p id="overview-bots">N/A</p>
+          <div class="card" style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
+            <h3 style="font-size:0.65rem; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:4px;">📁 Channels</h3>
+            <p id="overview-channels" style="font-size:1.3rem; font-weight:800; font-family:'JetBrains Mono',monospace;">N/A</p>
           </div>
-          <div class="card">
-            <h3>📁 Channels</h3>
-            <p id="overview-channels">N/A</p>
+          <div class="card" style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
+            <h3 style="font-size:0.65rem; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:4px;">🎭 Rollen</h3>
+            <p id="overview-roles" style="font-size:1.3rem; font-weight:800; font-family:'JetBrains Mono',monospace;">N/A</p>
           </div>
-          <div class="card">
-            <h3>🎭 Rollen</h3>
-            <p id="overview-roles">N/A</p>
+          <div class="card" style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
+            <h3 style="font-size:0.65rem; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:4px;">📅 Erstellt</h3>
+            <p id="overview-created" style="font-size:0.9rem; font-weight:700;">N/A</p>
           </div>
-          <div class="card">
-            <h3>📅 Erstellt</h3>
-            <p id="overview-created" class="stat-text" style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.85rem; font-weight:700;">N/A</p>
-          </div>
-          <div class="card">
-            <h3>👑 Owner</h3>
-            <p id="overview-owner" class="stat-text owner-row" style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.85rem; font-weight:700; display:flex; align-items:center; gap:6px;">
-              <img id="overview-owner-avatar" class="guild-icon-small hidden" src="" alt="" style="width:24px;height:24px;border-radius:50%;">
+          <div class="card" style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
+            <h3 style="font-size:0.65rem; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:4px;">👑 Owner</h3>
+            <p id="overview-owner" style="font-size:0.9rem; font-weight:700; display:flex; align-items:center; gap:6px;">
+              <img id="overview-owner-avatar" class="hidden" src="" alt="" style="width:24px;height:24px;border-radius:50%;">
               <span id="overview-owner-name">N/A</span>
             </p>
+          </div>
+          <div class="card" style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
+            <h3 style="font-size:0.65rem; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:4px;">🟢 Bot Status</h3>
+            <p style="font-size:0.9rem; font-weight:600; display:flex; align-items:center; gap:6px;"><span class="status-dot online"></span> Online</p>
           </div>
         </div>
       </div>
@@ -1533,183 +1049,108 @@
       <!-- Willkommen Tab -->
       <div id="mod-welcome" class="module-page hidden">
         <h2>👋 Willkommen</h2>
-        <p>Lass den Bot automatisch Nachrichten versenden und Rollen verwalten, wenn ein Member beitritt oder verlässt.</p>
-
-        <div class="subtabs">
-          <button class="subtab-btn active" data-sub="join" onclick="switchSubtab('welcome','join')">Beitritt</button>
-          <button class="subtab-btn" data-sub="leave" onclick="switchSubtab('welcome','leave')">Verlassen</button>
+        <p>Lass den Bot automatisch Nachrichten versenden, wenn ein Member beitritt oder verlässt.</p>
+        <div class="subtabs" style="display:flex; gap:6px; border-bottom:1px solid var(--border-subtle); margin-bottom:1rem; flex-wrap:wrap;">
+          <button class="subtab-btn active" data-sub="join" onclick="switchSubtab('welcome','join')" style="background:transparent; border:none; color:var(--text-muted); padding:6px 2px; font-size:0.75rem; font-weight:700; cursor:pointer; border-bottom:2px solid transparent; transition:all 0.2s;">Beitritt</button>
+          <button class="subtab-btn" data-sub="leave" onclick="switchSubtab('welcome','leave')" style="background:transparent; border:none; color:var(--text-muted); padding:6px 2px; font-size:0.75rem; font-weight:700; cursor:pointer; border-bottom:2px solid transparent; transition:all 0.2s;">Verlassen</button>
         </div>
-
+        <!-- Beitritt -->
         <div id="welcome-join-page" class="subpage">
-          <div class="card form-card" style="max-width:100%;">
+          <div class="panel-card">
             <div class="form-group">
               <div class="switch-row">
                 <label style="margin:0;">Willkommens-Nachricht aktiv</label>
                 <label class="switch"><input type="checkbox" id="join-enabled" checked><span class="switch-slider"></span></label>
               </div>
             </div>
-            <div class="form-group">
-              <label>Nachrichtentyp</label>
-              <select id="join-mode" onchange="updateEmbedPreview('join')">
-                <option value="embed">Embed</option>
-                <option value="text">Einfache Nachricht</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="join-channel">Kanal</label>
-              <select id="join-channel"></select>
-            </div>
-            <div class="form-group">
-              <label for="join-title">Embed-Titel</label>
-              <input type="text" id="join-title" placeholder="Willkommen auf {server}! 🎉" oninput="updateEmbedPreview('join')">
-            </div>
-            <div class="form-group">
-              <label for="join-text">Nachricht / Beschreibung</label>
-              <textarea id="join-text" rows="3" placeholder="Hey {user}, schön dass du da bist! Wir sind jetzt {membercount} Mitglieder." oninput="updateEmbedPreview('join')"></textarea>
-              <small>Platzhalter: <code>{user}</code>, <code>{username}</code>, <code>{server}</code>, <code>{membercount}</code></small>
-            </div>
+            <div class="form-group"><label>Nachrichtentyp</label><select id="join-mode" onchange="updateEmbedPreview('join')"><option value="embed">Embed</option><option value="text">Einfache Nachricht</option></select></div>
+            <div class="form-group"><label for="join-channel">Kanal</label><select id="join-channel"></select></div>
+            <div class="form-group"><label for="join-title">Embed-Titel</label><input type="text" id="join-title" placeholder="Willkommen auf {server}! 🎉" oninput="updateEmbedPreview('join')"></div>
+            <div class="form-group"><label for="join-text">Nachricht / Beschreibung</label><textarea id="join-text" rows="3" placeholder="Hey {user}, schön dass du da bist!" oninput="updateEmbedPreview('join')"></textarea><small>Platzhalter: <code>{user}</code>, <code>{username}</code>, <code>{server}</code>, <code>{membercount}</code></small></div>
             <div class="form-group">
               <label>Embed-Bild</label>
               <div class="image-upload">
                 <img id="join-image-preview" class="image-preview" src="" alt="">
-                <div class="upload-btn-wrap">
-                  <label class="btn btn-secondary" for="join-image-input">Bild hochladen</label>
-                  <input type="file" id="join-image-input" accept="image/*" onchange="handleImageUpload(this,'join')">
-                </div>
+                <div class="upload-btn-wrap"><label class="btn btn-secondary" for="join-image-input">Bild hochladen</label><input type="file" id="join-image-input" accept="image/*" onchange="handleImageUpload(this,'join')"></div>
                 <button class="btn btn-secondary" onclick="clearImage('join')" type="button">Entfernen</button>
               </div>
             </div>
             <div class="form-group">
-              <div class="switch-row">
-                <label style="margin:0;">Thumbnail = Profilbild des Beitretenden</label>
-                <label class="switch"><input type="checkbox" id="join-avatar-thumb" checked onchange="updateEmbedPreview('join')"><span class="switch-slider"></span></label>
-              </div>
+              <div class="switch-row"><label style="margin:0;">Thumbnail = Profilbild</label><label class="switch"><input type="checkbox" id="join-avatar-thumb" checked onchange="updateEmbedPreview('join')"><span class="switch-slider"></span></label></div>
             </div>
             <div class="form-group">
               <label>Embed-Farbe</label>
-              <div class="color-row">
-                <input type="color" id="join-color" value="#ffffff" oninput="syncColor('join')">
-                <input type="text" id="join-color-hex" value="#ffffff" oninput="syncColorHex('join')">
-              </div>
+              <div class="color-row"><input type="color" id="join-color" value="#ffffff" oninput="syncColor('join')"><input type="text" id="join-color-hex" value="#ffffff" oninput="syncColorHex('join')"></div>
             </div>
-            <div class="form-group">
-              <label>Auto-Rolle(n) bei Beitritt</label>
-              <div id="join-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span></div>
-            </div>
-            <div class="form-action">
-              <button class="btn btn-primary" onclick="saveModuleSettings('welcome')">Einstellungen speichern</button>
-            </div>
+            <div class="form-group"><label>Auto-Rolle(n) bei Beitritt</label><div id="join-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span></div></div>
+            <div class="form-action"><button class="btn btn-primary" onclick="saveModuleSettings('welcome')">Speichern</button></div>
           </div>
           <div class="embed-preview-wrap" style="margin-top:1rem;">
-            <label style="font-size:0.75rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">Live-Vorschau</label>
-            <div class="discord-embed" id="join-preview" style="border-left-color:#ffffff;">
-              <div class="discord-embed-body">
-                <div class="discord-embed-title" id="join-preview-title">Willkommen auf {server}! 🎉</div>
-                <div class="discord-embed-desc" id="join-preview-desc">Hey {user}, schön dass du da bist!</div>
-                <img id="join-preview-image" class="discord-embed-image hidden" src="">
-                <div class="discord-embed-footer">
-                  <img src="apex_logo.png">
-                  <span>Willkommens System • Powered by Apex</span>
-                </div>
-              </div>
-              <img id="join-preview-thumb" class="discord-embed-thumb" src="https://cdn.discordapp.com/embed/avatars/0.png">
+            <label style="font-size:0.75rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">📺 Live-Vorschau</label>
+            <div class="embed-preview" id="join-preview" style="border-left-color:#ffffff;">
+              <div class="embed-preview-title" id="join-preview-title">Willkommen auf {server}! 🎉</div>
+              <div class="embed-preview-desc" id="join-preview-desc">Hey {user}, schön dass du da bist!</div>
+              <img class="embed-preview-image hidden" id="join-preview-image" src="">
+              <div class="embed-preview-footer"><img src="apex_logo.png"><span>Willkommens System • Powered by Apex</span></div>
             </div>
           </div>
         </div>
-
+        <!-- Verlassen -->
         <div id="welcome-leave-page" class="subpage hidden">
-          <div class="card form-card" style="max-width:100%;">
+          <div class="panel-card">
             <div class="form-group">
-              <div class="switch-row">
-                <label style="margin:0;">Verlassen-Nachricht aktiv</label>
-                <label class="switch"><input type="checkbox" id="leave-enabled"><span class="switch-slider"></span></label>
-              </div>
+              <div class="switch-row"><label style="margin:0;">Verlassen-Nachricht aktiv</label><label class="switch"><input type="checkbox" id="leave-enabled"><span class="switch-slider"></span></label></div>
             </div>
-            <div class="form-group">
-              <label>Nachrichtentyp</label>
-              <select id="leave-mode" onchange="updateEmbedPreview('leave')">
-                <option value="embed">Embed</option>
-                <option value="text">Einfache Nachricht</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="leave-channel">Kanal</label>
-              <select id="leave-channel"></select>
-            </div>
-            <div class="form-group">
-              <label for="leave-title">Embed-Titel</label>
-              <input type="text" id="leave-title" placeholder="Auf Wiedersehen 👋" oninput="updateEmbedPreview('leave')">
-            </div>
-            <div class="form-group">
-              <label for="leave-text">Nachricht / Beschreibung</label>
-              <textarea id="leave-text" rows="3" placeholder="{username} hat den Server verlassen. Wir sind jetzt {membercount} Mitglieder." oninput="updateEmbedPreview('leave')"></textarea>
-              <small>Platzhalter: <code>{username}</code>, <code>{server}</code>, <code>{membercount}</code></small>
-            </div>
+            <div class="form-group"><label>Nachrichtentyp</label><select id="leave-mode" onchange="updateEmbedPreview('leave')"><option value="embed">Embed</option><option value="text">Einfache Nachricht</option></select></div>
+            <div class="form-group"><label for="leave-channel">Kanal</label><select id="leave-channel"></select></div>
+            <div class="form-group"><label for="leave-title">Embed-Titel</label><input type="text" id="leave-title" placeholder="Auf Wiedersehen 👋" oninput="updateEmbedPreview('leave')"></div>
+            <div class="form-group"><label for="leave-text">Nachricht / Beschreibung</label><textarea id="leave-text" rows="3" placeholder="{username} hat den Server verlassen." oninput="updateEmbedPreview('leave')"></textarea><small>Platzhalter: <code>{username}</code>, <code>{server}</code>, <code>{membercount}</code></small></div>
             <div class="form-group">
               <label>Embed-Bild</label>
               <div class="image-upload">
                 <img id="leave-image-preview" class="image-preview" src="" alt="">
-                <div class="upload-btn-wrap">
-                  <label class="btn btn-secondary" for="leave-image-input">Bild hochladen</label>
-                  <input type="file" id="leave-image-input" accept="image/*" onchange="handleImageUpload(this,'leave')">
-                </div>
+                <div class="upload-btn-wrap"><label class="btn btn-secondary" for="leave-image-input">Bild hochladen</label><input type="file" id="leave-image-input" accept="image/*" onchange="handleImageUpload(this,'leave')"></div>
                 <button class="btn btn-secondary" onclick="clearImage('leave')" type="button">Entfernen</button>
               </div>
             </div>
             <div class="form-group">
-              <div class="switch-row">
-                <label style="margin:0;">Thumbnail = Profilbild des Verlassenden</label>
-                <label class="switch"><input type="checkbox" id="leave-avatar-thumb" checked onchange="updateEmbedPreview('leave')"><span class="switch-slider"></span></label>
-              </div>
+              <div class="switch-row"><label style="margin:0;">Thumbnail = Profilbild</label><label class="switch"><input type="checkbox" id="leave-avatar-thumb" checked onchange="updateEmbedPreview('leave')"><span class="switch-slider"></span></label></div>
             </div>
             <div class="form-group">
               <label>Embed-Farbe</label>
-              <div class="color-row">
-                <input type="color" id="leave-color" value="#ffffff" oninput="syncColor('leave')">
-                <input type="text" id="leave-color-hex" value="#ffffff" oninput="syncColorHex('leave')">
-              </div>
+              <div class="color-row"><input type="color" id="leave-color" value="#ffffff" oninput="syncColor('leave')"><input type="text" id="leave-color-hex" value="#ffffff" oninput="syncColorHex('leave')"></div>
             </div>
-            <div class="form-action">
-              <button class="btn btn-primary" onclick="saveModuleSettings('welcome')">Einstellungen speichern</button>
-            </div>
+            <div class="form-action"><button class="btn btn-primary" onclick="saveModuleSettings('welcome')">Speichern</button></div>
           </div>
           <div class="embed-preview-wrap" style="margin-top:1rem;">
-            <label style="font-size:0.75rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">Live-Vorschau</label>
-            <div class="discord-embed" id="leave-preview" style="border-left-color:#ffffff;">
-              <div class="discord-embed-body">
-                <div class="discord-embed-title" id="leave-preview-title">Auf Wiedersehen 👋</div>
-                <div class="discord-embed-desc" id="leave-preview-desc">{username} hat den Server verlassen.</div>
-                <img id="leave-preview-image" class="discord-embed-image hidden" src="">
-                <div class="discord-embed-footer">
-                  <img src="apex_logo.png">
-                  <span>Willkommens System • Powered by Apex</span>
-                </div>
-              </div>
-              <img id="leave-preview-thumb" class="discord-embed-thumb" src="https://cdn.discordapp.com/embed/avatars/0.png">
+            <label style="font-size:0.75rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">📺 Live-Vorschau</label>
+            <div class="embed-preview" id="leave-preview" style="border-left-color:#ffffff;">
+              <div class="embed-preview-title" id="leave-preview-title">Auf Wiedersehen 👋</div>
+              <div class="embed-preview-desc" id="leave-preview-desc">{username} hat den Server verlassen.</div>
+              <img class="embed-preview-image hidden" id="leave-preview-image" src="">
+              <div class="embed-preview-footer"><img src="apex_logo.png"><span>Willkommens System • Powered by Apex</span></div>
             </div>
           </div>
         </div>
       </div>
 
       <!-- ========================================================= -->
-      <!-- TICKET SYSTEM – ÜBERSICHT MIT KARTEN                       -->
+      <!-- TICKET SYSTEM – WIE TICKETY                              -->
       <!-- ========================================================= -->
       <div id="mod-tickets" class="module-page hidden">
-        <h2><span class="h2-icon"><svg viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><line x1="12" y1="9" x2="12" y2="15"/></svg></span>Ticket System</h2>
-        <p>Erstelle Panels, über die Mitglieder per Knopfdruck ein Ticket in der richtigen Kategorie eröffnen.</p>
+        <h2>🎫 Ticket System</h2>
+        <p>Verwalte deine Ticket-Panels – so wie bei Tickety.</p>
 
         <div id="ticket-overview-container">
-          <div class="ticket-toolbar">
-            <span class="ticket-count" id="ticket-panel-count">Lade...</span>
-          </div>
-          <div id="ticket-overview-grid" class="guild-grid">
-            <div class="state-box" style="grid-column:1 / -1;"><span class="loading-spinner"></span> Lade Ticket-Panels...</div>
+          <div id="ticket-overview-grid">
+            <div class="state-box"><span class="loading-spinner"></span> Lade Ticket-Panels...</div>
           </div>
         </div>
 
-        <!-- Bearbeitungsansicht (wird von JS befüllt) -->
-        <div id="ticket-edit-container" class="edit-panel-view hidden">
-          <a href="#" onclick="closeEditView(); return false;" class="back-link"><svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Zurück zur Übersicht</a>
+        <!-- Bearbeitungsansicht (wie Tickety) -->
+        <div id="ticket-edit-container" class="edit-view hidden">
+          <a href="#" onclick="closeEditView(); return false;" style="display:inline-flex; align-items:center; gap:4px; color:var(--text-muted); text-decoration:none; font-weight:600; font-size:0.8rem; margin-bottom:1rem; transition:color 0.2s;">← Zurück zur Übersicht</a>
+
           <div id="edit-panel-header" style="margin-bottom:16px;"></div>
           <div id="ticket-edit-content"></div>
         </div>
@@ -1719,137 +1160,80 @@
       <div id="mod-teamliste" class="module-page hidden">
         <h2>👥 Teamliste</h2>
         <p>Generiert automatisch eine immer aktuelle Übersicht deines Teams in einem Kanal.</p>
-        <div class="card form-card">
-          <div class="form-group">
-            <label for="teamliste-channel">Kanal für die Teamliste</label>
-            <select id="teamliste-channel"></select>
-          </div>
-          <div class="form-group">
-            <label>Team-Rollen (beliebig viele, in Reihenfolge der Anzeige)</label>
-            <div id="teamliste-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span></div>
-            <small>Ausgewählte Rollen werden automatisch mit ihren Mitgliedern gruppiert angezeigt und aktualisieren sich live.</small>
-          </div>
-          <div class="form-action">
-            <button class="btn btn-primary" onclick="saveModuleSettings('teamliste')">Einstellungen speichern</button>
-          </div>
+        <div class="panel-card">
+          <div class="form-group"><label for="teamliste-channel">Kanal für die Teamliste</label><select id="teamliste-channel"></select></div>
+          <div class="form-group"><label>Team-Rollen</label><div id="teamliste-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span></div></div>
+          <div class="form-action"><button class="btn btn-primary" onclick="saveModuleSettings('teamliste')">Speichern</button></div>
         </div>
       </div>
 
       <!-- Support & FAQ Tab -->
       <div id="mod-support" class="module-page hidden">
         <h2>❓ Support &amp; FAQ<span class="soon-badge">Grundeinrichtung</span></h2>
-        <p>Automatisiere häufige Fragen mit intelligenten Auto-Antworten und einer strukturierten Hilfeseite.</p>
-        <div class="card form-card">
+        <div class="panel-card">
           <div class="form-group">
-            <div class="switch-row">
-              <label style="margin:0;">Modul aktiv</label>
-              <label class="switch"><input type="checkbox" id="support-enabled"><span class="switch-slider"></span></label>
-            </div>
+            <div class="switch-row"><label style="margin:0;">Modul aktiv</label><label class="switch"><input type="checkbox" id="support-enabled"><span class="switch-slider"></span></label></div>
           </div>
-          <div class="form-group">
-            <label for="support-channel">FAQ-Kanal</label>
-            <select id="support-channel"></select>
-          </div>
-          <div class="form-action">
-            <button class="btn btn-primary" onclick="saveModuleSettings('support')">Einstellungen speichern</button>
-          </div>
+          <div class="form-group"><label for="support-channel">FAQ-Kanal</label><select id="support-channel"></select></div>
+          <div class="form-action"><button class="btn btn-primary" onclick="saveModuleSettings('support')">Speichern</button></div>
         </div>
       </div>
 
       <!-- Moderation Tab -->
       <div id="mod-moderation" class="module-page hidden">
         <h2>🛡️ Moderation<span class="soon-badge">Grundeinrichtung</span></h2>
-        <p>Automod, Temp-Mutes, Warn-System und detaillierte Sanctions-Logs.</p>
-        <div class="card form-card">
+        <div class="panel-card">
           <div class="form-group">
-            <div class="switch-row">
-              <label style="margin:0;">Automod aktiv</label>
-              <label class="switch"><input type="checkbox" id="moderation-enabled"><span class="switch-slider"></span></label>
-            </div>
+            <div class="switch-row"><label style="margin:0;">Automod aktiv</label><label class="switch"><input type="checkbox" id="moderation-enabled"><span class="switch-slider"></span></label></div>
           </div>
-          <div class="form-group">
-            <label for="moderation-log-channel">Log-Kanal für Sanktionen</label>
-            <select id="moderation-log-channel"></select>
-          </div>
-          <div class="form-action">
-            <button class="btn btn-primary" onclick="saveModuleSettings('moderation')">Einstellungen speichern</button>
-          </div>
+          <div class="form-group"><label for="moderation-log-channel">Log-Kanal</label><select id="moderation-log-channel"></select></div>
+          <div class="form-action"><button class="btn btn-primary" onclick="saveModuleSettings('moderation')">Speichern</button></div>
         </div>
       </div>
 
       <!-- Teamupdate Log Tab -->
       <div id="mod-teamupdate" class="module-page hidden">
         <h2>📝 Teamupdate Log<span class="soon-badge">Grundeinrichtung</span></h2>
-        <p>Postet Beförderungen, Rang-Anpassungen und Team-Eintritte strukturiert in einem Log-Kanal.</p>
-        <div class="card form-card">
+        <div class="panel-card">
           <div class="form-group">
-            <div class="switch-row">
-              <label style="margin:0;">Log aktiv</label>
-              <label class="switch"><input type="checkbox" id="teamupdate-enabled"><span class="switch-slider"></span></label>
-            </div>
+            <div class="switch-row"><label style="margin:0;">Log aktiv</label><label class="switch"><input type="checkbox" id="teamupdate-enabled"><span class="switch-slider"></span></label></div>
           </div>
-          <div class="form-group">
-            <label for="teamupdate-channel">Log-Kanal</label>
-            <select id="teamupdate-channel"></select>
-          </div>
-          <div class="form-action">
-            <button class="btn btn-primary" onclick="saveModuleSettings('teamupdate')">Einstellungen speichern</button>
-          </div>
+          <div class="form-group"><label for="teamupdate-channel">Log-Kanal</label><select id="teamupdate-channel"></select></div>
+          <div class="form-action"><button class="btn btn-primary" onclick="saveModuleSettings('teamupdate')">Speichern</button></div>
         </div>
       </div>
 
       <!-- Kanal Statistiken Tab -->
       <div id="mod-stats" class="module-page hidden">
         <h2>📈 Kanal Statistiken<span class="soon-badge">Grundeinrichtung</span></h2>
-        <p>Zeigt Mitgliederzahl, Boosts und Online-Status live als Sprachkanal-Namen an.</p>
-        <div class="card form-card">
+        <div class="panel-card">
           <div class="form-group">
-            <div class="switch-row">
-              <label style="margin:0;">Live-Statistik-Kanäle aktiv</label>
-              <label class="switch"><input type="checkbox" id="stats-enabled"><span class="switch-slider"></span></label>
-            </div>
+            <div class="switch-row"><label style="margin:0;">Live-Statistik-Kanäle aktiv</label><label class="switch"><input type="checkbox" id="stats-enabled"><span class="switch-slider"></span></label></div>
           </div>
-          <div class="form-action">
-            <button class="btn btn-primary" onclick="saveModuleSettings('stats')">Einstellungen speichern</button>
-          </div>
+          <div class="form-action"><button class="btn btn-primary" onclick="saveModuleSettings('stats')">Speichern</button></div>
         </div>
       </div>
 
       <!-- Verifizierungs System Tab -->
       <div id="mod-verification" class="module-page hidden">
         <h2>✅ Verifizierungs System<span class="soon-badge">Grundeinrichtung</span></h2>
-        <p>Schütze deine Community vor Raid-Bots durch Button- oder Captcha-Verifizierung vor dem Serverbeitritt.</p>
-        <div class="card form-card">
+        <div class="panel-card">
           <div class="form-group">
-            <div class="switch-row">
-              <label style="margin:0;">Verifizierung aktiv</label>
-              <label class="switch"><input type="checkbox" id="verification-enabled"><span class="switch-slider"></span></label>
-            </div>
+            <div class="switch-row"><label style="margin:0;">Verifizierung aktiv</label><label class="switch"><input type="checkbox" id="verification-enabled"><span class="switch-slider"></span></label></div>
           </div>
-          <div class="form-group">
-            <label for="verification-role">Rolle nach Verifizierung</label>
-            <div id="verification-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span></div>
-          </div>
-          <div class="form-action">
-            <button class="btn btn-primary" onclick="saveModuleSettings('verification')">Einstellungen speichern</button>
-          </div>
+          <div class="form-group"><label>Rolle nach Verifizierung</label><div id="verification-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span></div></div>
+          <div class="form-action"><button class="btn btn-primary" onclick="saveModuleSettings('verification')">Speichern</button></div>
         </div>
       </div>
 
       <!-- Anti Nuke Schutz Tab -->
       <div id="mod-antinuke" class="module-page hidden">
         <h2>🔒 Anti Nuke Schutz<span class="soon-badge">Grundeinrichtung</span></h2>
-        <p>Echtzeit-Erkennung gegen Rechte-Missbrauch: Stoppt Massen-Kicks, Channel-Löschungen und Rollen-Griefing sofort.</p>
-        <div class="card form-card">
+        <div class="panel-card">
           <div class="form-group">
-            <div class="switch-row">
-              <label style="margin:0;">Anti Nuke aktiv</label>
-              <label class="switch"><input type="checkbox" id="antinuke-enabled" checked><span class="switch-slider"></span></label>
-            </div>
+            <div class="switch-row"><label style="margin:0;">Anti Nuke aktiv</label><label class="switch"><input type="checkbox" id="antinuke-enabled" checked><span class="switch-slider"></span></div>
           </div>
-          <div class="form-action">
-            <button class="btn btn-primary" onclick="saveModuleSettings('antinuke')">Einstellungen speichern</button>
-          </div>
+          <div class="form-action"><button class="btn btn-primary" onclick="saveModuleSettings('antinuke')">Speichern</button></div>
         </div>
       </div>
 
@@ -1972,7 +1356,7 @@
       requestAnimationFrame(frame);
     })();
 
-    // ===== HAMBURGER MENU FUNKTIONEN =====
+    // ===== HAMBURGER MENU =====
     function toggleMobileMenu() {
       const sidebar = document.getElementById('mobile-sidebar');
       const overlay = document.getElementById('menu-overlay-bg');
@@ -2010,23 +1394,16 @@
       const overlayContainer = document.getElementById('manage-overlay');
       if (!sidebar) return;
       if (sidebar.classList.contains('open') && !overlayContainer.classList.contains('hidden') === false) {
-        if (!sidebar.contains(e.target) && !btnMain?.contains(e.target)) {
-          closeMobileMenu();
-        }
+        if (!sidebar.contains(e.target) && !btnMain?.contains(e.target)) closeMobileMenu();
       }
       if (overlayContainer.classList.contains('hidden') === false) {
         if (sidebar.classList.contains('open')) {
-          if (!sidebar.contains(e.target) && !btnOverlay?.contains(e.target)) {
-            closeOverlayMenu();
-          }
+          if (!sidebar.contains(e.target) && !btnOverlay?.contains(e.target)) closeOverlayMenu();
         }
       }
     });
     document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') {
-        closeOverlayMenu();
-        closeMobileMenu();
-      }
+      if (e.key === 'Escape') { closeOverlayMenu(); closeMobileMenu(); }
     });
   </script>
 
