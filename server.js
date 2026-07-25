@@ -284,7 +284,7 @@ async function fetchGuildOwner(ownerId) {
 async function countGuildBots(guildId) {
   let count = 0;
   let after = '0';
-  const MAX_PAGES = 10; // Sicherheitslimit, deckt bis zu 10.000 Mitglieder ab
+  const MAX_PAGES = 10;
 
   try {
     for (let page = 0; page < MAX_PAGES; page++) {
@@ -292,7 +292,6 @@ async function countGuildBots(guildId) {
         headers: { Authorization: `Bot ${BOT_TOKEN}` }
       });
       if (!res.ok) {
-        // z.B. wenn das "Server Members Intent" im Dev-Portal nicht aktiviert ist
         if (page === 0) return null;
         break;
       }
@@ -416,23 +415,9 @@ app.get('/api/test', (req, res) => {
 });
 
 // ============================================================
-// EXPORT (für Vercel)
 // ============================================================
-module.exports = app;
-
-// Lokaler Start (nur wenn nicht auf Vercel)
-if (NODE_ENV !== 'production') {
-  connectToDatabase().then(() => {
-    app.listen(PORT, () => {
-      console.log(`🚀 Apex Dashboard läuft auf http://localhost:${PORT}`);
-    });
-  }).catch(err => {
-    console.error('❌ Fehler:', err);
-  });
-  }
-});
+// ⭐ NEU: Ticket-Panel in Discord senden
 // ============================================================
-// NEU: Ticket-Panel in Discord senden (mit besserer Fehlerbehandlung)
 // ============================================================
 app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res) => {
   const { guildId } = req.params;
@@ -463,7 +448,7 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
     const embed = {
       title: panel.title || 'Support Center',
       description: panel.description || 'Wähle eine Kategorie, um ein Ticket zu öffnen.',
-      color: parseInt(panel.color ? panel.color.replace('#', '') : 'ffffff', 16), // Hex → Dezimal
+      color: parseInt(panel.color ? panel.color.replace('#', '') : 'ffffff', 16),
       footer: {
         text: 'Ticket System • Powered by Apex'
       },
@@ -490,7 +475,6 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
       },
       body: JSON.stringify({
         embeds: [embed]
-        // components: [] // später für Buttons
       })
     });
 
@@ -513,4 +497,19 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
     res.status(500).json({ error: 'Interner Serverfehler: ' + err.message });
   }
 });
+
+// ============================================================
+// EXPORT (für Vercel)
+// ============================================================
+module.exports = app;
+
+// Lokaler Start (nur wenn nicht auf Vercel)
+if (NODE_ENV !== 'production') {
+  connectToDatabase().then(() => {
+    app.listen(PORT, () => {
+      console.log(`🚀 Apex Dashboard läuft auf http://localhost:${PORT}`);
+    });
+  }).catch(err => {
+    console.error('❌ Fehler:', err);
+  });
 }
