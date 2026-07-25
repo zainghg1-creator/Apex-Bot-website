@@ -37,6 +37,37 @@ const DOM = {
 };
 
 // ============================================================
+// DEBUG-HELFER – zeigt Fehler direkt im UI an
+// ============================================================
+function showDebug(message, isError = false) {
+  const debugEl = document.getElementById('debug-output') || (() => {
+    const div = document.createElement('div');
+    div.id = 'debug-output';
+    div.style.cssText = `
+      position: fixed; top: 10px; left: 10px; right: 10px;
+      background: rgba(0,0,0,0.9); color: #0f0;
+      padding: 12px; border-radius: 8px;
+      font-family: monospace; font-size: 12px;
+      z-index: 9999; max-height: 200px; overflow-y: auto;
+      border: 1px solid #333; display: none;
+    `;
+    document.body.prepend(div);
+    return div;
+  })();
+  
+  debugEl.style.display = 'block';
+  const line = document.createElement('div');
+  line.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+  if (isError) line.style.color = '#f55';
+  debugEl.appendChild(line);
+  debugEl.scrollTop = debugEl.scrollHeight;
+  
+  // Auch in der Konsole ausgeben
+  if (isError) console.error(message);
+  else console.log(message);
+}
+
+// ============================================================
 // STATE
 // ============================================================
 let state = {
@@ -64,10 +95,7 @@ function showState(stateEl) {
 }
 
 function showToast(message, type = 'success') {
-  if (!DOM.toastContainer) {
-    console.warn('Toast container nicht gefunden');
-    return;
-  }
+  if (!DOM.toastContainer) return;
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   const icon = type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ';
@@ -77,7 +105,7 @@ function showToast(message, type = 'success') {
     toast.style.opacity = '0';
     toast.style.transform = 'translateX(20px)';
     setTimeout(() => toast.remove(), 300);
-  }, 2800);
+  }, 4000); // länger sichtbar
 }
 
 function debounce(fn, delay = 300) {
@@ -104,36 +132,43 @@ function formatGuildCreatedDate(guildId) {
 }
 
 // ============================================================
-// API FUNCTIONS (verbessert)
+// API FUNCTIONS – mit detaillierter Fehleranzeige
 // ============================================================
 async function apiFetch(endpoint, options = {}) {
+  showDebug(`➡️ API-Aufruf: ${endpoint}`);
   try {
     const res = await fetch(`${CONFIG.API_BASE}${endpoint}`, {
       ...options,
       headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
     });
+    
+    showDebug(`📦 Status: ${res.status} ${res.statusText}`);
+    
     if (!res.ok) {
-      // Bei 401: nicht umleiten, sondern Fehler anzeigen
-      if (res.status === 401) {
-        showToast('⛔ Sitzung abgelaufen – bitte neu einloggen.', 'error');
-        // Optional: Login-Button anzeigen oder Seite neuladen
-        // window.location.href = '/'; // nicht mehr automatisch
-        return null;
-      }
-      // Andere HTTP-Fehler
-      let errorMsg;
+      let errorText = '';
       try {
         const errorJson = await res.json();
-        errorMsg = errorJson.error || `HTTP ${res.status}`;
+        errorText = errorJson.error || JSON.stringify(errorJson);
       } catch {
-        errorMsg = `HTTP ${res.status}`;
+        errorText = await res.text();
       }
-      throw new Error(errorMsg);
+      showDebug(`❌ Fehlerantwort: ${errorText}`, true);
+      
+      if (res.status === 401) {
+        showToast('⛔ Sitzung abgelaufen – bitte neu einloggen.', 'error');
+        showDebug('⛔ 401 – Session ungültig. Leite nicht automatisch um.', true);
+        // NICHT umleiten – stattdessen Fehler zurückgeben
+        return null;
+      }
+      throw new Error(errorText || `HTTP ${res.status}`);
     }
-    return await res.json();
+    
+    const data = await res.json();
+    showDebug(`✅ Erfolg: ${endpoint} (${Object.keys(data).length} Felder)`);
+    return data;
   } catch (err) {
-    // Netzwerkfehler etc.
-    showToast('Netzwerkfehler: ' + err.message, 'error');
+    showDebug(`💥 Netzwerk-/Parse-Fehler: ${err.message}`, true);
+    showToast(`Fehler: ${err.message}`, 'error');
     throw err;
   }
 }
@@ -148,13 +183,11 @@ async function getCachedTicketConfig(forceRefresh = false) {
   }
   try {
     const config = await apiFetch(`/guild/${state.activeGuildId}/config`);
-    if (!config) return null;
     state.ticketConfigCache = config.tickets || {};
     state.ticketConfigCacheGuildId = state.activeGuildId;
     return state.ticketConfigCache;
   } catch (err) {
-    console.error('Fehler beim Laden der Ticket-Config:', err);
-    showToast('Fehler beim Laden der Ticket-Konfiguration', 'error');
+    showDebug('Fehler beim Laden der Ticket-Config: ' + err.message, true);
     return null;
   }
 }
@@ -164,37 +197,53 @@ function invalidateTicketCache() {
 }
 
 // ============================================================
-// GUILD LIST – DAS LÄDT DIE SERVER
+// GUILD LIST – LÄDT DIE SERVER
 // ============================================================
 async function loadDashboard() {
   showState(DOM.loadingState);
+  showDebug('🔄 Lade Dashboard...');
   try {
+    // Zuerst testen, ob der Server erreichbar ist
+    try {
+      const test = await fetch('/api/test');
+      if (test.ok) {
+        showDebug('✅ Server-API ist erreichbar.');
+      } else {
+        showDebug(`⚠️ Server-Test gab Status ${test.status}`, true);
+      }
+    } catch (e) {
+      showDebug('❌ Server nicht erreichbar (api/test): ' + e.message, true);
+    }
+
     const data = await apiFetch('/guilds');
     if (!data) {
-      // data ist null, wenn 401 oder anderer Fehler, der null zurückgibt
       DOM.errorMessage.textContent = 'Keine gültige Sitzung – bitte melde dich erneut an.';
       showState(DOM.errorState);
+      showToast('Session abgelaufen – bitte neu einloggen.', 'error');
       return;
     }
-    // Prüfen, ob user vorhanden ist
-    if (!data.user) {
-      DOM.errorMessage.textContent = 'Benutzerinformationen fehlen. Bitte neu einloggen.';
+    if (!data.guilds) {
+      DOM.errorMessage.textContent = 'Die API lieferte kein "guilds"-Array: ' + JSON.stringify(data);
       showState(DOM.errorState);
+      showDebug('❌ Kein guilds-Feld im Antwortobjekt', true);
       return;
     }
     renderUser(data.user);
-    // Sicherstellen, dass guilds ein Array ist
-    const guilds = data.guilds || [];
-    renderGuilds(guilds, data.clientId || CONFIG.CLIENT_ID);
+    renderGuilds(data.guilds, data.clientId || CONFIG.CLIENT_ID);
+    showDebug(`✅ ${data.guilds.length} Server geladen.`);
   } catch (err) {
     DOM.errorMessage.textContent = err.message || 'Fehler beim Laden der Server';
     showState(DOM.errorState);
-    showToast('Fehler: ' + (err.message || 'Unbekannt'), 'error');
+    showDebug('💥 Fehler in loadDashboard: ' + err.message, true);
+    showToast('Fehler beim Laden: ' + err.message, 'error');
   }
 }
 
 function renderUser(user) {
-  if (!user) return;
+  if (!user) {
+    showDebug('⚠️ Kein User-Objekt empfangen', true);
+    return;
+  }
   if (DOM.userName) DOM.userName.textContent = user.username;
   if (DOM.userAvatar) {
     DOM.userAvatar.src = user.avatar
@@ -216,6 +265,7 @@ function renderUser(user) {
 function renderGuilds(guilds, clientId) {
   if (!guilds || !Array.isArray(guilds) || guilds.length === 0) {
     showState(DOM.emptyState);
+    showDebug('ℹ️ Keine Server gefunden (Array leer oder ungültig).');
     return;
   }
   DOM.guildList.innerHTML = '';
@@ -239,12 +289,14 @@ function renderGuilds(guilds, clientId) {
     DOM.guildList.appendChild(card);
   });
   showState(DOM.guildList);
+  showDebug(`✅ ${guilds.length} Server-Karten gerendert.`);
 }
 
 // ============================================================
-// MANAGEMENT OVERLAY
+// MANAGEMENT OVERLAY (unverändert, aber mit Debug)
 // ============================================================
 async function openManagement(guildId, name, iconUrl) {
+  showDebug(`🔧 Öffne Verwaltung für ${name} (${guildId})`);
   state.activeGuildId = guildId;
   DOM.activeGuildName.textContent = name;
   DOM.activeGuildIcon.src = iconUrl;
@@ -260,14 +312,13 @@ async function openManagement(guildId, name, iconUrl) {
   DOM.overviewOwnerAvatar.classList.add('hidden');
   DOM.overviewOwnerAvatar.src = '';
   DOM.overviewCreated.textContent = formatGuildCreatedDate(guildId);
-  
-  // Rollen und Kanäle laden
-  await loadRolesAndChannels(guildId);
-  // Ticket Config laden
+  if (state.guildRoles.length === 0 || state.guildChannels.length === 0) {
+    await loadRolesAndChannels(guildId);
+  } else {
+    renderAllSelects();
+  }
   await getCachedTicketConfig(true);
-  // Serverdetails laden
   await loadGuildDetails(guildId);
-  // Moduleinstellungen laden
   await loadAllModuleSettings(guildId);
 }
 
@@ -275,6 +326,7 @@ function closeManagement() {
   state.activeGuildId = null;
   DOM.manageOverlay.classList.add('hidden');
   document.body.style.overflow = '';
+  showDebug('Verwaltung geschlossen.');
 }
 
 async function loadGuildDetails(guildId) {
@@ -285,20 +337,13 @@ async function loadGuildDetails(guildId) {
       DOM.overviewBoosts.textContent = data.boosts ?? '0';
       DOM.overviewBots.textContent = data.botCount ?? data.bots ?? 'N/A';
       renderGuildOwner(data.owner);
-    } else {
-      // Fallback, wenn data null ist
-      DOM.overviewMembers.textContent = 'Fehler';
-      DOM.overviewBoosts.textContent = 'Fehler';
-      DOM.overviewBots.textContent = 'Fehler';
-      renderGuildOwner(null);
     }
   } catch (err) {
-    console.error('Fehler beim Laden der Guild-Details:', err);
+    showDebug('Fehler beim Laden der Guild-Details: ' + err.message, true);
     DOM.overviewMembers.textContent = 'N/A';
     DOM.overviewBoosts.textContent = 'N/A';
     DOM.overviewBots.textContent = 'N/A';
     renderGuildOwner(null);
-    showToast('Fehler beim Laden der Serverdetails', 'error');
   }
 }
 
@@ -326,13 +371,13 @@ async function loadRolesAndChannels(guildId) {
       apiFetch(`/guild/${guildId}/roles`).catch(() => []),
       apiFetch(`/guild/${guildId}/channels`).catch(() => [])
     ]);
-    state.guildRoles = (roles && Array.isArray(roles)) ? roles : [];
-    state.guildChannels = (channels && Array.isArray(channels)) ? channels : [];
+    state.guildRoles = roles || [];
+    state.guildChannels = channels || [];
+    showDebug(`✅ Rollen: ${state.guildRoles.length}, Kanäle: ${state.guildChannels.length}`);
   } catch (err) {
-    console.error('Fehler beim Laden von Rollen/Kanälen:', err);
+    showDebug('Fehler beim Laden von Rollen/Kanälen: ' + err.message, true);
     state.guildRoles = [];
     state.guildChannels = [];
-    showToast('Fehler beim Laden von Rollen/Kanälen', 'error');
   }
   DOM.overviewRoles.textContent = state.guildRoles.length;
   DOM.overviewChannels.textContent = state.guildChannels.length;
@@ -347,7 +392,6 @@ function renderAllSelects() {
 function renderChannelSelect(selectId, filterType) {
   const el = document.getElementById(selectId);
   if (!el) return;
-  // Nur Kanäle vom Typ filterType (0 = Text, 2 = Voice, 4 = Kategorie)
   const relevant = state.guildChannels.filter(c => c.type === filterType);
   if (relevant.length === 0) {
     el.innerHTML = `<option value="">Keine Textkanäle gefunden</option>`;
@@ -359,11 +403,11 @@ function renderChannelSelect(selectId, filterType) {
 function renderRoleChips(containerId, selectedIds = [], singleSelect = false) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  if (!state.guildRoles || state.guildRoles.length === 0) {
+  if (state.guildRoles.length === 0) {
     el.innerHTML = `<span class="chip-empty">Keine Rollen gefunden</span>`;
     return;
   }
-  const selectedSet = new Set(selectedIds || []);
+  const selectedSet = new Set(selectedIds);
   el.innerHTML = state.guildRoles.map(r => {
     const isSelected = selectedSet.has(r.id);
     return `<div class="role-chip ${isSelected ? 'selected' : ''}" data-role-id="${r.id}" onclick="toggleRoleChip('${containerId}', '${r.id}', ${singleSelect})">
@@ -373,8 +417,7 @@ function renderRoleChips(containerId, selectedIds = [], singleSelect = false) {
   }).join('');
 }
 
-// Diese Funktion muss global sein, weil sie im HTML onclick aufgerufen wird
-window.toggleRoleChip = function(containerId, roleId, singleSelect) {
+function toggleRoleChip(containerId, roleId, singleSelect) {
   const el = document.getElementById(containerId);
   const chip = el.querySelector(`[data-role-id="${roleId}"]`);
   if (!chip) return;
@@ -384,7 +427,7 @@ window.toggleRoleChip = function(containerId, roleId, singleSelect) {
   } else {
     chip.classList.toggle('selected');
   }
-};
+}
 
 function getSelectedRoleIds(containerId) {
   const el = document.getElementById(containerId);
@@ -492,7 +535,6 @@ const updateEmbedPreview = debounce((prefix) => {
 async function loadAllModuleSettings(guildId) {
   try {
     const config = await apiFetch(`/guild/${guildId}/config`).catch(() => ({}));
-    if (!config) return;
     applyWelcomeConfig(config.welcome || {});
     applyTeamlisteConfig(config.teamliste || {});
     applySimpleConfig('support', config.support || {});
@@ -501,7 +543,9 @@ async function loadAllModuleSettings(guildId) {
     applySimpleConfig('stats', config.stats || {});
     applyVerificationConfig(config.verification || {});
     applySimpleConfig('antinuke', config.antinuke || {});
-  } catch (err) { console.error('Fehler beim Laden der Konfiguration:', err); }
+  } catch (err) { 
+    showDebug('Fehler beim Laden der Konfiguration: ' + err.message, true);
+  }
 }
 
 function applyWelcomeConfig(cfg) {
@@ -637,12 +681,8 @@ async function saveModuleSettings(moduleName) {
         const channelEl = document.getElementById(`${moduleName}-channel`) || document.getElementById(`${moduleName}-log-channel`);
         payload = { enabled: enabledEl ? enabledEl.checked : true, channelId: channelEl ? channelEl.value : undefined };
     }
-    const result = await apiFetch(`/guild/${state.activeGuildId}/config/${moduleName}`, { method: 'POST', body: JSON.stringify(payload) });
-    if (result && result.success) {
-      showToast(`${moduleName.charAt(0).toUpperCase() + moduleName.slice(1)} gespeichert!`, 'success');
-    } else {
-      showToast(`Fehler beim Speichern von ${moduleName}`, 'error');
-    }
+    await apiFetch(`/guild/${state.activeGuildId}/config/${moduleName}`, { method: 'POST', body: JSON.stringify(payload) });
+    showToast(`${moduleName.charAt(0).toUpperCase() + moduleName.slice(1)} gespeichert!`, 'success');
     if (saveStatus) { saveStatus.textContent = '✓ Gespeichert'; saveStatus.classList.remove('hidden'); setTimeout(() => saveStatus.classList.add('hidden'), 3000); }
   } catch (err) {
     showToast(`Fehler: ${err.message}`, 'error');
@@ -664,7 +704,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ============================================================
-// TICKET SYSTEM – GALAXYBOT-STYLE
+// TICKET SYSTEM – GALAXYBOT-STYLE (mit Debug)
 // ============================================================
 
 const ticketGrid = document.getElementById('ticket-overview-grid');
@@ -701,11 +741,11 @@ function populateCategorySelects() {
 function renderEditRoleChips(containerId, selectedIds = [], singleSelect = false) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  if (!state.guildRoles || state.guildRoles.length === 0) {
+  if (state.guildRoles.length === 0) {
     el.innerHTML = `<span class="chip-empty">Keine Rollen gefunden</span>`;
     return;
   }
-  const selectedSet = new Set(selectedIds || []);
+  const selectedSet = new Set(selectedIds);
   el.innerHTML = state.guildRoles.map(r => {
     const isSelected = selectedSet.has(r.id);
     return `<div class="role-chip ${isSelected ? 'selected' : ''}" data-role-id="${r.id}" onclick="toggleEditRoleChip('${containerId}', '${r.id}', ${singleSelect})">
@@ -715,7 +755,6 @@ function renderEditRoleChips(containerId, selectedIds = [], singleSelect = false
   }).join('');
 }
 
-// Globale Funktion für onclick
 window.toggleEditRoleChip = function(containerId, roleId, singleSelect) {
   const el = document.getElementById(containerId);
   const chip = el.querySelector(`[data-role-id="${roleId}"]`);
@@ -846,7 +885,7 @@ function updateEditPreview() {
 }
 
 // ---- Panel in Discord senden ----
-window.sendPanelToChannel = async function(channelId, panelIndex) {
+async function sendPanelToChannel(channelId, panelIndex) {
   if (!state.activeGuildId) { showToast('Kein Server ausgewählt.', 'error'); return; }
   if (!channelId) { showToast('Bitte wähle einen Kanal aus.', 'error'); return; }
   if (panelIndex === undefined || panelIndex === null) { showToast('Bitte wähle ein Panel aus.', 'error'); return; }
@@ -864,7 +903,7 @@ window.sendPanelToChannel = async function(channelId, panelIndex) {
   } catch (err) {
     showToast(`Fehler: ${err.message}`, 'error');
   }
-};
+}
 
 // ---- Übersicht rendern (GalaxyBot-Style) ----
 async function renderTicketOverview() {
@@ -954,6 +993,7 @@ async function renderTicketOverview() {
     ticketGrid.innerHTML = html;
   } catch (err) {
     ticketGrid.innerHTML = `<div class="state-box error">Fehler: ${err.message}</div>`;
+    showDebug('Fehler in renderTicketOverview: ' + err.message, true);
   }
 }
 
@@ -962,7 +1002,7 @@ window.deleteTicketOption = async function(index) {
   if (!confirm('Möchtest du dieses Panel wirklich löschen?')) return;
   try {
     const config = await apiFetch(`/guild/${state.activeGuildId}/config`);
-    if (!config || !config.tickets || !config.tickets.options || !config.tickets.options[index]) return;
+    if (!config.tickets || !config.tickets.options || !config.tickets.options[index]) return;
     config.tickets.options.splice(index, 1);
     await apiFetch(`/guild/${state.activeGuildId}/config/tickets`, { method: 'POST', body: JSON.stringify(config.tickets) });
     invalidateTicketCache();
@@ -1270,157 +1310,107 @@ async function showEditView(index) {
   }
 }
 
-// ---- Edit speichern ----
-window.saveEditView = async function() {
-  const panelName = document.getElementById('edit-panel-name')?.value || 'Neues Panel';
-  const enabled = document.getElementById('edit-panel-enabled')?.checked ?? true;
-  const panelChannelId = document.getElementById('edit-panel-channel')?.value || '';
-  const logChannelId = document.getElementById('edit-log-channel')?.value || '';
-  const supportRoles = getEditSelectedRoles('edit-support-roles');
-  const categoryId = document.getElementById('edit-ticket-category')?.value || '';
-  const title = document.getElementById('edit-panel-title')?.value || 'Support Center';
-  const description = document.getElementById('edit-panel-desc')?.value || '';
-  const color = document.getElementById('edit-panel-color')?.value || '#ffffff';
-  const image = document.getElementById('edit-image-input')?.dataset.value || '';
-  const creationMessage = document.getElementById('edit-create-msg')?.value || '';
-  const channelNameTemplate = document.getElementById('edit-channel-template')?.value || '{panel.name}-{ticket.creator.username}';
-  const allowedRoles = getEditSelectedRoles('edit-allowed-roles');
-  const deniedRoles = getEditSelectedRoles('edit-denied-roles');
-  const maxTickets = parseInt(document.getElementById('edit-max-tickets')?.value) || 1;
-  const overflowEnabled = document.getElementById('edit-overflow-enabled')?.checked ?? false;
-  const overflowCategories = getSelectedOptions('edit-ticket-overflow');
-  const threadMode = document.getElementById('edit-thread-mode')?.value || 'none';
-  const saveTranscripts = document.getElementById('edit-save-transcripts')?.checked ?? false;
-  const saveImages = document.getElementById('edit-save-images')?.checked ?? false;
-  const privateTranscripts = document.getElementById('edit-private-transcripts')?.checked ?? false;
-  const claimEnabled = document.getElementById('edit-claim-enabled')?.checked ?? false;
-  const buttons = collectButtons();
-  const options = collectOptions();
-
-  const panelData = {
-    enabled,
-    panelName,
-    panelChannelId,
-    logChannelId,
-    supportRoles,
-    categoryId,
-    title,
-    description,
-    color,
-    image,
-    creationMessage,
-    channelNameTemplate,
-    allowedRoles,
-    deniedRoles,
-    maxTickets,
-    overflowEnabled,
-    overflowCategories,
-    threadMode,
-    saveTranscripts,
-    saveImages,
-    privateTranscripts,
-    claimEnabled,
-    buttons,
-    options
-  };
-
-  try {
-    const config = await apiFetch(`/guild/${state.activeGuildId}/config`);
-    if (!config) throw new Error('Konfiguration konnte nicht geladen werden');
-    if (!config.tickets) config.tickets = {};
-    if (!config.tickets.options) config.tickets.options = [];
-
-    if (editingIndex !== null && config.tickets.options[editingIndex]) {
-      config.tickets.options[editingIndex] = panelData;
-    } else {
-      config.tickets.options.push(panelData);
-    }
-
-    await apiFetch(`/guild/${state.activeGuildId}/config/tickets`, {
-      method: 'POST',
-      body: JSON.stringify(config.tickets)
-    });
-    invalidateTicketCache();
-    showToast('Panel gespeichert! ✅', 'success');
-    closeEditView();
-  } catch (err) {
-    showToast('Fehler beim Speichern: ' + err.message, 'error');
-  }
-};
-
-// ---- Edit schließen ----
-window.closeEditView = function() {
-  document.getElementById('ticket-overview-container').classList.remove('hidden');
-  editContainer.classList.add('hidden');
-  renderTicketOverview();
-};
-
-// ---- Bild-Upload für Edit ----
-window.handleEditImageUpload = function(input) {
-  const file = input.files?.[0];
-  if (!file) return;
-  if (file.size > 5 * 1024 * 1024) {
-    showToast('Bild zu groß (max. 5MB)', 'error');
-    input.value = '';
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const dataUrl = e.target.result;
-    const preview = document.getElementById('edit-image-preview');
-    if (preview) preview.src = dataUrl;
-    input.dataset.value = dataUrl;
-    updateEditPreview();
-  };
-  reader.onerror = () => showToast('Fehler beim Lesen der Datei', 'error');
-  reader.readAsDataURL(file);
-};
-
-window.clearEditImage = function() {
-  const input = document.getElementById('edit-image-input');
-  if (input) { input.value = ''; input.dataset.value = ''; }
-  const preview = document.getElementById('edit-image-preview');
-  if (preview) preview.src = '';
-  updateEditPreview();
-};
-
-// ---- Switch to selected panel (edit toolbar) ----
-window.switchToSelectedPanel = function() {
+// Hilfsfunktionen für Edit-View (nicht im Original)
+function switchToSelectedPanel() {
   const select = document.getElementById('edit-panel-select');
+  if (!select) return;
   const val = select.value;
   if (val === 'new') {
     openAddTicket();
   } else {
     openEditView(parseInt(val));
   }
-};
+}
+
+function handleEditImageUpload(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) {
+    showToast('Bild zu groß', 'error');
+    input.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    document.getElementById('edit-image-preview').src = dataUrl;
+    input.dataset.value = dataUrl;
+    updateEditPreview();
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearEditImage() {
+  const input = document.getElementById('edit-image-input');
+  if (input) { input.value = ''; input.dataset.value = ''; }
+  document.getElementById('edit-image-preview').src = '';
+  updateEditPreview();
+}
+
+async function saveEditView() {
+  // Sammle Daten aus dem Edit-Formular
+  const panelData = {
+    enabled: document.getElementById('edit-panel-enabled').checked,
+    panelName: document.getElementById('edit-panel-name').value,
+    panelChannelId: document.getElementById('edit-panel-channel').value,
+    logChannelId: document.getElementById('edit-log-channel').value,
+    supportRoles: getEditSelectedRoles('edit-support-roles'),
+    categoryId: document.getElementById('edit-ticket-category').value,
+    title: document.getElementById('edit-panel-title').value,
+    description: document.getElementById('edit-panel-desc').value,
+    color: document.getElementById('edit-panel-color').value,
+    image: document.getElementById('edit-image-input')?.dataset.value || '',
+    creationMessage: document.getElementById('edit-create-msg').value,
+    channelNameTemplate: document.getElementById('edit-channel-template').value,
+    allowedRoles: getEditSelectedRoles('edit-allowed-roles'),
+    deniedRoles: getEditSelectedRoles('edit-denied-roles'),
+    maxTickets: parseInt(document.getElementById('edit-max-tickets').value) || 1,
+    overflowEnabled: document.getElementById('edit-overflow-enabled').checked,
+    overflowCategories: getSelectedOptions('edit-ticket-overflow'),
+    threadMode: document.getElementById('edit-thread-mode').value,
+    saveTranscripts: document.getElementById('edit-save-transcripts').checked,
+    saveImages: document.getElementById('edit-save-images').checked,
+    privateTranscripts: document.getElementById('edit-private-transcripts').checked,
+    claimEnabled: document.getElementById('edit-claim-enabled').checked,
+    buttons: collectButtons(),
+    options: collectOptions()
+  };
+
+  // Lade aktuelle Tickets, ersetze das entsprechende Panel
+  try {
+    const config = await apiFetch(`/guild/${state.activeGuildId}/config`);
+    if (!config.tickets) config.tickets = {};
+    if (!config.tickets.options) config.tickets.options = [];
+    
+    if (editingIndex !== null && config.tickets.options[editingIndex]) {
+      config.tickets.options[editingIndex] = panelData;
+    } else {
+      config.tickets.options.push(panelData);
+    }
+    
+    await apiFetch(`/guild/${state.activeGuildId}/config/tickets`, {
+      method: 'POST',
+      body: JSON.stringify(config.tickets)
+    });
+    invalidateTicketCache();
+    showToast('Panel gespeichert!', 'success');
+    closeEditView();
+    renderTicketOverview();
+  } catch (err) {
+    showToast('Fehler: ' + err.message, 'error');
+  }
+}
+
+function closeEditView() {
+  document.getElementById('ticket-overview-container').classList.remove('hidden');
+  editContainer.classList.add('hidden');
+  editingIndex = null;
+}
 
 // ============================================================
-// INIT
+// START: Dashboard laden
 // ============================================================
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', () => {
+  showDebug('🟢 Dashboard geladen, starte loadDashboard()...');
   loadDashboard();
-
-  // Globale Funktionen für HTML-Onclick verfügbar machen
-  window.loadDashboard = loadDashboard;
-  window.openManagement = openManagement;
-  window.closeManagement = closeManagement;
-  window.switchTab = switchTab;
-  window.switchSubtab = switchSubtab;
-  window.saveModuleSettings = saveModuleSettings;
-  window.syncColor = syncColor;
-  window.syncColorHex = syncColorHex;
-  window.handleImageUpload = handleImageUpload;
-  window.clearImage = clearImage;
-  window.updateEmbedPreview = updateEmbedPreview;
-  window.sendPanelToChannel = sendPanelToChannel;
-  window.deleteTicketOption = deleteTicketOption;
-  window.openAddTicket = openAddTicket;
-  window.openEditView = openEditView;
-  window.saveEditView = saveEditView;
-  window.closeEditView = closeEditView;
-  window.switchEditTab = switchEditTab;
-  window.handleEditImageUpload = handleEditImageUpload;
-  window.clearEditImage = clearEditImage;
-  window.switchToSelectedPanel = switchToSelectedPanel;
 });
