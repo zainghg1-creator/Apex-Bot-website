@@ -52,34 +52,91 @@
       display: block;
     }
 
-    /* Header */
+    /* Header mit Hamburger */
     header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 12px 4%;
+      padding: 10px 4%;
       backdrop-filter: blur(12px);
       background: rgba(0, 0, 0, 0.85);
       border-bottom: 1px solid var(--border-subtle);
       position: sticky;
       top: 0;
       z-index: 100;
-      min-height: 60px;
+      min-height: 56px;
       gap: 8px;
     }
 
-    .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text-primary); flex-shrink: 0; }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Hamburger Button */
+    .hamburger-btn {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      width: 38px;
+      height: 38px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      padding: 0;
+      flex-shrink: 0;
+    }
+    .hamburger-btn:hover {
+      background: rgba(255,255,255,0.10);
+      border-color: var(--border-active);
+    }
+    .hamburger-btn span {
+      display: block;
+      width: 18px;
+      height: 2px;
+      background: var(--text-primary);
+      border-radius: 2px;
+      transition: all 0.2s ease;
+    }
+    .hamburger-btn.active span:nth-child(1) {
+      transform: rotate(45deg) translate(4px, 4px);
+    }
+    .hamburger-btn.active span:nth-child(2) {
+      opacity: 0;
+    }
+    .hamburger-btn.active span:nth-child(3) {
+      transform: rotate(-45deg) translate(4px, -4px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      color: var(--text-primary);
+      flex-shrink: 0;
+    }
     .brand-logo {
-      width: 30px; height: 30px; background: #000; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
+      width: 28px;
+      height: 28px;
+      background: #000;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       border: 1px solid rgba(255, 255, 255, 0.3);
     }
-    .brand-logo svg { width: 16px; height: 16px; }
-    .brand-name { font-size: 0.95rem; font-weight: 800; letter-spacing: -0.02em; }
+    .brand-logo svg { width: 14px; height: 14px; }
+    .brand-name { font-size: 0.9rem; font-weight: 800; letter-spacing: -0.02em; }
     .brand-name span { color: var(--text-muted); }
 
     .nav-center {
-      display: flex;
+      display: none;
       align-items: center;
       gap: 16px;
       position: absolute;
@@ -99,7 +156,7 @@
     .user-chip {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       background: rgba(255, 255, 255, 0.05);
       padding: 4px 6px 4px 4px;
       border-radius: 30px;
@@ -107,23 +164,23 @@
       flex-shrink: 0;
     }
     .user-chip img {
-      width: 28px;
-      height: 28px;
+      width: 26px;
+      height: 26px;
       border-radius: 50%;
       object-fit: cover;
       border: 1px solid var(--border-subtle);
     }
     #user-name {
-      font-size: 0.78rem;
+      font-size: 0.75rem;
       font-weight: 600;
-      display: none; /* auf Handy ausblenden, nur Avatar + Logout */
+      display: none;
     }
     .logout-btn {
       color: var(--text-muted);
       text-decoration: none;
-      font-size: 0.7rem;
+      font-size: 0.65rem;
       font-weight: 600;
-      padding: 4px 10px;
+      padding: 3px 8px;
       border-radius: 20px;
       background: rgba(255, 255, 255, 0.05);
       transition: all 0.2s ease;
@@ -161,13 +218,13 @@
     .container {
       max-width: 1100px;
       margin: 0 auto;
-      padding: 40px 16px 80px;
+      padding: 32px 16px 80px;
       width: 100%;
     }
 
-    .page-heading { text-align: center; margin-bottom: 32px; }
-    .page-heading h2 { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 6px; }
-    .page-subtitle { color: var(--text-muted); font-size: 0.9rem; }
+    .page-heading { text-align: center; margin-bottom: 24px; }
+    .page-heading h2 { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 4px; }
+    .page-subtitle { color: var(--text-muted); font-size: 0.85rem; }
 
     .state-box {
       background: var(--bg-surface);
@@ -186,27 +243,25 @@
     .guild-grid {
       display: grid;
       grid-template-columns: 1fr;
-      gap: 16px;
+      gap: 14px;
     }
 
     .guild-card {
       background: var(--bg-surface);
-      padding: 1.2rem;
-      border-radius: 16px;
+      padding: 1rem;
+      border-radius: 14px;
       border: 1px solid var(--border-subtle);
       display: flex;
       flex-direction: column;
       align-items: stretch;
-      gap: 12px;
+      gap: 10px;
       transition: all 0.25s ease;
       cursor: default;
     }
-
     .guild-card:hover {
       border-color: var(--border-active);
       transform: translateY(-2px);
     }
-
     .guild-card.add-card {
       border-style: dashed;
       border-color: var(--border-subtle);
@@ -224,29 +279,27 @@
     .guild-info {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       min-width: 0;
       width: 100%;
     }
-
     .guild-icon {
-      width: 44px;
-      height: 44px;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
       object-fit: cover;
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid var(--border-subtle);
       flex-shrink: 0;
-      font-size: 1.3rem;
+      font-size: 1.2rem;
       display: flex;
       align-items: center;
       justify-content: center;
     }
-
     .guild-name {
       flex: 1;
       min-width: 0;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       font-weight: 700;
       line-height: 1.3;
       color: var(--text-primary);
@@ -257,9 +310,8 @@
       -webkit-box-orient: vertical;
       white-space: normal;
     }
-
     .guild-detail {
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       color: var(--text-muted);
       display: flex;
       flex-direction: column;
@@ -268,23 +320,23 @@
     .guild-detail span {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
     }
-
     .guild-action {
       display: flex;
-      gap: 8px;
+      gap: 6px;
       margin-top: 4px;
       flex-wrap: wrap;
     }
     .guild-action .btn {
       flex: 1;
-      min-width: 60px;
-      padding: 8px 12px;
-      font-size: 0.8rem;
+      min-width: 50px;
+      padding: 6px 10px;
+      font-size: 0.75rem;
+      min-height: 36px;
     }
 
-    /* Overlay / Sidebar – mobil optimiert */
+    /* ===== OVERLAY / SIDEBAR mit Hamburger-Menü ===== */
     .overlay {
       position: fixed;
       inset: 0;
@@ -294,8 +346,8 @@
       z-index: 200;
     }
 
+    /* Sidebar – Desktop: sichtbar, Mobil: als Overlay von links */
     .sidebar {
-      width: 100%;
       background: var(--bg-surface);
       border-bottom: 1px solid var(--border-subtle);
       padding: 10px 12px;
@@ -305,8 +357,9 @@
       gap: 8px;
       overflow-x: auto;
       flex-shrink: 0;
-      min-height: 56px;
+      min-height: 52px;
       scrollbar-width: thin;
+      transition: transform 0.3s ease, opacity 0.3s ease;
     }
     .sidebar::-webkit-scrollbar { height: 3px; }
     .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
@@ -316,19 +369,19 @@
       align-items: center;
       gap: 8px;
       flex-shrink: 0;
-      margin-right: 8px;
+      margin-right: 6px;
     }
     .guild-icon-small {
-      width: 32px;
-      height: 32px;
+      width: 30px;
+      height: 30px;
       border-radius: 50%;
       object-fit: cover;
       border: 1px solid var(--border-subtle);
     }
     #active-guild-name {
       font-weight: 700;
-      font-size: 0.8rem;
-      max-width: 120px;
+      font-size: 0.75rem;
+      max-width: 100px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -349,19 +402,19 @@
       background: transparent;
       border: none;
       color: var(--text-muted);
-      padding: 6px 10px;
+      padding: 5px 8px;
       border-radius: 8px;
-      font-size: 0.72rem;
+      font-size: 0.68rem;
       font-weight: 600;
       cursor: pointer;
       font-family: inherit;
       transition: all 0.2s ease;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
       white-space: nowrap;
       flex-shrink: 0;
-      min-height: 36px;
+      min-height: 32px;
     }
     .tab-btn:hover {
       color: var(--text-primary);
@@ -375,16 +428,16 @@
       stroke: #000000;
     }
     .tab-icon {
-      width: 16px;
-      height: 16px;
+      width: 14px;
+      height: 14px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
     }
     .tab-icon svg {
-      width: 16px;
-      height: 16px;
+      width: 14px;
+      height: 14px;
       stroke: var(--text-muted);
       fill: none;
       stroke-width: 2;
@@ -398,48 +451,48 @@
 
     .back-btn {
       flex-shrink: 0;
-      padding: 6px 12px;
-      font-size: 0.7rem;
-      min-height: 36px;
+      padding: 4px 10px;
+      font-size: 0.65rem;
+      min-height: 32px;
       white-space: nowrap;
     }
 
     .content-area {
       flex: 1;
-      padding: 1.25rem;
+      padding: 1rem;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
     }
 
     .content-area h2 {
-      font-size: 1.3rem;
+      font-size: 1.2rem;
       font-weight: 800;
       letter-spacing: -0.01em;
       margin-bottom: 4px;
     }
     .module-page > p {
       color: var(--text-muted);
-      font-size: 0.85rem;
-      margin-bottom: 1rem;
+      font-size: 0.8rem;
+      margin-bottom: 0.8rem;
     }
 
     /* Cards & Forms */
     .card {
       background: var(--bg-surface);
       border: 1px solid var(--border-subtle);
-      border-radius: 14px;
-      padding: 1.2rem;
+      border-radius: 12px;
+      padding: 1rem;
     }
     .card h3 {
-      font-size: 0.7rem;
+      font-size: 0.65rem;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.04em;
       color: var(--text-muted);
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
     .card p {
-      font-size: 1.3rem;
+      font-size: 1.1rem;
       font-weight: 800;
       font-family: 'JetBrains Mono', monospace;
     }
@@ -447,26 +500,25 @@
     .stats-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-top: 1rem;
+      gap: 10px;
+      margin-top: 0.8rem;
     }
-    .stats-grid .card p { font-size: 1.2rem; }
+    .stats-grid .card p { font-size: 1rem; }
 
     .form-card {
-      margin-top: 1rem;
+      margin-top: 0.8rem;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 14px;
       max-width: 100%;
     }
-
     .form-group {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 4px;
     }
     .form-group label {
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       font-weight: 600;
       color: var(--text-muted);
     }
@@ -476,22 +528,22 @@
       width: 100%;
       background: var(--bg-base);
       border: 1px solid var(--border-subtle);
-      border-radius: 10px;
-      padding: 10px 12px;
+      border-radius: 8px;
+      padding: 8px 10px;
       color: var(--text-primary);
       outline: none;
       font-family: inherit;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       transition: all 0.2s ease;
       appearance: none;
       -webkit-appearance: none;
-      min-height: 44px;
+      min-height: 38px;
     }
     .form-group select {
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
       background-repeat: no-repeat;
-      background-position: right 12px center;
-      padding-right: 36px;
+      background-position: right 10px center;
+      padding-right: 32px;
       cursor: pointer;
     }
     .form-group select:hover {
@@ -507,26 +559,29 @@
     .form-group select option {
       background: #000000;
       color: #ffffff;
-      padding: 10px;
+      padding: 8px;
     }
     .form-group small {
       color: var(--text-dim);
-      font-size: 0.7rem;
+      font-size: 0.65rem;
     }
     .form-action {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 8px;
       margin-top: 4px;
     }
     .form-action .btn {
       flex: 1;
-      min-width: 120px;
+      min-width: 80px;
+      padding: 8px 14px;
+      font-size: 0.8rem;
+      min-height: 38px;
     }
 
     .status-success {
       color: var(--text-primary);
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       font-weight: 600;
     }
     .hidden { display: none !important; }
@@ -544,16 +599,16 @@
 
     footer {
       text-align: center;
-      padding: 30px 16px;
+      padding: 24px 16px;
       border-top: 1px solid var(--border-subtle);
       color: var(--text-dim);
-      font-size: 0.75rem;
+      font-size: 0.7rem;
     }
 
     .subtabs {
       display: flex;
-      gap: 6px;
-      margin: 1rem 0 0.5rem;
+      gap: 4px;
+      margin: 0.8rem 0 0.4rem;
       border-bottom: 1px solid var(--border-subtle);
       flex-wrap: wrap;
     }
@@ -561,8 +616,8 @@
       background: transparent;
       border: none;
       color: var(--text-muted);
-      padding: 8px 4px;
-      font-size: 0.8rem;
+      padding: 6px 2px;
+      font-size: 0.75rem;
       font-weight: 700;
       cursor: pointer;
       font-family: inherit;
@@ -576,35 +631,35 @@
     .color-row {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       flex-wrap: wrap;
     }
     .color-row input[type="color"] {
-      width: 44px;
-      height: 40px;
+      width: 38px;
+      height: 36px;
       padding: 2px;
       border: 1px solid var(--border-subtle);
-      border-radius: 8px;
+      border-radius: 6px;
       background: var(--bg-base);
       cursor: pointer;
     }
     .color-row input[type="text"] {
-      max-width: 120px;
+      max-width: 100px;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8rem;
+      font-size: 0.75rem;
     }
 
     .switch-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
+      gap: 10px;
     }
-    .switch-row label { margin: 0; cursor: pointer; font-size: 0.85rem; }
+    .switch-row label { margin: 0; cursor: pointer; font-size: 0.8rem; }
     .switch {
       position: relative;
-      width: 44px;
-      height: 24px;
+      width: 40px;
+      height: 22px;
       flex-shrink: 0;
     }
     .switch input { opacity: 0; width: 0; height: 0; }
@@ -613,22 +668,22 @@
       border-radius: 30px; cursor: pointer; transition: 0.2s;
     }
     .switch-slider::before {
-      content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px;
+      content: ''; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px;
       background: var(--text-muted); border-radius: 50%; transition: 0.2s;
     }
     .switch input:checked + .switch-slider { background: #ffffff; }
-    .switch input:checked + .switch-slider::before { background: #000000; transform: translateX(20px); }
+    .switch input:checked + .switch-slider::before { background: #000000; transform: translateX(18px); }
 
     .image-upload {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       flex-wrap: wrap;
     }
     .image-preview {
-      width: 64px;
-      height: 64px;
-      border-radius: 10px;
+      width: 56px;
+      height: 56px;
+      border-radius: 8px;
       object-fit: cover;
       background: var(--bg-base);
       border: 1px solid var(--border-subtle);
@@ -638,24 +693,24 @@
     .chip-select {
       display: flex;
       flex-wrap: wrap;
-      gap: 6px;
+      gap: 4px;
       background: var(--bg-base);
       border: 1px solid var(--border-subtle);
-      border-radius: 10px;
-      padding: 10px;
-      min-height: 44px;
+      border-radius: 8px;
+      padding: 8px;
+      min-height: 38px;
       transition: border-color 0.2s ease;
     }
     .chip-select:hover { border-color: var(--border-active); }
     .role-chip {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
       background: rgba(255,255,255,0.05);
       border: 1px solid var(--border-subtle);
-      padding: 5px 12px;
+      padding: 4px 10px;
       border-radius: 20px;
-      font-size: 0.78rem;
+      font-size: 0.72rem;
       font-weight: 600;
       cursor: pointer;
       user-select: none;
@@ -664,7 +719,7 @@
       touch-action: manipulation;
     }
     .role-chip .chip-icon {
-      font-size: 0.65rem;
+      font-size: 0.6rem;
       opacity: 0.6;
       font-weight: 800;
     }
@@ -680,40 +735,40 @@
       box-shadow: 0 2px 8px rgba(255, 255, 255, 0.2);
     }
     .role-chip.selected .chip-icon { opacity: 0.8; color: #000000; }
-    .chip-empty { color: var(--text-dim); font-size: 0.8rem; padding: 4px 0; }
+    .chip-empty { color: var(--text-dim); font-size: 0.75rem; padding: 4px 0; }
 
     .button-row {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 6px;
       align-items: center;
       background: var(--bg-base);
       border: 1px solid var(--border-subtle);
-      border-radius: 10px;
-      padding: 10px;
+      border-radius: 8px;
+      padding: 8px;
     }
     .button-row input,
     .button-row select {
       flex: 1;
-      min-width: 80px;
+      min-width: 60px;
       background: var(--bg-base);
       border: 1px solid var(--border-subtle);
-      border-radius: 8px;
-      padding: 8px 10px;
+      border-radius: 6px;
+      padding: 6px 8px;
       color: var(--text-primary);
       font-family: inherit;
-      font-size: 0.8rem;
-      min-height: 38px;
+      font-size: 0.75rem;
+      min-height: 34px;
     }
     .button-remove {
       background: transparent;
       border: 1px solid var(--border-subtle);
       color: var(--text-muted);
-      border-radius: 8px;
-      width: 34px;
-      height: 34px;
+      border-radius: 6px;
+      width: 30px;
+      height: 30px;
       cursor: pointer;
-      font-size: 1rem;
+      font-size: 0.9rem;
       flex-shrink: 0;
       transition: all 0.2s ease;
       display: flex;
@@ -728,14 +783,14 @@
       background: rgba(255,255,255,0.05);
       border: 1px dashed var(--border-subtle);
       color: var(--text-muted);
-      padding: 8px 14px;
-      border-radius: 10px;
+      padding: 6px 12px;
+      border-radius: 8px;
       cursor: pointer;
       font-family: inherit;
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       font-weight: 600;
       transition: all 0.2s ease;
-      min-height: 40px;
+      min-height: 34px;
       touch-action: manipulation;
     }
     .add-button-btn:hover,
@@ -748,35 +803,35 @@
     .option-row {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 6px;
       align-items: center;
       background: var(--bg-base);
       border: 1px solid var(--border-subtle);
-      border-radius: 10px;
-      padding: 10px;
+      border-radius: 8px;
+      padding: 8px;
     }
     .option-row input,
     .option-row select {
       flex: 1;
-      min-width: 80px;
+      min-width: 60px;
       background: var(--bg-base);
       border: 1px solid var(--border-subtle);
-      border-radius: 8px;
-      padding: 8px 10px;
+      border-radius: 6px;
+      padding: 6px 8px;
       color: var(--text-primary);
       font-family: inherit;
-      font-size: 0.8rem;
-      min-height: 38px;
+      font-size: 0.75rem;
+      min-height: 34px;
     }
     .option-remove {
       background: transparent;
       border: 1px solid var(--border-subtle);
       color: var(--text-muted);
-      border-radius: 8px;
-      width: 34px;
-      height: 34px;
+      border-radius: 6px;
+      width: 30px;
+      height: 30px;
       cursor: pointer;
-      font-size: 1rem;
+      font-size: 0.9rem;
       flex-shrink: 0;
       transition: all 0.2s ease;
       display: flex;
@@ -790,11 +845,11 @@
       background: #2b2d31;
       border-left: 4px solid #ffffff;
       border-radius: 6px;
-      padding: 12px 14px;
+      padding: 10px 12px;
       font-family: 'Plus Jakarta Sans', sans-serif;
       color: #dbdee1;
       display: flex;
-      gap: 12px;
+      gap: 10px;
       justify-content: space-between;
     }
     .discord-embed-body { flex: 1; min-width: 0; }
@@ -802,17 +857,17 @@
       font-weight: 700;
       color: #ffffff;
       margin-bottom: 4px;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
     }
     .discord-embed-desc {
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       line-height: 1.4;
       white-space: pre-wrap;
       word-break: break-word;
     }
     .discord-embed-thumb {
-      width: 48px;
-      height: 48px;
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
       object-fit: cover;
       flex-shrink: 0;
@@ -820,25 +875,24 @@
     .discord-embed-image {
       width: 100%;
       border-radius: 6px;
-      margin-top: 8px;
-      max-height: 120px;
+      margin-top: 6px;
+      max-height: 100px;
       object-fit: cover;
     }
     .discord-embed-footer {
       display: flex;
       align-items: center;
       gap: 6px;
-      margin-top: 8px;
-      font-size: 0.65rem;
+      margin-top: 6px;
+      font-size: 0.6rem;
       color: #949ba4;
     }
     .discord-embed-footer img {
-      width: 16px;
-      height: 16px;
+      width: 14px;
+      height: 14px;
       border-radius: 50%;
     }
 
-    /* Edit Tabs */
     .edit-tab-content.hidden { display: none; }
     .edit-tab-btn.active {
       color: var(--text-primary) !important;
@@ -847,43 +901,43 @@
 
     .soon-badge {
       display: inline-block;
-      font-size: 0.6rem;
+      font-size: 0.55rem;
       font-weight: 700;
       letter-spacing: 0.04em;
       text-transform: uppercase;
       color: var(--text-dim);
       background: rgba(255,255,255,0.06);
       border: 1px solid var(--border-subtle);
-      padding: 2px 8px;
+      padding: 2px 6px;
       border-radius: 20px;
-      margin-left: 6px;
+      margin-left: 4px;
       vertical-align: middle;
     }
 
     #toast-container {
       position: fixed;
-      bottom: 20px;
+      bottom: 16px;
       left: 50%;
       transform: translateX(-50%);
       z-index: 999;
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      width: 90%;
-      max-width: 400px;
+      gap: 8px;
+      width: 92%;
+      max-width: 380px;
       pointer-events: none;
     }
     .toast {
       background: #ffffff;
       color: #000000;
       font-weight: 700;
-      font-size: 0.85rem;
-      padding: 12px 18px;
-      border-radius: 12px;
+      font-size: 0.8rem;
+      padding: 10px 16px;
+      border-radius: 10px;
       box-shadow: 0 8px 24px rgba(0,0,0,0.4);
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       animation: toast-in 0.3s ease, toast-out 0.3s ease 2.7s forwards;
       pointer-events: auto;
     }
@@ -891,58 +945,130 @@
     @keyframes toast-out { from { opacity: 1; } to { opacity: 0; transform: translateY(-10px); } }
 
     .edit-panel-view {
-      margin-top: 1rem;
+      margin-top: 0.8rem;
     }
     .edit-panel-view .back-link {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
       color: var(--text-muted);
       text-decoration: none;
       font-weight: 600;
-      font-size: 0.85rem;
-      margin-bottom: 1rem;
+      font-size: 0.8rem;
+      margin-bottom: 0.8rem;
       transition: color 0.2s;
       cursor: pointer;
-      padding: 6px 0;
+      padding: 4px 0;
     }
     .edit-panel-view .back-link:hover { color: var(--text-primary); }
 
     .loading-spinner {
       display: inline-block;
-      width: 18px;
-      height: 18px;
+      width: 16px;
+      height: 16px;
       border: 2px solid var(--border-subtle);
       border-top-color: var(--text-primary);
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
-      margin-right: 8px;
+      margin-right: 6px;
       vertical-align: middle;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Mobile Optimierungen für die Bearbeitungsansicht */
-    #edit-panel-header {
-      margin-bottom: 16px;
-    }
-    #edit-panel-header .discord-embed {
-      margin-top: 10px;
+    /* ===== MOBILE MENU (Hamburger Overlay) ===== */
+    @media (max-width: 767px) {
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 280px;
+        flex-direction: column;
+        align-items: stretch;
+        border-bottom: none;
+        border-right: 1px solid var(--border-subtle);
+        padding: 1rem 0.8rem;
+        overflow-y: auto;
+        transform: translateX(-110%);
+        opacity: 0;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+        z-index: 250;
+        background: var(--bg-surface);
+        box-shadow: 4px 0 30px rgba(0,0,0,0.8);
+      }
+      .sidebar.open {
+        transform: translateX(0);
+        opacity: 1;
+      }
+
+      .sidebar-header {
+        margin-bottom: 1rem;
+        padding-bottom: 0.8rem;
+        border-bottom: 1px solid var(--border-subtle);
+        flex-shrink: 0;
+      }
+      #active-guild-name {
+        max-width: 140px;
+        font-size: 0.9rem;
+      }
+      .guild-icon-small {
+        width: 36px;
+        height: 36px;
+      }
+
+      .sidebar-nav {
+        flex-direction: column;
+        overflow-y: auto;
+        overflow-x: visible;
+        flex: 1;
+        gap: 2px;
+      }
+      .tab-btn {
+        padding: 10px 12px;
+        font-size: 0.85rem;
+        white-space: normal;
+        border-radius: 10px;
+        min-height: 44px;
+      }
+      .tab-icon {
+        width: 20px;
+        height: 20px;
+      }
+      .tab-icon svg {
+        width: 20px;
+        height: 20px;
+      }
+      .back-btn {
+        width: 100%;
+        text-align: center;
+        margin-top: auto;
+        padding: 10px;
+        font-size: 0.8rem;
+        min-height: 44px;
+      }
+
+      /* Overlay-Background (dunkel hinter dem Menü) */
+      .menu-overlay-bg {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.6);
+        z-index: 245;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+      }
+      .menu-overlay-bg.open {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .nav-center { display: none; }
+      #user-name { display: none; }
     }
 
-    /* Responsive Anpassungen */
-    @media (min-width: 640px) {
-      .guild-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-      .stats-grid {
-        grid-template-columns: repeat(3, 1fr);
-      }
-      .content-area {
-        padding: 2rem;
-      }
-      #user-name {
-        display: inline !important;
-      }
+    @media (min-width: 768px) {
+      .hamburger-btn { display: none; }
+      .menu-overlay-bg { display: none; }
       .sidebar {
         width: 240px;
         flex-direction: column;
@@ -953,9 +1079,10 @@
         overflow-y: auto;
         height: 100%;
         min-height: auto;
+        flex-shrink: 0;
       }
       .sidebar-header {
-        margin-bottom: 1.2rem;
+        margin-bottom: 1rem;
         padding-bottom: 0.8rem;
         border-bottom: 1px solid var(--border-subtle);
         flex-shrink: 0;
@@ -988,14 +1115,23 @@
         flex-direction: row;
       }
       .content-area {
-        padding: 2rem 2.5rem;
+        padding: 1.5rem 2rem;
       }
-      .brand-name { font-size: 1.1rem; }
-      .brand-logo { width: 34px; height: 34px; }
-      .brand-logo svg { width: 18px; height: 18px; }
+      .brand-name { font-size: 1.05rem; }
+      .brand-logo { width: 32px; height: 32px; }
+      .brand-logo svg { width: 16px; height: 16px; }
+      #user-name {
+        display: inline !important;
+      }
+      .guild-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
     }
 
-    @media (min-width: 900px) {
+    @media (min-width: 1024px) {
       .guild-grid {
         grid-template-columns: repeat(3, 1fr);
       }
@@ -1003,31 +1139,35 @@
         grid-template-columns: repeat(4, 1fr);
       }
       .container {
-        padding: 60px 24px 100px;
+        padding: 48px 24px 80px;
+      }
+      .content-area {
+        padding: 2rem 2.5rem;
       }
     }
 
     @media (max-width: 480px) {
-      header { padding: 8px 3%; }
-      .brand-name { font-size: 0.85rem; }
-      .brand-logo { width: 26px; height: 26px; }
-      .brand-logo svg { width: 14px; height: 14px; }
-      .nav-center { gap: 10px; }
-      .nav-link { font-size: 0.7rem; }
-      .user-chip img { width: 24px; height: 24px; }
-      .logout-btn { font-size: 0.6rem; padding: 3px 8px; }
-      .content-area { padding: 0.8rem; }
-      .content-area h2 { font-size: 1.1rem; }
-      .guild-card { padding: 1rem; }
-      .guild-name { font-size: 0.85rem; }
-      .btn { font-size: 0.75rem; padding: 8px 12px; min-height: 38px; }
-      .form-group input, .form-group textarea, .form-group select { font-size: 0.8rem; padding: 8px 10px; min-height: 38px; }
-      .card { padding: 0.8rem; }
-      .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
-      .stats-grid .card p { font-size: 1rem; }
-      .discord-embed { padding: 10px 12px; }
-      .discord-embed-title { font-size: 0.8rem; }
-      .discord-embed-desc { font-size: 0.75rem; }
+      header { padding: 6px 3%; min-height: 48px; }
+      .hamburger-btn { width: 34px; height: 34px; }
+      .hamburger-btn span { width: 16px; height: 2px; }
+      .brand-logo { width: 24px; height: 24px; }
+      .brand-logo svg { width: 12px; height: 12px; }
+      .brand-name { font-size: 0.8rem; }
+      .user-chip img { width: 22px; height: 22px; }
+      .logout-btn { font-size: 0.55rem; padding: 2px 6px; }
+      .content-area { padding: 0.6rem; }
+      .content-area h2 { font-size: 1rem; }
+      .guild-card { padding: 0.8rem; }
+      .guild-name { font-size: 0.8rem; }
+      .btn { font-size: 0.7rem; padding: 6px 10px; min-height: 34px; }
+      .form-group input, .form-group textarea, .form-group select { font-size: 0.75rem; padding: 6px 8px; min-height: 34px; }
+      .card { padding: 0.7rem; }
+      .stats-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+      .stats-grid .card p { font-size: 0.9rem; }
+      .discord-embed { padding: 8px 10px; }
+      .discord-embed-title { font-size: 0.75rem; }
+      .discord-embed-desc { font-size: 0.7rem; }
+      .sidebar { width: 240px; }
     }
   </style>
 </head>
@@ -1036,19 +1176,31 @@
   <div class="bg-grid"></div>
   <canvas id="starfield"></canvas>
 
-  <!-- Top Navigation -->
+  <!-- Overlay-Background für mobiles Menü -->
+  <div id="menu-overlay-bg" class="menu-overlay-bg" onclick="closeMobileMenu()"></div>
+
+  <!-- Top Navigation mit Hamburger -->
   <header>
-    <a href="/" class="brand">
-      <div class="brand-logo">
-        <svg width="18" height="18" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M50 18 L22 75 L38 75 L50 48 L62 75 L78 75 Z" fill="#FFFFFF"/>
-          <path d="M15 50 C20 25, 40 12, 68 12" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
-          <path d="M85 50 C80 75, 60 88, 32 88" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
-          <line x1="72" y1="20" x2="28" y2="80" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
-        </svg>
-      </div>
-      <span class="brand-name">APEX<span>.</span></span>
-    </a>
+    <div class="header-left">
+      <!-- Hamburger-Button -->
+      <button class="hamburger-btn" id="hamburger-btn" onclick="toggleMobileMenu()" aria-label="Menü öffnen/schließen">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+
+      <a href="/" class="brand">
+        <div class="brand-logo">
+          <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M50 18 L22 75 L38 75 L50 48 L62 75 L78 75 Z" fill="#FFFFFF"/>
+            <path d="M15 50 C20 25, 40 12, 68 12" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+            <path d="M85 50 C80 75, 60 88, 32 88" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+            <line x1="72" y1="20" x2="28" y2="80" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="brand-name">APEX<span>.</span></span>
+      </a>
+    </div>
 
     <nav class="nav-center">
       <a href="/" class="nav-link">Startseite</a>
@@ -1079,44 +1231,45 @@
 
   <!-- Server Management Overlay / Modal -->
   <div id="manage-overlay" class="overlay hidden">
-    <div class="sidebar">
+    <!-- Sidebar (Desktop: sichtbar, Mobil: als Hamburger-Menü) -->
+    <div class="sidebar" id="mobile-sidebar">
       <div class="sidebar-header">
         <img id="active-guild-icon" src="" class="guild-icon-small">
         <span id="active-guild-name">Server</span>
       </div>
       <nav class="sidebar-nav">
-        <button class="tab-btn active" data-tab="overview" onclick="switchTab('overview')">
+        <button class="tab-btn active" data-tab="overview" onclick="switchTab('overview'); closeMobileMenu();">
           <span class="tab-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span> Übersicht
         </button>
-        <button class="tab-btn" data-tab="welcome" onclick="switchTab('welcome')">
+        <button class="tab-btn" data-tab="welcome" onclick="switchTab('welcome'); closeMobileMenu();">
           <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></span> Willkommen
         </button>
-        <button class="tab-btn" data-tab="tickets" onclick="switchTab('tickets')">
+        <button class="tab-btn" data-tab="tickets" onclick="switchTab('tickets'); closeMobileMenu();">
           <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><line x1="12" y1="9" x2="12" y2="15"/></svg></span> Tickets
         </button>
-        <button class="tab-btn" data-tab="teamliste" onclick="switchTab('teamliste')">
+        <button class="tab-btn" data-tab="teamliste" onclick="switchTab('teamliste'); closeMobileMenu();">
           <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Teamliste
         </button>
-        <button class="tab-btn" data-tab="support" onclick="switchTab('support')">
+        <button class="tab-btn" data-tab="support" onclick="switchTab('support'); closeMobileMenu();">
           <span class="tab-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> Support
         </button>
-        <button class="tab-btn" data-tab="moderation" onclick="switchTab('moderation')">
+        <button class="tab-btn" data-tab="moderation" onclick="switchTab('moderation'); closeMobileMenu();">
           <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span> Moderation
         </button>
-        <button class="tab-btn" data-tab="teamupdate" onclick="switchTab('teamupdate')">
+        <button class="tab-btn" data-tab="teamupdate" onclick="switchTab('teamupdate'); closeMobileMenu();">
           <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></span> Teamupdate
         </button>
-        <button class="tab-btn" data-tab="stats" onclick="switchTab('stats')">
+        <button class="tab-btn" data-tab="stats" onclick="switchTab('stats'); closeMobileMenu();">
           <span class="tab-icon"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span> Statistiken
         </button>
-        <button class="tab-btn" data-tab="verification" onclick="switchTab('verification')">
+        <button class="tab-btn" data-tab="verification" onclick="switchTab('verification'); closeMobileMenu();">
           <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span> Verifizierung
         </button>
-        <button class="tab-btn" data-tab="antinuke" onclick="switchTab('antinuke')">
+        <button class="tab-btn" data-tab="antinuke" onclick="switchTab('antinuke'); closeMobileMenu();">
           <span class="tab-icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span> Anti Nuke
         </button>
       </nav>
-      <button class="btn btn-secondary back-btn" onclick="closeManagement()">← Server wechseln</button>
+      <button class="btn btn-secondary back-btn" onclick="closeManagement(); closeMobileMenu();">← Server wechseln</button>
     </div>
 
     <div class="content-area">
@@ -1137,7 +1290,7 @@
           </div>
           <div class="card">
             <h3>Bot Status</h3>
-            <p style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.9rem; font-weight: 600; display:flex; align-items:center; gap:6px;"><span class="status-dot online"></span> Online</p>
+            <p style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.85rem; font-weight: 600; display:flex; align-items:center; gap:6px;"><span class="status-dot online"></span> Online</p>
           </div>
           <div class="card">
             <h3>🤖 Bots</h3>
@@ -1153,12 +1306,12 @@
           </div>
           <div class="card">
             <h3>📅 Erstellt</h3>
-            <p id="overview-created" class="stat-text" style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.9rem; font-weight:700;">N/A</p>
+            <p id="overview-created" class="stat-text" style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.85rem; font-weight:700;">N/A</p>
           </div>
           <div class="card">
             <h3>👑 Owner</h3>
-            <p id="overview-owner" class="stat-text owner-row" style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.9rem; font-weight:700; display:flex; align-items:center; gap:8px;">
-              <img id="overview-owner-avatar" class="guild-icon-small hidden" src="" alt="" style="width:28px;height:28px;border-radius:50%;">
+            <p id="overview-owner" class="stat-text owner-row" style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.85rem; font-weight:700; display:flex; align-items:center; gap:6px;">
+              <img id="overview-owner-avatar" class="guild-icon-small hidden" src="" alt="" style="width:24px;height:24px;border-radius:50%;">
               <span id="overview-owner-name">N/A</span>
             </p>
           </div>
@@ -1246,8 +1399,8 @@
             </div>
           </div>
 
-          <div class="embed-preview-wrap" style="margin-top:1.5rem;">
-            <label style="font-size:0.8rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:8px;">Live-Vorschau</label>
+          <div class="embed-preview-wrap" style="margin-top:1rem;">
+            <label style="font-size:0.75rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">Live-Vorschau</label>
             <div class="discord-embed" id="join-preview" style="border-left-color:#ffffff;">
               <div class="discord-embed-body">
                 <div class="discord-embed-title" id="join-preview-title">Willkommen auf {server}! 🎉</div>
@@ -1329,8 +1482,8 @@
             </div>
           </div>
 
-          <div class="embed-preview-wrap" style="margin-top:1.5rem;">
-            <label style="font-size:0.8rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:8px;">Live-Vorschau</label>
+          <div class="embed-preview-wrap" style="margin-top:1rem;">
+            <label style="font-size:0.75rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">Live-Vorschau</label>
             <div class="discord-embed" id="leave-preview" style="border-left-color:#ffffff;">
               <div class="discord-embed-body">
                 <div class="discord-embed-title" id="leave-preview-title">Auf Wiedersehen 👋</div>
@@ -1631,6 +1784,41 @@
     resize();
     requestAnimationFrame(frame);
   })();
+
+  // ============================================================
+  // HAMBURGER MENU FUNKTIONEN
+  // ============================================================
+  function toggleMobileMenu() {
+    const sidebar = document.getElementById('mobile-sidebar');
+    const overlay = document.getElementById('menu-overlay-bg');
+    const btn = document.getElementById('hamburger-btn');
+    
+    sidebar.classList.toggle('open');
+    overlay.classList.toggle('open');
+    btn.classList.toggle('active');
+  }
+
+  function closeMobileMenu() {
+    const sidebar = document.getElementById('mobile-sidebar');
+    const overlay = document.getElementById('menu-overlay-bg');
+    const btn = document.getElementById('hamburger-btn');
+    
+    sidebar.classList.remove('open');
+    overlay.classList.remove('open');
+    btn.classList.remove('active');
+  }
+
+  // Menü schließen, wenn auf den Hintergrund geklickt wird
+  document.addEventListener('click', function(e) {
+    const sidebar = document.getElementById('mobile-sidebar');
+    const btn = document.getElementById('hamburger-btn');
+    // Wenn das Menü offen ist und der Klick nicht auf das Menü oder den Button geht
+    if (sidebar.classList.contains('open')) {
+      if (!sidebar.contains(e.target) && !btn.contains(e.target)) {
+        closeMobileMenu();
+      }
+    }
+  });
   </script>
   <script src="/dashboard.js"></script>
 </body>
