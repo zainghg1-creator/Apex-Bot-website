@@ -499,8 +499,8 @@
       align-items: center;
       gap: 6px;
     }
-    .ticket-add-card:hover { border-color: var(--border-active); color: var(--text-primary); background: rgba(255,255,255,0.02); }
-    .ticket-add-card .icon { font-size: 2rem; line-height: 1; }
+    .ticket-add-card:hover { border-color: #6d5ef8; color: var(--text-primary); background: rgba(109,94,248,0.08); }
+    .ticket-add-card .icon { font-size: 2rem; line-height: 1; color: #6d5ef8; }
     .ticket-add-card .label { font-weight: 700; font-size: 1rem; }
     .ticket-add-card .sub { font-size: 0.8rem; color: var(--text-dim); }
 
@@ -782,6 +782,121 @@
     .embed-preview-footer img { width: 14px; height: 14px; border-radius: 50%; }
 
     .edit-preview-wrap { margin-bottom: 16px; background: var(--bg-surface); border-radius: 10px; padding: 14px; border: 1px solid var(--border-subtle); }
+
+    /* ===== TICKET PANEL EDITOR – TICKETY-STYLE REDESIGN =====
+       Alles hier ist unter ".tpe" verschachtelt/neu, damit andere
+       Dashboard-Module (Welcome, Verification, Teamliste, ...) die
+       auf form-group / switch / chip-select / panel-card etc. basieren,
+       unverändert bleiben. */
+    :root {
+      --tpe-accent: #6d5ef8;
+      --tpe-accent-hover: #5b4de0;
+      --tpe-accent-soft: rgba(109, 94, 248, 0.14);
+      --tpe-card-bg: #131318;
+      --tpe-card-bg-alt: #17171d;
+      --tpe-border: rgba(255, 255, 255, 0.07);
+      --tpe-border-strong: rgba(255, 255, 255, 0.14);
+      --tpe-red: #ef4444;
+      --tpe-green: #23a55a;
+      --tpe-gray: #6d7079;
+      --tpe-blue: #5865f2;
+    }
+
+    .tpe { display: flex; flex-direction: column; gap: 0; }
+
+    /* scoped overrides on shared components, only inside .tpe */
+    .tpe .switch input:checked + .switch-slider { background: var(--tpe-accent); }
+    .tpe .switch input:checked + .switch-slider::before { background: #ffffff; }
+    .tpe .role-chip.selected { background: var(--tpe-accent); color: #fff; border-color: var(--tpe-accent); box-shadow: 0 2px 10px rgba(109,94,248,0.30); }
+    .tpe .form-group input:focus, .tpe .form-group textarea:focus, .tpe .form-group select:focus { border-color: var(--tpe-accent); box-shadow: 0 0 0 2px var(--tpe-accent-soft); }
+    .tpe .add-option-btn { background: var(--tpe-accent-soft); border: 1px dashed var(--tpe-accent); color: var(--tpe-accent); }
+    .tpe .add-option-btn:hover { background: rgba(109,94,248,0.22); }
+    .tpe .btn-primary { background: var(--tpe-accent); color: #fff; }
+    .tpe .btn-primary:hover { background: var(--tpe-accent-hover); }
+    .tpe .option-remove:hover, .tpe .button-remove:hover { color: var(--tpe-red); border-color: var(--tpe-red); }
+
+    /* header */
+    .tpe-header {
+      display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+      background: var(--tpe-card-bg); border: 1px solid var(--tpe-border); border-radius: 14px;
+      padding: 14px 16px; margin-bottom: 16px;
+    }
+    .tpe-back {
+      width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,0.04); border: 1px solid var(--tpe-border); border-radius: 10px;
+      color: var(--text-primary); cursor: pointer; font-size: 1rem; transition: all 0.2s ease;
+    }
+    .tpe-back:hover { background: rgba(255,255,255,0.08); border-color: var(--tpe-border-strong); }
+    .tpe-header-titles { display: flex; flex-direction: column; gap: 4px; margin-right: auto; min-width: 140px; }
+    .tpe-title { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.01em; }
+    .tpe-panel-select {
+      background: transparent; border: none; color: var(--text-muted); font-size: 0.72rem; font-weight: 600;
+      padding: 0; min-height: auto; max-width: 220px;
+    }
+    .tpe-header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .tpe-channel-select {
+      background: var(--bg-base); border: 1px solid var(--tpe-border); border-radius: 8px;
+      padding: 8px 12px; color: var(--text-primary); font-size: 0.8rem; min-height: 38px; min-width: 180px;
+    }
+
+    /* tabs (reusing edit-tabs/.edit-tab-btn markup, restyled since ticket-only) */
+    .edit-tabs { border-bottom: 1px solid var(--tpe-border); }
+    .edit-tab-btn.active { border-bottom-color: var(--tpe-accent); }
+
+    /* cards */
+    .tpe-card { background: var(--tpe-card-bg); border: 1px solid var(--tpe-border); border-radius: 14px; padding: 18px 20px; margin-bottom: 14px; }
+    .tpe-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 4px; }
+    .tpe-card-title { font-weight: 800; font-size: 0.92rem; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
+    .tpe-card-sub { font-size: 0.75rem; color: var(--text-dim); margin-top: 4px; line-height: 1.4; }
+    .tpe-card .form-group { margin-top: 14px; }
+    .tpe-card .form-group:first-child { margin-top: 0; }
+
+    /* stepper */
+    .tpe-stepper { display: flex; align-items: center; width: fit-content; border: 1px solid var(--tpe-border); border-radius: 10px; overflow: hidden; }
+    .tpe-stepper button { width: 38px; height: 40px; border: none; background: rgba(255,255,255,0.04); color: var(--text-primary); font-size: 1.1rem; cursor: pointer; transition: background 0.2s ease; }
+    .tpe-stepper button:hover { background: rgba(255,255,255,0.08); }
+    .tpe-stepper input { width: 64px; text-align: center; border: none; border-left: 1px solid var(--tpe-border); border-right: 1px solid var(--tpe-border); background: var(--bg-base); color: var(--text-primary); font-size: 0.9rem; height: 40px; min-height: auto; }
+
+    /* color swatches */
+    .tpe-color-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .tpe-swatch { width: 26px; height: 26px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: all 0.15s ease; flex-shrink: 0; }
+    .tpe-swatch.selected { box-shadow: 0 0 0 2px var(--tpe-card-bg-alt), 0 0 0 4px currentColor; }
+
+    /* discord-style live preview */
+    .tpe-discord-preview { background: #313338; border-radius: 12px; padding: 14px 16px; font-family: 'Plus Jakarta Sans', sans-serif; margin-bottom: 16px; }
+    .tpe-discord-author { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .tpe-discord-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--tpe-accent); display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+    .tpe-discord-namerow { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; flex-wrap: wrap; }
+    .tpe-discord-name { font-weight: 700; color: #fff; }
+    .tpe-discord-app-badge { background: var(--tpe-blue); color: #fff; font-size: 0.55rem; font-weight: 800; padding: 1px 5px; border-radius: 4px; text-transform: uppercase; }
+    .tpe-discord-time { color: #949ba4; font-size: 0.7rem; }
+    .tpe-discord-preview .embed-preview { margin-left: 44px; }
+    .tpe-msg-bubble { font-size: 0.82rem; color: #dbdee1; line-height: 1.4; margin-left: 44px; white-space: pre-wrap; word-break: break-word; }
+
+    /* button config cards (Claim / Close / Request Close style) */
+    .tpe-btn-card { border: 1px solid var(--tpe-border); border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; background: var(--tpe-card-bg-alt); }
+    .tpe-btn-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .tpe-btn-card-head input.btn-action-label { background: transparent; border: none; font-weight: 800; font-size: 0.9rem; color: var(--text-primary); padding: 0; min-height: auto; width: auto; max-width: 60%; }
+    .tpe-btn-card-head input.btn-action-label:focus { outline: none; }
+    .tpe-btn-grid { display: grid; grid-template-columns: 64px 1.4fr 1fr; gap: 10px; align-items: end; }
+    .tpe-btn-grid .form-group { margin-top: 0 !important; }
+    .tpe-btn-preview { margin-top: 12px; }
+    .tpe-btn-preview-label { font-size: 0.65rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+    .tpe-btn-chip { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 0.85rem; color: #fff; }
+    .tpe-btn-remove { background: transparent; border: 1px solid var(--tpe-border); color: var(--text-muted); border-radius: 8px; width: 34px; height: 34px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s ease; flex-shrink: 0; }
+    .tpe-btn-remove:hover { color: var(--tpe-red); border-color: var(--tpe-red); }
+
+    /* option cards (dropdown options) */
+    .tpe-option-card { border: 1px solid var(--tpe-border); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; background: var(--tpe-card-bg-alt); }
+
+    .tpe-footer { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 6px; padding-top: 16px; border-top: 1px solid var(--tpe-border); }
+    .tpe-footer .btn { min-width: 120px; }
+
+    @media (max-width: 640px) {
+      .tpe-btn-grid { grid-template-columns: 1fr; }
+      .tpe-header { padding: 12px; }
+      .tpe-card { padding: 14px 16px; }
+    }
 
     /* ===== TOAST ===== */
     #toast-container {
