@@ -1,6 +1,6 @@
 'use strict';
 
-console.log('✅ NEUE dashboard.js – Ticket-System 10x cooler!');
+console.log('✅ NEUE dashboard.js – Ticket-System mit Senden-Funktion!');
 
 // ============================================================
 // KONFIGURATION
@@ -735,7 +735,37 @@ function updateEditPreview() {
   }
 }
 
-// ------ Übersicht der Tickets (Karten) – angepasst an neue CSS-Klassen ------
+// ------ NEUE FUNKTION: Panel in Discord senden ------
+async function sendPanelToChannel(channelId, panelIndex) {
+  if (!state.activeGuildId) {
+    showToast('Kein Server ausgewählt.', 'error');
+    return;
+  }
+  if (!channelId) {
+    showToast('Bitte wähle einen Kanal aus.', 'error');
+    return;
+  }
+  if (panelIndex === undefined || panelIndex === null) {
+    showToast('Bitte wähle ein Panel aus.', 'error');
+    return;
+  }
+
+  try {
+    const response = await apiFetch(`/guild/${state.activeGuildId}/tickets/send-panel`, {
+      method: 'POST',
+      body: JSON.stringify({ panelIndex, channelId })
+    });
+    if (response && response.success) {
+      showToast('Panel erfolgreich in Discord gesendet! 🎉', 'success');
+    } else {
+      showToast(response?.error || 'Fehler beim Senden.', 'error');
+    }
+  } catch (err) {
+    showToast(`Fehler: ${err.message}`, 'error');
+  }
+}
+
+// ------ Übersicht der Tickets (Karten) mit Toolbar ------
 async function renderTicketOverview() {
   if (!ticketGrid) return;
   if (!state.activeGuildId) {
@@ -744,7 +774,6 @@ async function renderTicketOverview() {
   }
   ticketGrid.innerHTML = `<div class="state-box" style="grid-column:1/-1;"><span class="loading-spinner"></span> Lade Ticket-Panels...</div>`;
 
-  // Zähler aktualisieren
   const countEl = document.getElementById('ticket-panel-count');
   if (countEl) countEl.textContent = 'Lade...';
 
@@ -756,9 +785,49 @@ async function renderTicketOverview() {
     }
     const options = tickets.options || [];
 
-    // Zähler aktualisieren
     if (countEl) countEl.textContent = `${options.length} Panel${options.length !== 1 ? 's' : ''}`;
 
+    // -------------------------------
+    // Toolbar: Kanalauswahl + Senden-Button (oben rechts)
+    // -------------------------------
+    const toolbarHtml = `
+      <div style="display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:0 0 16px auto; max-width:100%;">
+        <label style="font-size:0.75rem; font-weight:600; color:var(--text-muted);">Panel:</label>
+        <select id="send-panel-select" style="flex:1; min-width:120px; background:var(--bg-base); border:1px solid var(--border-subtle); border-radius:8px; padding:6px 10px; color:var(--text-primary); font-size:0.8rem; min-height:36px;">
+          ${options.map((opt, i) => `<option value="${i}">${escapeHtml(opt.panelName || opt.label || 'Unbenannt')}</option>`).join('')}
+          ${options.length === 0 ? '<option value="">Keine Panels</option>' : ''}
+        </select>
+        <label style="font-size:0.75rem; font-weight:600; color:var(--text-muted);">Kanal:</label>
+        <select id="send-channel-select" style="flex:1; min-width:140px; background:var(--bg-base); border:1px solid var(--border-subtle); border-radius:8px; padding:6px 10px; color:var(--text-primary); font-size:0.8rem; min-height:36px;">
+          ${state.guildChannels.filter(c => c.type === 0).map(c => `<option value="${c.id}"># ${escapeHtml(c.name)}</option>`).join('')}
+          ${state.guildChannels.filter(c => c.type === 0).length === 0 ? '<option value="">Keine Textkanäle</option>' : ''}
+        </select>
+        <button class="btn btn-primary" onclick="sendPanelToChannel(document.getElementById('send-channel-select').value, parseInt(document.getElementById('send-panel-select').value))" style="flex-shrink:0; padding:6px 16px; min-height:36px; font-size:0.8rem;">
+          📤 Abschicken
+        </button>
+      </div>
+    `;
+
+    // Vorhandene Toolbar durch neue ersetzen
+    const container = document.getElementById('ticket-overview-container');
+    let toolbarContainer = container.querySelector('.ticket-toolbar');
+    if (!toolbarContainer) {
+      toolbarContainer = document.createElement('div');
+      toolbarContainer.className = 'ticket-toolbar';
+      container.prepend(toolbarContainer);
+    }
+    // Zähler und neue Toolbar kombinieren
+    toolbarContainer.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <span class="ticket-count" id="ticket-panel-count">${options.length} Panel${options.length !== 1 ? 's' : ''}</span>
+        ${toolbarHtml}
+      </div>
+    `;
+    // Zähler-Referenz aktualisieren
+    const newCountEl = toolbarContainer.querySelector('.ticket-count');
+    if (newCountEl) newCountEl.textContent = `${options.length} Panel${options.length !== 1 ? 's' : ''}`;
+
+    // ----- Karten rendern -----
     if (options.length === 0) {
       ticketGrid.innerHTML = `
         <div class="guild-card ticket-add-card" onclick="openAddTicket()">
@@ -817,7 +886,6 @@ async function renderTicketOverview() {
       `;
     });
 
-    // Add-Karte
     html += `
       <div class="guild-card ticket-add-card" onclick="openAddTicket()">
         <div class="ticket-add-icon"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
@@ -1354,3 +1422,4 @@ window.renderTicketOverview = renderTicketOverview;
 window.addOptionRow = addOptionRow;
 window.updateEditPreview = updateEditPreview;
 window.switchToSelectedPanel = switchToSelectedPanel;
+window.sendPanelToChannel = sendPanelToChannel;
