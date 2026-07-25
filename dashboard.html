@@ -32,6 +32,7 @@
       --text-primary: #ffffff;
       --text-muted: #a1a1aa;
       --text-dim: #71717a;
+      --accent-purple: #6d5ef8;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -97,7 +98,7 @@
       padding: 0;
       flex-shrink: 0;
     }
-    .hamburger-btn:hover { background: rgba(255,255,255,0.08); border-color: var(--border-medium); }
+    .hamburger-btn:hover { background: rgba(255,255,255,0.08); border-color: rgba(109,94,248,0.4); }
     .hamburger-btn span {
       display: block;
       width: 18px;
@@ -251,7 +252,7 @@
       gap: 12px;
       transition: all 0.25s ease;
     }
-    .guild-card:hover { border-color: var(--border-medium); transform: translateY(-2px); }
+    .guild-card:hover { border-color: rgba(109,94,248,0.35); transform: translateY(-2px); }
     .guild-card.add-card {
       border-style: dashed;
       justify-content: center;
@@ -372,7 +373,7 @@
       min-height: 32px;
     }
     .tab-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.04); }
-    .tab-btn.active { background: #ffffff; color: #000000; }
+    .tab-btn.active { background: #ffffff; color: #000000; box-shadow: 0 2px 14px rgba(109,94,248,0.22); }
     .tab-btn.active .tab-icon svg { stroke: #000000; }
     .tab-icon { width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .tab-icon svg { width: 14px; height: 14px; stroke: var(--text-muted); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -585,7 +586,8 @@
       font-size: 0.8rem;
     }
     .edit-tab-btn:hover { color: var(--text-primary); }
-    .edit-tab-btn.active { color: var(--text-primary); border-bottom-color: #ffffff; }
+    .edit-tab-btn.active { color: var(--text-primary); border-bottom-color: var(--accent-purple); }
+    .subtab-btn.active { color: var(--text-primary) !important; border-bottom-color: var(--accent-purple) !important; }
     .edit-tab-content.hidden { display: none; }
 
     .panel-card {
@@ -943,7 +945,7 @@
       width: 16px;
       height: 16px;
       border: 2px solid var(--border-subtle);
-      border-top-color: var(--text-primary);
+      border-top-color: var(--accent-purple);
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
       margin-right: 6px;
