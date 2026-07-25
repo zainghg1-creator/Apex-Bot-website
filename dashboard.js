@@ -1,6 +1,6 @@
 'use strict';
 
-console.log('✅ NEUE dashboard.js – Support-Rollen pro Option!');
+console.log('✅ Tickety-style Dashboard geladen!');
 
 // ============================================================
 // KONFIGURATION
@@ -43,7 +43,6 @@ let state = {
   activeGuildId: null,
   guildRoles: [],
   guildChannels: [],
-  ticketOptionCount: 0,
   ticketConfigCache: null,
   ticketConfigCacheGuildId: null
 };
@@ -53,13 +52,7 @@ let state = {
 // ============================================================
 function escapeHtml(str) {
   if (!str) return '';
-  const map = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;'
-  };
+  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
   return String(str).replace(/[&<>"']/g, m => map[m]);
 }
 
@@ -113,10 +106,7 @@ function formatGuildCreatedDate(guildId) {
 async function apiFetch(endpoint, options = {}) {
   const res = await fetch(`${CONFIG.API_BASE}${endpoint}`, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {})
-    }
+    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
   });
   if (!res.ok) {
     if (res.status === 401) { window.location.href = '/'; return null; }
@@ -164,6 +154,7 @@ async function loadDashboard() {
     showState(DOM.errorState);
   }
 }
+
 function renderUser(user) {
   if (!user) return;
   if (DOM.userName) DOM.userName.textContent = user.username;
@@ -174,6 +165,7 @@ function renderUser(user) {
     DOM.userAvatar.alt = `${user.username}s Avatar`;
   }
 }
+
 function renderGuilds(guilds, clientId) {
   if (!guilds || guilds.length === 0) { showState(DOM.emptyState); return; }
   DOM.guildList.innerHTML = '';
@@ -222,17 +214,18 @@ async function openManagement(guildId, name, iconUrl) {
     await loadRolesAndChannels(guildId);
   } else {
     renderAllSelects();
-    renderCategorySelects();
   }
   await getCachedTicketConfig(true);
   await loadGuildDetails(guildId);
   await loadAllModuleSettings(guildId);
 }
+
 function closeManagement() {
   state.activeGuildId = null;
   DOM.manageOverlay.classList.add('hidden');
   document.body.style.overflow = '';
 }
+
 async function loadGuildDetails(guildId) {
   try {
     const data = await apiFetch(`/guild/${guildId}`);
@@ -249,6 +242,7 @@ async function loadGuildDetails(guildId) {
     renderGuildOwner(null);
   }
 }
+
 function renderGuildOwner(owner) {
   if (!owner) {
     DOM.overviewOwnerName.textContent = 'N/A';
@@ -282,12 +276,13 @@ async function loadRolesAndChannels(guildId) {
   DOM.overviewRoles.textContent = state.guildRoles.length;
   DOM.overviewChannels.textContent = state.guildChannels.length;
   renderAllSelects();
-  renderCategorySelects();
 }
+
 function renderAllSelects() {
   const selectIds = ['join-channel', 'leave-channel', 'teamliste-channel', 'support-channel', 'moderation-log-channel', 'teamupdate-channel'];
   selectIds.forEach(id => renderChannelSelect(id, 0));
 }
+
 function renderChannelSelect(selectId, filterType) {
   const el = document.getElementById(selectId);
   if (!el) return;
@@ -298,19 +293,7 @@ function renderChannelSelect(selectId, filterType) {
   }
   el.innerHTML = relevant.map(c => `<option value="${c.id}"># ${escapeHtml(c.name)}</option>`).join('');
 }
-function renderCategorySelects() {
-  const ids = ['ticket-location-category', 'ticket-overflow-categories'];
-  ids.forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const categories = state.guildChannels.filter(c => c.type === 4);
-    if (categories.length === 0) {
-      el.innerHTML = `<option value="">Keine Kategorien gefunden</option>`;
-      return;
-    }
-    el.innerHTML = categories.map(c => `<option value="${c.id}">📁 ${escapeHtml(c.name)}</option>`).join('');
-  });
-}
+
 function renderRoleChips(containerId, selectedIds = [], singleSelect = false) {
   const el = document.getElementById(containerId);
   if (!el) return;
@@ -321,12 +304,13 @@ function renderRoleChips(containerId, selectedIds = [], singleSelect = false) {
   const selectedSet = new Set(selectedIds);
   el.innerHTML = state.guildRoles.map(r => {
     const isSelected = selectedSet.has(r.id);
-    return `<div class="role-chip ${isSelected ? 'selected' : ''}" data-role-id="${r.id}" role="option" aria-selected="${isSelected}" onclick="toggleRoleChip('${containerId}', '${r.id}', ${singleSelect})">
+    return `<div class="role-chip ${isSelected ? 'selected' : ''}" data-role-id="${r.id}" onclick="toggleRoleChip('${containerId}', '${r.id}', ${singleSelect})">
       <span class="chip-icon">@</span>
       <span class="chip-label">${escapeHtml(r.name)}</span>
     </div>`;
   }).join('');
 }
+
 function toggleRoleChip(containerId, roleId, singleSelect) {
   const el = document.getElementById(containerId);
   const chip = el.querySelector(`[data-role-id="${roleId}"]`);
@@ -338,6 +322,7 @@ function toggleRoleChip(containerId, roleId, singleSelect) {
     chip.classList.toggle('selected');
   }
 }
+
 function getSelectedRoleIds(containerId) {
   const el = document.getElementById(containerId);
   if (!el) return [];
@@ -358,6 +343,7 @@ function switchTab(tabName) {
     setTimeout(() => renderTicketOverview(), 50);
   }
 }
+
 function switchSubtab(moduleName, subName) {
   const container = document.getElementById(`mod-${moduleName}`);
   if (!container) return;
@@ -370,7 +356,7 @@ function switchSubtab(moduleName, subName) {
 }
 
 // ============================================================
-// COLOR SYNC (für Welcome-Modul)
+// COLOR SYNC
 // ============================================================
 function syncColor(prefix) {
   const color = document.getElementById(`${prefix}-color`).value;
@@ -390,7 +376,7 @@ function syncColorHex(prefix) {
 }
 
 // ============================================================
-// IMAGE UPLOAD (für Welcome und Ticket)
+// IMAGE UPLOAD
 // ============================================================
 function handleImageUpload(input, prefix) {
   const file = input.files?.[0];
@@ -411,6 +397,7 @@ function handleImageUpload(input, prefix) {
   reader.onerror = () => showToast('Fehler beim Lesen der Datei', 'error');
   reader.readAsDataURL(file);
 }
+
 function clearImage(prefix) {
   const input = document.getElementById(`${prefix}-image-input`);
   if (input) { input.value = ''; input.dataset.value = ''; }
@@ -418,13 +405,13 @@ function clearImage(prefix) {
   if (previewImg) previewImg.src = '';
   updateEmbedPreview(prefix);
 }
+
 const updateEmbedPreview = debounce((prefix) => {
-  const titleEl = document.getElementById(`${prefix}-title`) || document.getElementById(`${prefix}-panel-title`);
-  const descEl = document.getElementById(`${prefix}-text`) || document.getElementById(`${prefix}-panel-desc`);
+  const titleEl = document.getElementById(`${prefix}-title`);
+  const descEl = document.getElementById(`${prefix}-text`);
   const previewTitle = document.getElementById(`${prefix}-preview-title`);
   const previewDesc = document.getElementById(`${prefix}-preview-desc`);
   const previewImage = document.getElementById(`${prefix}-preview-image`);
-  const previewThumb = document.getElementById(`${prefix}-preview-thumb`);
   const imageInput = document.getElementById(`${prefix}-image-input`);
   const avatarThumbToggle = document.getElementById(`${prefix}-avatar-thumb`);
   if (previewTitle && titleEl) previewTitle.textContent = titleEl.value || titleEl.placeholder;
@@ -434,17 +421,15 @@ const updateEmbedPreview = debounce((prefix) => {
     if (val) { previewImage.src = val; previewImage.classList.remove('hidden'); }
     else { previewImage.classList.add('hidden'); }
   }
-  if (previewThumb) previewThumb.style.display = avatarThumbToggle && !avatarThumbToggle.checked ? 'none' : '';
 }, 200);
 
 // ============================================================
-// LOAD SETTINGS (für andere Module)
+// LOAD SETTINGS
 // ============================================================
 async function loadAllModuleSettings(guildId) {
   try {
     const config = await apiFetch(`/guild/${guildId}/config`).catch(() => ({}));
     applyWelcomeConfig(config.welcome || {});
-    // Tickets werden separat geladen
     applyTeamlisteConfig(config.teamliste || {});
     applySimpleConfig('support', config.support || {});
     applySimpleConfig('moderation', config.moderation || {});
@@ -454,6 +439,7 @@ async function loadAllModuleSettings(guildId) {
     applySimpleConfig('antinuke', config.antinuke || {});
   } catch (err) { console.error('Fehler beim Laden der Konfiguration:', err); }
 }
+
 function applyWelcomeConfig(cfg) {
   const j = cfg.join || {};
   const l = cfg.leave || {};
@@ -477,20 +463,24 @@ function applyWelcomeConfig(cfg) {
   updateEmbedPreview('join');
   updateEmbedPreview('leave');
 }
+
 function applyTeamlisteConfig(cfg) {
   setSelectValue('teamliste-channel', cfg.channelId || '');
   renderRoleChips('teamliste-roles', cfg.roles || []);
 }
+
 function applyVerificationConfig(cfg) {
   setChecked('verification-enabled', cfg.enabled ?? false);
   renderRoleChips('verification-roles', cfg.roleId ? [cfg.roleId] : [], true);
 }
+
 function applySimpleConfig(prefix, cfg) {
   setChecked(`${prefix}-enabled`, cfg.enabled ?? false);
   const channelId = cfg.channelId || cfg.logChannelId || '';
   const el = document.getElementById(`${prefix}-channel`) || document.getElementById(`${prefix}-log-channel`);
   if (el) setSelectValue(el.id, channelId);
 }
+
 function setValue(id, val) { const el = document.getElementById(id); if (el) el.value = val; }
 function setChecked(id, val) { const el = document.getElementById(id); if (el) el.checked = !!val; }
 function setSelectValue(id, val) { const el = document.getElementById(id); if (el) el.value = val; }
@@ -510,7 +500,7 @@ function setImage(prefix, url) {
 }
 
 // ============================================================
-// SAVE SETTINGS (für andere Module)
+// SAVE SETTINGS
 // ============================================================
 async function saveModuleSettings(moduleName) {
   const saveStatus = document.getElementById(`${moduleName}-save-status`);
@@ -543,15 +533,40 @@ async function saveModuleSettings(moduleName) {
           }
         };
         break;
-      case 'teamliste':
+      case 'tickets':
         payload = {
-          channelId: document.getElementById('teamliste-channel').value,
-          roles: getSelectedRoleIds('teamliste-roles')
+          panelChannelId: document.getElementById('edit-panel-channel')?.value || '',
+          title: document.getElementById('edit-panel-title')?.value || '',
+          description: document.getElementById('edit-panel-desc')?.value || '',
+          color: document.getElementById('edit-panel-color')?.value || '#ffffff',
+          image: document.getElementById('edit-image-input')?.dataset.value || '',
+          creationMessage: document.getElementById('edit-create-msg')?.value || '',
+          enabled: document.getElementById('edit-panel-enabled')?.checked ?? true,
+          panelName: document.getElementById('edit-panel-name')?.value || '',
+          supportRoles: getEditSelectedRoles('edit-support-roles') || [],
+          categoryId: document.getElementById('edit-ticket-category')?.value || '',
+          logChannelId: document.getElementById('edit-log-channel')?.value || '',
+          overflowEnabled: document.getElementById('edit-overflow-enabled')?.checked ?? false,
+          overflowCategories: getSelectedOptions('edit-ticket-overflow') || [],
+          threadMode: document.getElementById('edit-thread-mode')?.value || 'none',
+          saveTranscripts: document.getElementById('edit-save-transcripts')?.checked ?? false,
+          saveImages: document.getElementById('edit-save-images')?.checked ?? false,
+          privateTranscripts: document.getElementById('edit-private-transcripts')?.checked ?? false,
+          channelNameTemplate: document.getElementById('edit-channel-template')?.value || '{panel.name}-{ticket.creator.username}',
+          allowedRoles: getEditSelectedRoles('edit-allowed-roles') || [],
+          deniedRoles: getEditSelectedRoles('edit-denied-roles') || [],
+          maxTickets: parseInt(document.getElementById('edit-max-tickets')?.value) || 1,
+          claimEnabled: document.getElementById('edit-claim-enabled')?.checked ?? false,
+          buttons: collectButtons() || [],
+          options: collectOptions() || []
         };
+        invalidateTicketCache();
+        break;
+      case 'teamliste':
+        payload = { channelId: document.getElementById('teamliste-channel').value, roles: getSelectedRoleIds('teamliste-roles') };
         break;
       case 'verification':
-        const roles = getSelectedRoleIds('verification-roles');
-        payload = { enabled: document.getElementById('verification-enabled').checked, roleId: roles[0] || null };
+        payload = { enabled: document.getElementById('verification-enabled').checked, roleId: getSelectedRoleIds('verification-roles')[0] || null };
         break;
       default:
         const enabledEl = document.getElementById(`${moduleName}-enabled`);
@@ -559,12 +574,18 @@ async function saveModuleSettings(moduleName) {
         payload = { enabled: enabledEl ? enabledEl.checked : true, channelId: channelEl ? channelEl.value : undefined };
     }
     await apiFetch(`/guild/${state.activeGuildId}/config/${moduleName}`, { method: 'POST', body: JSON.stringify(payload) });
-    showToast(`${moduleName.charAt(0).toUpperCase() + moduleName.slice(1)} erfolgreich gespeichert!`, 'success');
+    showToast(`${moduleName.charAt(0).toUpperCase() + moduleName.slice(1)} gespeichert!`, 'success');
     if (saveStatus) { saveStatus.textContent = '✓ Gespeichert'; saveStatus.classList.remove('hidden'); setTimeout(() => saveStatus.classList.add('hidden'), 3000); }
   } catch (err) {
-    showToast(`Fehler beim Speichern: ${err.message}`, 'error');
+    showToast(`Fehler: ${err.message}`, 'error');
     if (saveStatus) { saveStatus.textContent = '✕ Fehler'; saveStatus.classList.remove('hidden'); setTimeout(() => saveStatus.classList.add('hidden'), 3000); }
   }
+}
+
+function getSelectedOptions(selectId) {
+  const el = document.getElementById(selectId);
+  if (!el) return [];
+  return Array.from(el.selectedOptions).map(o => o.value);
 }
 
 // ============================================================
@@ -572,25 +593,20 @@ async function saveModuleSettings(moduleName) {
 // ============================================================
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !DOM.manageOverlay.classList.contains('hidden')) closeManagement();
-  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-    const activeTab = document.querySelector('.tab-btn.active');
-    if (activeTab) { const moduleName = activeTab.dataset.tab; if (moduleName) saveModuleSettings(moduleName); }
-  }
 });
 
 // ============================================================
-// NEUES TICKET SYSTEM – 10x COOLER
+// TICKET SYSTEM – WIE TICKETY
 // ============================================================
 
 const ticketGrid = document.getElementById('ticket-overview-grid');
 const editContainer = document.getElementById('ticket-edit-container');
 const editContent = document.getElementById('ticket-edit-content');
 let editingIndex = null;
-let isEditViewOpen = false;
 let buttonCounter = 0;
 let optionCounter = 0;
 
-// ------ Tab-Navigation für die Bearbeitungsansicht ------
+// ---- Tab-Navigation (Tickety-Stil) ----
 function switchEditTab(tabName) {
   document.querySelectorAll('.edit-tab-btn').forEach(btn => btn.classList.remove('active'));
   document.querySelectorAll('.edit-tab-content').forEach(el => el.classList.add('hidden'));
@@ -601,7 +617,7 @@ function switchEditTab(tabName) {
   updateEditPreview();
 }
 
-// ------ Hilfsfunktionen für die Bearbeitungsansicht ------
+// ---- Hilfsfunktionen ----
 function populateCategorySelects() {
   const ids = ['edit-ticket-category', 'edit-ticket-overflow', 'edit-option-category'];
   ids.forEach(id => {
@@ -630,6 +646,7 @@ function renderEditRoleChips(containerId, selectedIds = [], singleSelect = false
     </div>`;
   }).join('');
 }
+
 window.toggleEditRoleChip = function(containerId, roleId, singleSelect) {
   const el = document.getElementById(containerId);
   const chip = el.querySelector(`[data-role-id="${roleId}"]`);
@@ -641,13 +658,14 @@ window.toggleEditRoleChip = function(containerId, roleId, singleSelect) {
     chip.classList.toggle('selected');
   }
 };
+
 function getEditSelectedRoles(containerId) {
   const el = document.getElementById(containerId);
   if (!el) return [];
   return Array.from(el.querySelectorAll('.role-chip.selected')).map(c => c.dataset.roleId);
 }
 
-// ------ Buttons (für Panel) ------
+// ---- Buttons ----
 window.addButtonRow = function(data = null) {
   const container = document.getElementById('edit-button-list');
   if (!container) return;
@@ -656,14 +674,15 @@ window.addButtonRow = function(data = null) {
   row.className = 'button-row';
   row.id = rowId;
   row.innerHTML = `
-    <input type="text" placeholder="Label" class="btn-label" value="${data ? escapeHtml(data.label || '') : ''}" style="min-width:120px;">
-    <input type="text" placeholder="Emoji" class="btn-emoji" value="${data ? escapeHtml(data.emoji || '') : '🎫'}" style="max-width:80px;">
-    <input type="color" class="btn-color" value="${data ? (data.color || '#ffffff') : '#ffffff'}" style="width:44px;height:38px;padding:0;border:1px solid var(--border-subtle);border-radius:8px;background:var(--bg-base);cursor:pointer;">
-    <input type="text" placeholder="Aktion (z.B. open)" class="btn-action" value="${data ? escapeHtml(data.action || '') : ''}" style="min-width:100px;">
-    <button type="button" class="button-remove" onclick="document.getElementById('${rowId}').remove()" aria-label="Button entfernen">✕</button>
+    <input type="text" placeholder="Label" class="btn-label" value="${data ? escapeHtml(data.label || '') : ''}" style="min-width:100px;">
+    <input type="text" placeholder="Emoji" class="btn-emoji" value="${data ? escapeHtml(data.emoji || '') : '🎫'}" style="max-width:70px;">
+    <input type="color" class="btn-color" value="${data ? (data.color || '#ffffff') : '#ffffff'}" style="width:36px;height:34px;padding:0;border:1px solid var(--border-subtle);border-radius:6px;background:var(--bg-base);cursor:pointer;">
+    <input type="text" placeholder="Aktion" class="btn-action" value="${data ? escapeHtml(data.action || '') : ''}" style="min-width:80px;">
+    <button type="button" class="button-remove" onclick="document.getElementById('${rowId}').remove()">✕</button>
   `;
   container.appendChild(row);
 };
+
 function collectButtons() {
   const rows = document.querySelectorAll('#edit-button-list .button-row');
   return Array.from(rows).map(row => ({
@@ -674,7 +693,7 @@ function collectButtons() {
   }));
 }
 
-// ------ Optionen (Kategorien) für das Panel – JETZT MIT SUPPORT-ROLLEN ------
+// ---- Optionen (mit Support-Rollen) ----
 window.addOptionRow = function(data = null) {
   const container = document.getElementById('edit-options-list');
   if (!container) return;
@@ -682,39 +701,37 @@ window.addOptionRow = function(data = null) {
   const row = document.createElement('div');
   row.className = 'option-row';
   row.id = rowId;
-  
-  // Support-Rollen für diese Option
+
   const supportRoles = data?.supportRoles || [];
-  
+
   row.innerHTML = `
-    <div style="display:flex; flex-wrap:wrap; gap:8px; width:100%; align-items:center;">
-      <input type="text" placeholder="Label, z.B. Support" class="opt-label" value="${data ? escapeHtml(data.label || '') : ''}" style="flex:2; min-width:120px;">
-      <input type="text" placeholder="Emoji" class="opt-emoji" value="${data ? escapeHtml(data.emoji || '') : '🎫'}" style="max-width:80px;">
-      <select class="opt-category" style="flex:2; min-width:140px;"></select>
-      <button type="button" class="option-remove" onclick="document.getElementById('${rowId}').remove()" aria-label="Option entfernen">✕</button>
+    <div style="display:flex; flex-wrap:wrap; gap:6px; width:100%; align-items:center;">
+      <input type="text" placeholder="Label" class="opt-label" value="${data ? escapeHtml(data.label || '') : ''}" style="flex:2; min-width:100px;">
+      <input type="text" placeholder="Emoji" class="opt-emoji" value="${data ? escapeHtml(data.emoji || '') : '🎫'}" style="max-width:70px;">
+      <select class="opt-category" style="flex:2; min-width:120px;"></select>
+      <button type="button" class="option-remove" onclick="document.getElementById('${rowId}').remove()">✕</button>
     </div>
-    <div style="width:100%; margin-top:4px;">
-      <label style="font-size:0.7rem; font-weight:600; color:var(--text-muted);">Support-Rollen für diese Option (optional):</label>
+    <div class="option-support-roles">
+      <label>Support-Rollen (für diese Option):</label>
       <div class="chip-select" id="opt-support-roles-${rowId}" style="margin-top:2px;"></div>
     </div>
   `;
   container.appendChild(row);
-  
-  // Kategorien für dieses Select befüllen
+
   const select = row.querySelector('.opt-category');
   const categories = state.guildChannels.filter(c => c.type === 4);
   select.innerHTML = categories.length
     ? categories.map(c => `<option value="${c.id}">📁 ${escapeHtml(c.name)}</option>`).join('')
-    : `<option value="">Keine Kategorien gefunden</option>`;
+    : `<option value="">Keine Kategorien</option>`;
   if (data && data.categoryId) select.value = data.categoryId;
-  
-  // Support-Rollen-Chips rendern
+
   const chipContainerId = `opt-support-roles-${rowId}`;
   const chipContainer = document.getElementById(chipContainerId);
   if (chipContainer) {
     renderEditRoleChips(chipContainerId, supportRoles);
   }
 };
+
 function collectOptions() {
   const rows = document.querySelectorAll('#edit-options-list .option-row');
   return Array.from(rows).map(row => {
@@ -729,20 +746,20 @@ function collectOptions() {
   });
 }
 
-// ------ LIVE-VORSCHAU (für die Bearbeitungsansicht) ------
+// ---- Live-Vorschau ----
 function updateEditPreview() {
   const preview = document.getElementById('edit-embed-preview');
   if (!preview) return;
 
   const title = document.getElementById('edit-panel-title')?.value || 'Support Center';
-  const desc = document.getElementById('edit-panel-desc')?.value || 'Wähle eine Kategorie, um ein Ticket zu öffnen.';
+  const desc = document.getElementById('edit-panel-desc')?.value || 'Wähle eine Kategorie aus.';
   const color = document.getElementById('edit-panel-color')?.value || '#ffffff';
   const imageInput = document.getElementById('edit-image-input');
   const image = imageInput?.dataset.value || '';
 
-  const titleEl = preview.querySelector('.discord-embed-title');
-  const descEl = preview.querySelector('.discord-embed-desc');
-  const imgEl = preview.querySelector('.discord-embed-image');
+  const titleEl = preview.querySelector('.embed-preview-title');
+  const descEl = preview.querySelector('.embed-preview-desc');
+  const imgEl = preview.querySelector('.embed-preview-image');
 
   if (titleEl) titleEl.textContent = title;
   if (descEl) descEl.textContent = desc;
@@ -759,20 +776,11 @@ function updateEditPreview() {
   }
 }
 
-// ------ NEUE FUNKTION: Panel in Discord senden ------
+// ---- Panel in Discord senden ----
 async function sendPanelToChannel(channelId, panelIndex) {
-  if (!state.activeGuildId) {
-    showToast('Kein Server ausgewählt.', 'error');
-    return;
-  }
-  if (!channelId) {
-    showToast('Bitte wähle einen Kanal aus.', 'error');
-    return;
-  }
-  if (panelIndex === undefined || panelIndex === null) {
-    showToast('Bitte wähle ein Panel aus.', 'error');
-    return;
-  }
+  if (!state.activeGuildId) { showToast('Kein Server ausgewählt.', 'error'); return; }
+  if (!channelId) { showToast('Bitte wähle einen Kanal aus.', 'error'); return; }
+  if (panelIndex === undefined || panelIndex === null) { showToast('Bitte wähle ein Panel aus.', 'error'); return; }
 
   try {
     const response = await apiFetch(`/guild/${state.activeGuildId}/tickets/send-panel`, {
@@ -780,7 +788,7 @@ async function sendPanelToChannel(channelId, panelIndex) {
       body: JSON.stringify({ panelIndex, channelId })
     });
     if (response && response.success) {
-      showToast('Panel erfolgreich in Discord gesendet! 🎉', 'success');
+      showToast('Panel erfolgreich gesendet! 🎉', 'success');
     } else {
       showToast(response?.error || 'Fehler beim Senden.', 'error');
     }
@@ -789,187 +797,144 @@ async function sendPanelToChannel(channelId, panelIndex) {
   }
 }
 
-// ------ Übersicht der Tickets (Karten) mit Toolbar ------
+// ---- Übersicht rendern ----
 async function renderTicketOverview() {
   if (!ticketGrid) return;
   if (!state.activeGuildId) {
-    ticketGrid.innerHTML = `<div class="state-box" style="grid-column:1/-1;">Bitte wähle zuerst einen Server aus.</div>`;
+    ticketGrid.innerHTML = `<div class="state-box">Bitte wähle zuerst einen Server aus.</div>`;
     return;
   }
-  ticketGrid.innerHTML = `<div class="state-box" style="grid-column:1/-1;"><span class="loading-spinner"></span> Lade Ticket-Panels...</div>`;
-
-  const countEl = document.getElementById('ticket-panel-count');
-  if (countEl) countEl.textContent = 'Lade...';
+  ticketGrid.innerHTML = `<div class="state-box"><span class="loading-spinner"></span> Lade Ticket-Panels...</div>`;
 
   try {
     const tickets = await getCachedTicketConfig();
     if (!tickets) {
-      ticketGrid.innerHTML = `<div class="state-box error" style="grid-column:1/-1;">Fehler beim Laden der Konfiguration.</div>`;
+      ticketGrid.innerHTML = `<div class="state-box error">Fehler beim Laden der Konfiguration.</div>`;
       return;
     }
-    const options = tickets.options || [];
+    const panels = tickets.options || [];
 
-    if (countEl) countEl.textContent = `${options.length} Panel${options.length !== 1 ? 's' : ''}`;
-
-    // -------------------------------
-    // Toolbar: Kanalauswahl + Senden-Button (oben rechts)
-    // -------------------------------
-    const toolbarHtml = `
-      <div style="display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:0 0 16px auto; max-width:100%;">
-        <label style="font-size:0.75rem; font-weight:600; color:var(--text-muted);">Panel:</label>
-        <select id="send-panel-select" style="flex:1; min-width:120px; background:var(--bg-base); border:1px solid var(--border-subtle); border-radius:8px; padding:6px 10px; color:var(--text-primary); font-size:0.8rem; min-height:36px;">
-          ${options.map((opt, i) => `<option value="${i}">${escapeHtml(opt.panelName || opt.label || 'Unbenannt')}</option>`).join('')}
-          ${options.length === 0 ? '<option value="">Keine Panels</option>' : ''}
-        </select>
-        <label style="font-size:0.75rem; font-weight:600; color:var(--text-muted);">Kanal:</label>
-        <select id="send-channel-select" style="flex:1; min-width:140px; background:var(--bg-base); border:1px solid var(--border-subtle); border-radius:8px; padding:6px 10px; color:var(--text-primary); font-size:0.8rem; min-height:36px;">
-          ${state.guildChannels.filter(c => c.type === 0).map(c => `<option value="${c.id}"># ${escapeHtml(c.name)}</option>`).join('')}
-          ${state.guildChannels.filter(c => c.type === 0).length === 0 ? '<option value="">Keine Textkanäle</option>' : ''}
-        </select>
-        <button class="btn btn-primary" onclick="sendPanelToChannel(document.getElementById('send-channel-select').value, parseInt(document.getElementById('send-panel-select').value))" style="flex-shrink:0; padding:6px 16px; min-height:36px; font-size:0.8rem;">
-          📤 Abschicken
-        </button>
-      </div>
-    `;
-
-    // Vorhandene Toolbar durch neue ersetzen
-    const container = document.getElementById('ticket-overview-container');
-    let toolbarContainer = container.querySelector('.ticket-toolbar');
-    if (!toolbarContainer) {
-      toolbarContainer = document.createElement('div');
-      toolbarContainer.className = 'ticket-toolbar';
-      container.prepend(toolbarContainer);
-    }
-    toolbarContainer.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-        <span class="ticket-count" id="ticket-panel-count">${options.length} Panel${options.length !== 1 ? 's' : ''}</span>
-        ${toolbarHtml}
-      </div>
-    `;
-    const newCountEl = toolbarContainer.querySelector('.ticket-count');
-    if (newCountEl) newCountEl.textContent = `${options.length} Panel${options.length !== 1 ? 's' : ''}`;
-
-    // ----- Karten rendern -----
-    if (options.length === 0) {
+    if (panels.length === 0) {
       ticketGrid.innerHTML = `
-        <div class="guild-card ticket-add-card" onclick="openAddTicket()">
-          <div class="ticket-add-icon"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
-          <div style="font-weight:700; font-size:1rem;">Neues Ticket-Panel</div>
-          <div style="color:var(--text-muted); font-size:0.8rem;">Klicke hier, um ein neues Panel zu erstellen.</div>
+        <div class="panel-add-card" onclick="openAddTicket()">
+          <div class="icon">＋</div>
+          <div class="label">Neues Ticket-Panel</div>
+          <div class="sub">Klicke hier, um ein neues Panel zu erstellen.</div>
         </div>
       `;
       return;
     }
 
-    let html = '';
-    options.forEach((opt, index) => {
-      const emoji = opt.emoji || '🎫';
-      const label = opt.label || opt.panelName || 'Unbenannt';
-      const categoryName = state.guildChannels.find(c => c.id === opt.categoryId)?.name || 'Keine Kategorie';
-      const isActive = opt.enabled !== false;
-      const statusClass = isActive ? 'active' : '';
-      const statusText = isActive ? 'Aktiv' : 'Inaktiv';
+    // Toolbar (Panel + Kanal auswählen + Senden)
+    const toolbarHtml = `
+      <div style="display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:16px; background:var(--bg-surface); padding:10px 14px; border-radius:10px; border:1px solid var(--border-subtle);">
+        <label style="font-size:0.75rem; font-weight:600; color:var(--text-muted);">Panel:</label>
+        <select id="send-panel-select" style="flex:1; min-width:120px; background:var(--bg-base); border:1px solid var(--border-subtle); border-radius:6px; padding:6px 10px; color:var(--text-primary); font-size:0.8rem; min-height:34px;">
+          ${panels.map((opt, i) => `<option value="${i}">${escapeHtml(opt.panelName || opt.label || 'Unbenannt')}</option>`).join('')}
+        </select>
+        <label style="font-size:0.75rem; font-weight:600; color:var(--text-muted);">Kanal:</label>
+        <select id="send-channel-select" style="flex:1; min-width:140px; background:var(--bg-base); border:1px solid var(--border-subtle); border-radius:6px; padding:6px 10px; color:var(--text-primary); font-size:0.8rem; min-height:34px;">
+          ${state.guildChannels.filter(c => c.type === 0).map(c => `<option value="${c.id}"># ${escapeHtml(c.name)}</option>`).join('')}
+          ${state.guildChannels.filter(c => c.type === 0).length === 0 ? '<option value="">Keine Textkanäle</option>' : ''}
+        </select>
+        <button class="btn btn-primary" onclick="sendPanelToChannel(document.getElementById('send-channel-select').value, parseInt(document.getElementById('send-panel-select').value))" style="padding:6px 16px; min-height:34px; font-size:0.8rem;">
+          📤 Abschicken
+        </button>
+      </div>
+    `;
+
+    let html = toolbarHtml + `<div style="display:grid; grid-template-columns:1fr; gap:14px;">`;
+
+    panels.forEach((panel, index) => {
+      const emoji = panel.emoji || '🎫';
+      const label = panel.panelName || panel.label || 'Unbenannt';
+      const categoryName = state.guildChannels.find(c => c.id === panel.categoryId)?.name || 'Keine Kategorie';
+      const isActive = panel.enabled !== false;
+      const optionCount = (panel.options || []).length;
 
       html += `
-        <div class="guild-card ticket-card" style="border-left: 4px solid ${isActive ? '#22c55e' : '#ef4444'};">
-          <div class="ticket-card-header">
-            <div class="ticket-icon-badge"><svg viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><line x1="12" y1="9" x2="12" y2="15"/></svg></div>
-            <div class="ticket-card-titles">
-              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                <span style="font-weight:700; font-size:0.95rem;">${escapeHtml(emoji)} ${escapeHtml(label)}</span>
-                <span class="ticket-status-pill ${statusClass}"><span class="status-dot"></span> ${statusText}</span>
-              </div>
+        <div class="panel-card" style="border-left: 4px solid ${isActive ? '#22c55e' : '#ef4444'};">
+          <div class="panel-card-header">
+            <div class="panel-card-title">
+              <span class="emoji">${escapeHtml(emoji)}</span>
+              ${escapeHtml(label)}
             </div>
+            <span class="panel-card-status ${isActive ? 'active' : ''}">
+              <span class="dot"></span> ${isActive ? 'Aktiv' : 'Inaktiv'}
+            </span>
           </div>
-          <div class="ticket-card-meta">
-            <div class="ticket-card-meta-row">
-              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
-              ${escapeHtml(categoryName)}
-            </div>
-            <div class="ticket-card-meta-row">
-              <svg viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><line x1="12" y1="9" x2="12" y2="15"/></svg>
-              ${opt.options && opt.options.length ? opt.options.length + ' Optionen' : 'Keine Optionen'}
-            </div>
+          <div class="panel-card-meta">
+            <span>📂 ${escapeHtml(categoryName)}</span>
+            <span>📋 ${optionCount} Option${optionCount !== 1 ? 'en' : ''}</span>
           </div>
-          <div class="ticket-card-footer">
-            <div class="ticket-quick-toggle">
-              <label class="switch" style="width:32px; height:18px;">
-                <input type="checkbox" ${isActive ? 'checked' : ''} onchange="toggleTicketStatus(${index}, this.checked)">
-                <span class="switch-slider"></span>
-              </label>
-              <span style="font-size:0.7rem;">${isActive ? 'Aktiv' : 'Inaktiv'}</span>
-            </div>
-            <div style="display:flex; gap:6px;">
-              <button class="btn btn-secondary" onclick="openEditView(${index})" style="padding:6px 12px; font-size:0.7rem; min-height:30px;">✏️ Bearbeiten</button>
-              <button class="btn btn-danger" onclick="deleteTicketOption(${index})" style="padding:6px 12px; font-size:0.7rem; min-height:30px;">🗑️</button>
-            </div>
+          <div class="panel-card-actions">
+            <button class="btn btn-secondary" onclick="openEditView(${index})">✏️ Bearbeiten</button>
+            <button class="btn btn-danger" onclick="deleteTicketOption(${index})">🗑️ Löschen</button>
           </div>
         </div>
       `;
     });
 
     html += `
-      <div class="guild-card ticket-add-card" onclick="openAddTicket()">
-        <div class="ticket-add-icon"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
-        <div style="font-weight:700; font-size:1rem;">Neues Ticket-Panel</div>
-        <div style="color:var(--text-muted); font-size:0.8rem;">Klicke hier, um ein neues Panel zu erstellen.</div>
+      <div class="panel-add-card" onclick="openAddTicket()">
+        <div class="icon">＋</div>
+        <div class="label">Neues Ticket-Panel</div>
+        <div class="sub">Klicke hier, um ein neues Panel zu erstellen.</div>
       </div>
     `;
+    html += `</div>`;
 
     ticketGrid.innerHTML = html;
   } catch (err) {
-    ticketGrid.innerHTML = `<div class="state-box error" style="grid-column:1/-1;">Fehler beim Laden: ${err.message}</div>`;
+    ticketGrid.innerHTML = `<div class="state-box error">Fehler: ${err.message}</div>`;
   }
 }
 
-// ------ Toggle Status (aktiv/inaktiv) ------
-window.toggleTicketStatus = async function(index, checked) {
+// ---- Ticket löschen ----
+window.deleteTicketOption = async function(index) {
+  if (!confirm('Möchtest du dieses Panel wirklich löschen?')) return;
   try {
     const config = await apiFetch(`/guild/${state.activeGuildId}/config`);
     if (!config.tickets || !config.tickets.options || !config.tickets.options[index]) return;
-    config.tickets.options[index].enabled = checked;
-    await apiFetch(`/guild/${state.activeGuildId}/config/tickets`, {
-      method: 'POST',
-      body: JSON.stringify(config.tickets)
-    });
+    config.tickets.options.splice(index, 1);
+    await apiFetch(`/guild/${state.activeGuildId}/config/tickets`, { method: 'POST', body: JSON.stringify(config.tickets) });
     invalidateTicketCache();
-    showToast(`Panel ${checked ? 'aktiviert' : 'deaktiviert'}!`, 'success');
+    showToast('Panel gelöscht.', 'success');
     renderTicketOverview();
   } catch (err) {
     showToast(`Fehler: ${err.message}`, 'error');
   }
 };
 
-// ------ Neues Ticket / Bearbeiten ------
+// ---- Neues Ticket / Bearbeiten ----
 window.openAddTicket = function() { editingIndex = null; showEditView(null); };
 window.openEditView = function(index) { editingIndex = index; showEditView(index); };
 
-// ------ Bearbeitungsansicht mit ALLEN Einstellungen (inkl. Log-Kanal & pro-Option Support-Rollen) ------
+// ---- Bearbeitungsansicht (wie Tickety) ----
 async function showEditView(index) {
   document.getElementById('ticket-overview-container').classList.add('hidden');
   editContainer.classList.remove('hidden');
-  isEditViewOpen = true;
-  editContent.innerHTML = `<div style="text-align:center;padding:3rem;"><span class="loading-spinner"></span> Lade Ticket-Einstellungen...</div>`;
+  editContent.innerHTML = `<div style="text-align:center;padding:2rem;"><span class="loading-spinner"></span> Lade Einstellungen...</div>`;
 
   const tickets = await getCachedTicketConfig();
   if (!tickets) {
-    editContent.innerHTML = `<div class="state-box error">Fehler beim Laden der Konfiguration.</div>`;
+    editContent.innerHTML = `<div class="state-box error">Fehler beim Laden.</div>`;
     return;
   }
-  const options = tickets.options || [];
+  const panels = tickets.options || [];
   let data = null;
-  if (index !== null && options[index]) {
-    data = options[index];
+  if (index !== null && panels[index]) {
+    data = panels[index];
   } else {
     data = {
       enabled: true,
-      panelName: 'Neues Ticket',
+      panelName: 'Neues Panel',
       panelChannelId: '',
       logChannelId: '',
       supportRoles: [],
       categoryId: '',
       title: 'Support Center',
-      description: 'Wähle eine Kategorie, um ein Ticket zu öffnen.',
+      description: 'Wähle eine Kategorie aus.',
       color: '#ffffff',
       image: '',
       creationMessage: 'Hallo {user}, wir kümmern uns um dein Anliegen.',
@@ -989,107 +954,96 @@ async function showEditView(index) {
     };
   }
 
-  // --- HTML mit allen neuen CSS-Klassen ---
   let html = `
-    <div class="card form-card" style="max-width:100%; padding:1.5rem;">
-
-      <!-- Toolbar: Panel wechseln -->
+    <div class="panel-card">
+      <!-- Panel-Dropdown (wie Tickety) -->
       <div class="edit-toolbar">
-        <label><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="21" x2="9" y2="9"/></svg> Panel:</label>
+        <label>📋 Panel:</label>
         <select id="edit-panel-select">
-          ${options.map((opt, i) => `<option value="${i}" ${i === index ? 'selected' : ''}>${escapeHtml(opt.panelName || opt.label || 'Unbenannt')}</option>`).join('')}
+          ${panels.map((p, i) => `<option value="${i}" ${i === index ? 'selected' : ''}>${escapeHtml(p.panelName || p.label || 'Unbenannt')}</option>`).join('')}
           ${index === null ? `<option value="new" selected>+ Neues Panel</option>` : ''}
         </select>
-        <button class="btn btn-secondary" onclick="switchToSelectedPanel()" style="flex-shrink:0; padding:6px 14px; min-height:34px; font-size:0.75rem;">Wechseln</button>
+        <button class="btn btn-secondary" onclick="switchToSelectedPanel()" style="padding:4px 12px; min-height:32px; font-size:0.75rem;">Wechseln</button>
       </div>
 
-      <!-- Vorschau -->
+      <!-- Vorschau (wie Tickety) -->
       <div class="edit-preview-wrap">
-        <div class="edit-preview-label"><svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Live-Vorschau</div>
-        <div class="discord-embed" id="edit-embed-preview" style="border-left-color:${data.color || '#ffffff'};">
-          <div class="discord-embed-body">
-            <div class="discord-embed-title">${escapeHtml(data.title || 'Support Center')}</div>
-            <div class="discord-embed-desc">${escapeHtml(data.description || 'Wähle eine Kategorie, um ein Ticket zu öffnen.')}</div>
-            <img class="discord-embed-image ${data.image ? '' : 'hidden'}" src="${data.image || ''}" style="max-height:120px; width:100%; border-radius:6px; margin-top:6px; object-fit:cover;">
-            <div class="discord-embed-footer">
-              <img src="apex_logo.png" style="width:14px;height:14px;border-radius:50%;">
-              <span>Ticket System • Powered by Apex</span>
-            </div>
+        <label style="font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.03em;">📺 Live-Vorschau</label>
+        <div class="embed-preview" id="edit-embed-preview" style="border-left-color:${data.color || '#ffffff'};">
+          <div class="embed-preview-title">${escapeHtml(data.title || 'Support Center')}</div>
+          <div class="embed-preview-desc">${escapeHtml(data.description || 'Wähle eine Kategorie aus.')}</div>
+          <img class="embed-preview-image ${data.image ? '' : 'hidden'}" src="${data.image || ''}">
+          <div class="embed-preview-footer">
+            <img src="apex_logo.png">
+            <span>Ticket System • Powered by Apex</span>
           </div>
         </div>
       </div>
 
-      <!-- Tabs -->
+      <!-- Tabs (wie Tickety) -->
       <div class="edit-tabs">
-        <button class="edit-tab-btn active" data-edit-tab="general" onclick="switchEditTab('general')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Allgemein</button>
-        <button class="edit-tab-btn" data-edit-tab="embed" onclick="switchEditTab('embed')"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="21" x2="9" y2="9"/></svg> Design</button>
-        <button class="edit-tab-btn" data-edit-tab="messages" onclick="switchEditTab('messages')"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Nachrichten</button>
-        <button class="edit-tab-btn" data-edit-tab="roles" onclick="switchEditTab('roles')"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Berechtigungen</button>
-        <button class="edit-tab-btn" data-edit-tab="advanced" onclick="switchEditTab('advanced')"><svg viewBox="0 0 24 24"><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4 12H2"/><path d="M22 12h-2"/><path d="M19.07 4.93l-2.83 2.83"/><path d="M7.76 16.24l-2.83 2.83"/><path d="M16.24 7.76l2.83-2.83"/><path d="M4.93 19.07l2.83-2.83"/></svg> Fortgeschritten</button>
-        <button class="edit-tab-btn" data-edit-tab="options" onclick="switchEditTab('options')"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Optionen</button>
+        <button class="edit-tab-btn active" data-edit-tab="general" onclick="switchEditTab('general')">Allgemein</button>
+        <button class="edit-tab-btn" data-edit-tab="embed" onclick="switchEditTab('embed')">Embed</button>
+        <button class="edit-tab-btn" data-edit-tab="messages" onclick="switchEditTab('messages')">Nachrichten</button>
+        <button class="edit-tab-btn" data-edit-tab="roles" onclick="switchEditTab('roles')">Berechtigungen</button>
+        <button class="edit-tab-btn" data-edit-tab="advanced" onclick="switchEditTab('advanced')">Fortgeschritten</button>
+        <button class="edit-tab-btn" data-edit-tab="options" onclick="switchEditTab('options')">Optionen</button>
       </div>
 
       <!-- TAB: Allgemein -->
       <div id="edit-tab-general" class="edit-tab-content">
         <div class="form-group">
           <div class="switch-row">
-            <label style="margin:0; font-size:0.9rem; font-weight:600;">Panel aktiv</label>
+            <label style="font-weight:600; font-size:0.85rem;">Panel aktiv</label>
             <label class="switch"><input type="checkbox" id="edit-panel-enabled" ${data.enabled ? 'checked' : ''}><span class="switch-slider"></span></label>
           </div>
-          <small style="margin-top:-4px;">Deaktiviert das Panel – es wird nicht im ausgewählten Kanal angezeigt.</small>
         </div>
         <div class="form-group">
           <label for="edit-panel-name">Panel-Name</label>
           <input type="text" id="edit-panel-name" value="${escapeHtml(data.panelName || '')}" placeholder="z.B. Support">
-          <small>Wird in der Kanalnamen-Vorlage verwendet.</small>
         </div>
-        <!-- Kanalauswahl für das Panel -->
         <div class="form-group">
           <label for="edit-panel-channel">📢 Kanal für das Panel</label>
-          <select id="edit-panel-channel" style="width:100%; background:var(--bg-base); border:1px solid var(--border-subtle); border-radius:8px; padding:8px 12px; color:var(--text-primary); min-height:38px;"></select>
-          <small>Hier wird das Ticket-Panel (Embed) gesendet.</small>
-        </div>
-        <!-- Log-Kanal -->
-        <div class="form-group">
-          <label for="edit-log-channel">📋 Log-Kanal (Transkripte & Logs)</label>
-          <select id="edit-log-channel" style="width:100%; background:var(--bg-base); border:1px solid var(--border-subtle); border-radius:8px; padding:8px 12px; color:var(--text-primary); min-height:38px;"></select>
-          <small>Hier werden Logs (Ticket geöffnet/geschlossen) und Transkripte gesendet.</small>
+          <select id="edit-panel-channel"></select>
+          <small>Hier wird das Ticket-Panel gesendet.</small>
         </div>
         <div class="form-group">
-          <label>Support-Rollen (Zugriff) – Fallback für alle Optionen</label>
+          <label for="edit-log-channel">📋 Log-Kanal</label>
+          <select id="edit-log-channel"></select>
+          <small>Logs und Transkripte werden hier gesendet.</small>
+        </div>
+        <div class="form-group">
+          <label>Support-Rollen (Fallback)</label>
           <div id="edit-support-roles" class="chip-select"></div>
-          <small>Diese Rollen werden verwendet, wenn eine Option keine eigenen Support-Rollen definiert.</small>
+          <small>Werden verwendet, wenn keine option-spezifischen Rollen definiert sind.</small>
         </div>
         <div class="form-group">
           <label for="edit-ticket-category">📂 Kategorie für Tickets</label>
-          <select id="edit-ticket-category" style="width:100%; background:var(--bg-base); border:1px solid var(--border-subtle); border-radius:8px; padding:8px 12px; color:var(--text-primary); min-height:38px;"></select>
+          <select id="edit-ticket-category"></select>
           <small>Tickets werden in dieser Kategorie erstellt.</small>
         </div>
       </div>
 
-      <!-- TAB: Design -->
+      <!-- TAB: Embed -->
       <div id="edit-tab-embed" class="edit-tab-content hidden">
         <div class="form-group">
-          <label for="edit-panel-title">Panel-Titel</label>
+          <label for="edit-panel-title">Titel</label>
           <input type="text" id="edit-panel-title" value="${escapeHtml(data.title || 'Support Center')}" placeholder="Support Center" oninput="updateEditPreview()">
         </div>
         <div class="form-group">
-          <label for="edit-panel-desc">Panel-Beschreibung</label>
-          <textarea id="edit-panel-desc" rows="3" placeholder="Wähle eine Kategorie, um ein Ticket zu öffnen." oninput="updateEditPreview()">${escapeHtml(data.description || '')}</textarea>
+          <label for="edit-panel-desc">Beschreibung</label>
+          <textarea id="edit-panel-desc" rows="3" placeholder="Wähle eine Kategorie aus." oninput="updateEditPreview()">${escapeHtml(data.description || '')}</textarea>
         </div>
         <div class="form-group">
-          <label>Panel-Bild (optional)</label>
+          <label>Bild (optional)</label>
           <div class="image-upload">
             <img id="edit-image-preview" class="image-preview" src="${data.image || ''}" alt="">
-            <div class="upload-btn-wrap">
-              <label class="btn btn-secondary" for="edit-image-input">📤 Hochladen</label>
-              <input type="file" id="edit-image-input" accept="image/*" onchange="handleEditImageUpload(this)">
-            </div>
-            <button class="btn btn-secondary" onclick="clearEditImage()" type="button">Entfernen</button>
+            <div class="upload-btn-wrap"><label class="btn btn-secondary" for="edit-image-input">📤 Hochladen</label><input type="file" id="edit-image-input" accept="image/*" onchange="handleEditImageUpload(this)"></div>
+            <button class="btn btn-secondary" onclick="clearEditImage()">Entfernen</button>
           </div>
         </div>
         <div class="form-group">
-          <label>Akzentfarbe</label>
+          <label>Farbe</label>
           <div class="color-row">
             <input type="color" id="edit-panel-color" value="${data.color || '#ffffff'}" oninput="document.getElementById('edit-panel-color-hex').value = this.value; updateEditPreview();">
             <input type="text" id="edit-panel-color-hex" value="${data.color || '#ffffff'}" oninput="document.getElementById('edit-panel-color').value = this.value; updateEditPreview();">
@@ -1100,7 +1054,7 @@ async function showEditView(index) {
       <!-- TAB: Nachrichten -->
       <div id="edit-tab-messages" class="edit-tab-content hidden">
         <div class="form-group">
-          <label for="edit-create-msg">Begrüßungsnachricht im Ticket</label>
+          <label for="edit-create-msg">Begrüßungsnachricht</label>
           <textarea id="edit-create-msg" rows="3" placeholder="Hallo {user}, wir kümmern uns um dein Anliegen.">${escapeHtml(data.creationMessage || '')}</textarea>
           <small>Platzhalter: <code>{user}</code>, <code>{username}</code></small>
         </div>
@@ -1114,16 +1068,16 @@ async function showEditView(index) {
       <!-- TAB: Berechtigungen -->
       <div id="edit-tab-roles" class="edit-tab-content hidden">
         <div class="form-group">
-          <label>Rollen, die ein Ticket öffnen dürfen (optional)</label>
+          <label>Rollen, die öffnen dürfen (optional)</label>
           <div id="edit-allowed-roles" class="chip-select"></div>
           <small>Leer lassen = jeder darf öffnen.</small>
         </div>
         <div class="form-group">
-          <label>Rollen, die kein Ticket öffnen dürfen (optional)</label>
+          <label>Rollen, die nicht öffnen dürfen (optional)</label>
           <div id="edit-denied-roles" class="chip-select"></div>
         </div>
         <div class="form-group">
-          <label for="edit-max-tickets">Maximale Tickets pro Benutzer</label>
+          <label for="edit-max-tickets">Max. Tickets pro User</label>
           <input type="number" id="edit-max-tickets" value="${data.maxTickets || 1}" min="1" step="1">
         </div>
       </div>
@@ -1132,65 +1086,63 @@ async function showEditView(index) {
       <div id="edit-tab-advanced" class="edit-tab-content hidden">
         <div class="form-group">
           <div class="switch-row">
-            <label style="margin:0; font-size:0.85rem;">Überlauf-Kategorien aktivieren</label>
+            <label style="font-size:0.85rem;">Überlauf-Kategorien</label>
             <label class="switch"><input type="checkbox" id="edit-overflow-enabled" ${data.overflowEnabled ? 'checked' : ''}><span class="switch-slider"></span></label>
           </div>
-          <small>Wenn aktiv, werden Tickets auf mehrere Kategorien verteilt.</small>
         </div>
         <div class="form-group" id="edit-overflow-group" style="${data.overflowEnabled ? '' : 'display:none;'}">
-          <label for="edit-ticket-overflow">Überlauf-Kategorien (mehrfach)</label>
-          <select id="edit-ticket-overflow" multiple style="height:auto;min-height:60px; width:100%; background:var(--bg-base); border:1px solid var(--border-subtle); border-radius:8px; padding:8px; color:var(--text-primary);"></select>
-          <small>Halte Strg (Cmd) gedrückt, um mehrere auszuwählen.</small>
+          <label for="edit-ticket-overflow">Überlauf-Kategorien</label>
+          <select id="edit-ticket-overflow" multiple style="height:auto;min-height:50px;"></select>
+          <small>Strg (Cmd) für Mehrfachauswahl.</small>
         </div>
         <div class="form-group">
           <label for="edit-thread-mode">Thread-Modus</label>
-          <select id="edit-thread-mode" style="width:100%; background:var(--bg-base); border:1px solid var(--border-subtle); border-radius:8px; padding:8px 12px; color:var(--text-primary); min-height:38px;">
-            <option value="none" ${data.threadMode === 'none' ? 'selected' : ''}>Keine Threads</option>
-            <option value="thread" ${data.threadMode === 'thread' ? 'selected' : ''}>Öffentliche Threads</option>
-            <option value="private" ${data.threadMode === 'private' ? 'selected' : ''}>Private Threads</option>
+          <select id="edit-thread-mode">
+            <option value="none" ${data.threadMode === 'none' ? 'selected' : ''}>Keine</option>
+            <option value="thread" ${data.threadMode === 'thread' ? 'selected' : ''}>Öffentlich</option>
+            <option value="private" ${data.threadMode === 'private' ? 'selected' : ''}>Privat</option>
           </select>
         </div>
         <div class="form-group">
-          <label style="font-weight:600; font-size:0.85rem;">Transkript-Einstellungen</label>
+          <label style="font-weight:600; font-size:0.8rem;">Transkript-Einstellungen</label>
           <div class="switch-row">
-            <label style="margin:0; font-size:0.85rem;">Transkripte speichern</label>
+            <label style="font-size:0.85rem;">Transkripte speichern</label>
             <label class="switch"><input type="checkbox" id="edit-save-transcripts" ${data.saveTranscripts ? 'checked' : ''}><span class="switch-slider"></span></label>
           </div>
           <div class="switch-row">
-            <label style="margin:0; font-size:0.85rem;">Bilder in Transkripten</label>
+            <label style="font-size:0.85rem;">Bilder in Transkripten</label>
             <label class="switch"><input type="checkbox" id="edit-save-images" ${data.saveImages ? 'checked' : ''}><span class="switch-slider"></span></label>
           </div>
           <div class="switch-row">
-            <label style="margin:0; font-size:0.85rem;">Private Transkripte</label>
+            <label style="font-size:0.85rem;">Private Transkripte</label>
             <label class="switch"><input type="checkbox" id="edit-private-transcripts" ${data.privateTranscripts ? 'checked' : ''}><span class="switch-slider"></span></label>
           </div>
         </div>
         <div class="form-group">
           <div class="switch-row">
-            <label style="margin:0; font-size:0.85rem;">Claim-System aktivieren</label>
+            <label style="font-size:0.85rem;">Claim-System</label>
             <label class="switch"><input type="checkbox" id="edit-claim-enabled" ${data.claimEnabled ? 'checked' : ''}><span class="switch-slider"></span></label>
           </div>
-          <small>Ermöglicht Teammitgliedern, Tickets zu übernehmen.</small>
         </div>
         <div class="form-group">
-          <label style="font-weight:600; font-size:0.85rem;">Buttons (für das Panel)</label>
+          <label style="font-weight:600; font-size:0.8rem;">Buttons</label>
           <div id="edit-button-list"></div>
-          <button type="button" class="add-button-btn" onclick="window.addButtonRow()">+ Button hinzufügen</button>
+          <button type="button" class="add-option-btn" onclick="window.addButtonRow()">+ Button hinzufügen</button>
         </div>
       </div>
 
-      <!-- TAB: Optionen (verlinkte Kategorien mit eigenen Support-Rollen) -->
+      <!-- TAB: Optionen (verlinkte Kategorien) -->
       <div id="edit-tab-options" class="edit-tab-content hidden">
         <div class="form-group">
-          <label style="font-weight:600; font-size:0.85rem;">Dropdown-Optionen (Kategorien)</label>
+          <label style="font-weight:600; font-size:0.8rem;">Dropdown-Optionen</label>
           <div id="edit-options-list"></div>
           <button type="button" class="add-option-btn" onclick="window.addOptionRow()">+ Option hinzufügen</button>
-          <small>Jede Option kann eigene Support-Rollen haben. Wenn keine definiert, werden die globalen Support-Rollen verwendet.</small>
+          <small>Jede Option kann eigene Support-Rollen haben.</small>
         </div>
       </div>
 
       <!-- Speichern -->
-      <div class="form-action" style="margin-top:1.2rem;padding-top:1.2rem;border-top:1px solid var(--border-subtle);">
+      <div class="form-action" style="margin-top:1rem; padding-top:1rem; border-top:1px solid var(--border-subtle);">
         <button class="btn btn-primary" onclick="saveEditView()">💾 Speichern</button>
         <button class="btn btn-secondary" onclick="closeEditView()">Abbrechen</button>
         <span id="edit-save-status" class="hidden status-success"></span>
@@ -1200,44 +1152,36 @@ async function showEditView(index) {
 
   editContent.innerHTML = html;
 
-  // --- Befüllen der dynamischen Elemente ---
-
-  // Kategorien befüllen
+  // ---- Befüllen ----
   populateCategorySelects();
 
-  // Rollen-Chips rendern (globale Support-Rollen)
+  // Globale Support-Rollen
   renderEditRoleChips('edit-support-roles', data.supportRoles || []);
   renderEditRoleChips('edit-allowed-roles', data.allowedRoles || []);
   renderEditRoleChips('edit-denied-roles', data.deniedRoles || []);
 
-  // Kanal für das Panel befüllen (Textkanäle)
+  // Panel-Kanal
   const panelChannelSelect = document.getElementById('edit-panel-channel');
   if (panelChannelSelect) {
     const textChannels = state.guildChannels.filter(c => c.type === 0);
     panelChannelSelect.innerHTML = textChannels.length
       ? textChannels.map(c => `<option value="${c.id}" ${c.id === data.panelChannelId ? 'selected' : ''}># ${escapeHtml(c.name)}</option>`).join('')
-      : `<option value="">Keine Textkanäle gefunden</option>`;
-    if (data.panelChannelId && !textChannels.some(c => c.id === data.panelChannelId)) {
-      panelChannelSelect.value = '';
-    }
+      : `<option value="">Keine Textkanäle</option>`;
   }
 
-  // Log-Kanal befüllen (Textkanäle)
+  // Log-Kanal
   const logChannelSelect = document.getElementById('edit-log-channel');
   if (logChannelSelect) {
     const textChannels = state.guildChannels.filter(c => c.type === 0);
     logChannelSelect.innerHTML = textChannels.length
       ? textChannels.map(c => `<option value="${c.id}" ${c.id === data.logChannelId ? 'selected' : ''}># ${escapeHtml(c.name)}</option>`).join('')
-      : `<option value="">Keine Textkanäle gefunden</option>`;
-    if (data.logChannelId && !textChannels.some(c => c.id === data.logChannelId)) {
-      logChannelSelect.value = '';
-    }
+      : `<option value="">Keine Textkanäle</option>`;
   }
 
-  // Ausgewählte Kategorie setzen
+  // Kategorie
   if (data.categoryId) document.getElementById('edit-ticket-category').value = data.categoryId;
 
-  // Overflow-Kategorien setzen
+  // Overflow
   if (data.overflowCategories) {
     const overflowSelect = document.getElementById('edit-ticket-overflow');
     if (overflowSelect) {
@@ -1252,217 +1196,34 @@ async function showEditView(index) {
     document.getElementById('edit-overflow-group').style.display = this.checked ? '' : 'none';
   });
 
-  // Buttons laden
+  // Buttons
   if (data.buttons && data.buttons.length) {
     data.buttons.forEach(btn => window.addButtonRow(btn));
   } else {
     window.addButtonRow({ label: 'Ticket öffnen', emoji: '🎫', color: '#ffffff', action: 'open' });
   }
 
-  // Optionen laden (mit Support-Rollen)
+  // Optionen
   if (data.options && data.options.length) {
     data.options.forEach(opt => window.addOptionRow(opt));
   } else {
     window.addOptionRow({ label: 'Allgemeiner Support', emoji: '🎫', categoryId: '' });
   }
 
-  // Aktiven Tab setzen
   switchEditTab('general');
-  // Vorschau initial aktualisieren
   updateEditPreview();
 }
 
-// ------ Hilfsfunktionen für Bild-Upload ------
+// ---- Hilfsfunktionen für Bilder ----
 window.handleEditImageUpload = function(input) {
   const file = input.files?.[0];
   if (!file) return;
   if (file.size > 5 * 1024 * 1024) {
-    showToast('Bild ist zu groß (max. 5MB)', 'error');
+    showToast('Bild zu groß (max. 5MB)', 'error');
     input.value = '';
     return;
   }
   const reader = new FileReader();
   reader.onload = (e) => {
     const preview = document.getElementById('edit-image-preview');
-    if (preview) preview.src = e.target.result;
-    input.dataset.value = e.target.result;
-    updateEditPreview();
-  };
-  reader.readAsDataURL(file);
-};
-window.clearEditImage = function() {
-  const input = document.getElementById('edit-image-input');
-  if (input) { input.value = ''; input.dataset.value = ''; }
-  const preview = document.getElementById('edit-image-preview');
-  if (preview) preview.src = '';
-  updateEditPreview();
-};
-
-// ------ Panel wechseln (Dropdown) ------
-window.switchToSelectedPanel = async function() {
-  const select = document.getElementById('edit-panel-select');
-  if (!select) return;
-  const val = select.value;
-  if (val === 'new') {
-    editingIndex = null;
-    showEditView(null);
-  } else {
-    const index = parseInt(val);
-    editingIndex = index;
-    showEditView(index);
-  }
-};
-
-// ------ Bearbeitungsansicht schließen ------
-window.closeEditView = function() {
-  document.getElementById('ticket-overview-container').classList.remove('hidden');
-  editContainer.classList.add('hidden');
-  editContent.innerHTML = '';
-  editingIndex = null;
-  isEditViewOpen = false;
-  renderTicketOverview();
-};
-
-// ------ Speichern der Bearbeitung (mit pro-Option Support-Rollen) ------
-window.saveEditView = async function() {
-  const saveStatus = document.getElementById('edit-save-status');
-  if (saveStatus) { saveStatus.classList.add('hidden'); saveStatus.textContent = '⏳ Speichern...'; saveStatus.classList.remove('hidden'); }
-
-  // Daten aus allen Tabs sammeln
-  const enabled = document.getElementById('edit-panel-enabled').checked;
-  const panelName = document.getElementById('edit-panel-name').value.trim();
-  const panelChannelId = document.getElementById('edit-panel-channel')?.value || '';
-  const logChannelId = document.getElementById('edit-log-channel')?.value || '';
-  const supportRoles = getEditSelectedRoles('edit-support-roles');
-  const categoryId = document.getElementById('edit-ticket-category').value;
-  const title = document.getElementById('edit-panel-title').value.trim();
-  const description = document.getElementById('edit-panel-desc').value.trim();
-  const color = document.getElementById('edit-panel-color').value;
-  const imageInput = document.getElementById('edit-image-input');
-  const image = imageInput?.dataset.value || '';
-  const creationMessage = document.getElementById('edit-create-msg').value.trim();
-  const channelNameTemplate = document.getElementById('edit-channel-template').value.trim() || '{panel.name}-{ticket.creator.username}';
-  const allowedRoles = getEditSelectedRoles('edit-allowed-roles');
-  const deniedRoles = getEditSelectedRoles('edit-denied-roles');
-  const maxTickets = parseInt(document.getElementById('edit-max-tickets').value) || 1;
-  const overflowEnabled = document.getElementById('edit-overflow-enabled').checked;
-  const overflowSelect = document.getElementById('edit-ticket-overflow');
-  const overflowCategories = overflowSelect ? Array.from(overflowSelect.selectedOptions).map(o => o.value) : [];
-  const threadMode = document.getElementById('edit-thread-mode').value;
-  const saveTranscripts = document.getElementById('edit-save-transcripts').checked;
-  const saveImages = document.getElementById('edit-save-images').checked;
-  const privateTranscripts = document.getElementById('edit-private-transcripts').checked;
-  const claimEnabled = document.getElementById('edit-claim-enabled').checked;
-  const buttons = collectButtons().filter(b => b.label.trim());
-  const options = collectOptions().filter(o => o.label.trim());
-
-  if (!panelName) {
-    showToast('Bitte gib einen Panel-Namen ein.', 'error');
-    if (saveStatus) saveStatus.textContent = '✕ Fehler';
-    return;
-  }
-
-  try {
-    const config = await apiFetch(`/guild/${state.activeGuildId}/config`);
-    if (!config.tickets) config.tickets = {};
-    if (!config.tickets.options) config.tickets.options = [];
-
-    const newData = {
-      enabled,
-      panelName,
-      panelChannelId,
-      logChannelId,
-      supportRoles,
-      categoryId,
-      title,
-      description,
-      color,
-      image,
-      creationMessage,
-      channelNameTemplate,
-      allowedRoles,
-      deniedRoles,
-      maxTickets,
-      overflowEnabled,
-      overflowCategories,
-      threadMode,
-      saveTranscripts,
-      saveImages,
-      privateTranscripts,
-      claimEnabled,
-      buttons,
-      options
-    };
-
-    if (editingIndex !== null) {
-      config.tickets.options[editingIndex] = newData;
-    } else {
-      config.tickets.options.push(newData);
-    }
-
-    await apiFetch(`/guild/${state.activeGuildId}/config/tickets`, {
-      method: 'POST',
-      body: JSON.stringify(config.tickets)
-    });
-
-    invalidateTicketCache();
-    showToast(editingIndex !== null ? 'Ticket aktualisiert!' : 'Ticket hinzugefügt!', 'success');
-    if (saveStatus) saveStatus.textContent = '✓ Gespeichert';
-    closeEditView();
-  } catch (err) {
-    showToast(`Fehler: ${err.message}`, 'error');
-    if (saveStatus) saveStatus.textContent = '✕ Fehler';
-  }
-};
-
-// ------ Ticket löschen ------
-window.deleteTicketOption = async function(index) {
-  if (!confirm('Möchtest du dieses Ticket wirklich löschen?')) return;
-  try {
-    const config = await apiFetch(`/guild/${state.activeGuildId}/config`);
-    if (!config.tickets || !config.tickets.options || !config.tickets.options[index]) return;
-    config.tickets.options.splice(index, 1);
-    await apiFetch(`/guild/${state.activeGuildId}/config/tickets`, {
-      method: 'POST',
-      body: JSON.stringify(config.tickets)
-    });
-    invalidateTicketCache();
-    showToast('Ticket gelöscht.', 'success');
-    renderTicketOverview();
-  } catch (err) {
-    showToast(`Fehler: ${err.message}`, 'error');
-  }
-};
-
-// ------ Event Listener für Ticket-Tab ------
-document.addEventListener('DOMContentLoaded', function() {
-  const ticketTabBtn = document.querySelector('[data-tab="tickets"]');
-  if (ticketTabBtn) {
-    ticketTabBtn.addEventListener('click', function() {
-      setTimeout(() => { if (state.activeGuildId) renderTicketOverview(); }, 50);
-    });
-  }
-  const overlay = document.getElementById('manage-overlay');
-  if (overlay) {
-    const observer = new MutationObserver(() => {
-      if (!overlay.classList.contains('hidden')) {
-        const activeTab = document.querySelector('.tab-btn.active[data-tab="tickets"]');
-        if (activeTab && state.activeGuildId) renderTicketOverview();
-      }
-    });
-    observer.observe(overlay, { attributes: true, attributeFilter: ['class'] });
-  }
-});
-
-// ============================================================
-// INIT
-// ============================================================
-document.addEventListener('DOMContentLoaded', loadDashboard);
-
-// Funktionen global verfügbar machen
-window.switchEditTab = switchEditTab;
-window.renderTicketOverview = renderTicketOverview;
-window.addOptionRow = addOptionRow;
-window.updateEditPreview = updateEditPreview;
-window.switchToSelectedPanel = switchToSelectedPanel;
-window.sendPanelToChannel = sendPanelToChannel;
+    if (preview) preview.src =
