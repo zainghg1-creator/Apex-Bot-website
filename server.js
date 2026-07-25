@@ -537,11 +537,20 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
 });
 
 // ============================================================
-// VERIFICATION PANEL SENDEN
+// VERIFICATION PANEL SENDEN (MIT VOLLER EMBED-KONFIG)
 // ============================================================
 app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req, res) => {
   const { guildId } = req.params;
-  const { channelId, method, roleId } = req.body;
+  const { 
+    channelId, 
+    method, 
+    roleId,
+    title,
+    description,
+    color,
+    image,
+    buttonLabel
+  } = req.body;
 
   if (!channelId || !method || !roleId) {
     return res.status(400).json({ error: 'channelId, method und roleId sind erforderlich.' });
@@ -553,22 +562,28 @@ app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req,
       return res.status(500).json({ error: 'BOT_TOKEN nicht konfiguriert.' });
     }
 
+    // Embed mit benutzerdefinierten Werten
     const embed = {
-      title: '🔐 Verifizierung',
-      description: method === 'button'
+      title: title || '🔐 Verifizierung',
+      description: description || (method === 'button'
         ? 'Klicke auf den Button, um dich zu verifizieren.'
-        : 'Beantworte die folgende Aufgabe, um dich zu verifizieren.',
-      color: 0x6d5ef8,
+        : 'Beantworte die folgende Aufgabe, um dich zu verifizieren.'),
+      color: parseInt(color ? color.replace('#', '') : '6d5ef8', 16),
       footer: { text: 'Verifizierungssystem • Powered by Apex' }
     };
 
+    if (image && image.startsWith('http')) {
+      embed.image = { url: image };
+    }
+
     let components = [];
+    const label = buttonLabel || (method === 'button' ? 'Verifizieren' : 'Aufgabe lösen');
     if (method === 'button') {
       components = [{
         type: 1,
         components: [{
           type: 2,
-          label: 'Verifizieren',
+          label: label,
           style: 1,
           custom_id: `verify_button_${guildId}_${roleId}`
         }]
@@ -578,7 +593,7 @@ app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req,
         type: 1,
         components: [{
           type: 2,
-          label: 'Aufgabe lösen',
+          label: label,
           style: 1,
           custom_id: `verify_math_${guildId}_${roleId}`
         }]
