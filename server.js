@@ -47,25 +47,46 @@ app.use(express.static(__dirname));
 app.use(express.json({ limit: '8mb' }));
 
 // ============================================================
-// SESSION MIT MONGODB-STORE
+// SESSION-STORE (mit Fallback)
 // ============================================================
+let sessionStore = null;
+let mongoConnected = false;
+
 if (!MONGODB_URI) {
-  console.error('❌ MONGODB_URI fehlt – Session kann nicht persistent gespeichert werden!');
-  process.exit(1);
+  console.warn('⚠️ MONGODB_URI fehlt – verwende MemoryStore (nicht persistent!)');
+} else {
+  try {
+    // Mongoose verbinden
+    mongoose.connect(MONGODB_URI, { dbName: 'apex' })
+      .then(() => {
+        console.log('✅ MongoDB verbunden (für Session-Store)');
+        mongoConnected = true;
+      })
+      .catch(err => {
+        console.error('❌ MongoDB Verbindungsfehler:', err.message);
+        console.warn('⚠️ Verwende MemoryStore als Fallback');
+      });
+
+    // MongoStore erstellen
+    sessionStore = MongoStore.create({
+      mongoUrl: MONGODB_URI,
+      dbName: 'apex',
+      collectionName: 'sessions',
+      ttl: 24 * 60 * 60,
+      autoRemove: 'native'
+    });
+    console.log('✅ MongoStore initialisiert');
+  } catch (err) {
+    console.error('❌ Fehler beim Erstellen des MongoStore:', err.message);
+    sessionStore = null;
+  }
 }
 
-// Mongoose verbinden
-mongoose.connect(MONGODB_URI, { dbName: 'apex' })
-  .then(() => console.log('✅ MongoDB verbunden (für Session-Store)'))
-  .catch(err => console.error('❌ MongoDB Verbindungsfehler:', err));
-
-const sessionStore = MongoStore.create({
-  mongoUrl: MONGODB_URI,
-  dbName: 'apex',
-  collectionName: 'sessions',
-  ttl: 24 * 60 * 60,
-  autoRemove: 'native'
-});
+// Fallback: MemoryStore
+if (!sessionStore) {
+  console.warn('⚠️ Verwende MemoryStore (nicht persistent, nur für Tests)');
+  sessionStore = new session.MemoryStore();
+}
 
 app.use(session({
   secret: SESSION_SECRET || 'default-secret-muss-geaendert-werden',
@@ -121,8 +142,10 @@ app.get('/auth/discord/callback', async (req, res) => {
     console.log('❌ Kein Code in der Callback-URL');
     return res.redirect('/?error=missing_code');
   }
-  
+
   try {
+    // --- Token austauschen ---
+    console.log('🔄 Tausche Code gegen Token...');
     const tokenRes = await fetch(`${DISCORD_API}/oauth2/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -134,29 +157,28 @@ app.get('/auth/discord/callback', async (req, res) => {
         redirect_uri: REDIRECT_URI
       })
     });
-    
+
     if (!tokenRes.ok) {
       const errorText = await tokenRes.text();
       console.error('❌ Token exchange fehlgeschlagen:', tokenRes.status, errorText);
       return res.redirect('/?error=token_exchange_failed');
     }
-    
     const tokenData = await tokenRes.json();
     console.log('✅ Token erhalten');
 
+    // --- User abrufen ---
+    console.log('🔄 Rufe User-Daten ab...');
     const userRes = await fetch(`${DISCORD_API}/users/@me`, {
       headers: { Authorization: `Bearer ${tokenData.access_token}` }
     });
-    
     if (!userRes.ok) {
       console.error('❌ User fetch fehlgeschlagen:', userRes.status);
       return res.redirect('/?error=user_fetch_failed');
     }
-    
     const user = await userRes.json();
     console.log(`👤 User eingeloggt: ${user.username} (${user.id})`);
 
-    // Session speichern
+    // --- Session setzen ---
     req.session.accessToken = tokenData.access_token;
     req.session.user = {
       id: user.id,
@@ -165,8 +187,7 @@ app.get('/auth/discord/callback', async (req, res) => {
       discriminator: user.discriminator
     };
 
-    // Session wird automatisch in MongoDB gespeichert
-    // Wir speichern explizit, um sicherzustellen, dass es klappt
+    // --- Session speichern (wichtig!) ---
     req.session.save((err) => {
       if (err) {
         console.error('❌ Fehler beim Speichern der Session:', err);
@@ -174,8 +195,10 @@ app.get('/auth/discord/callback', async (req, res) => {
       }
       console.log(`✅ Session gespeichert für ${user.username} – Session-ID: ${req.sessionID}`);
       console.log(`🔍 Session-Inhalt:`, req.session.user);
+      // Jetzt zur Dashboard-Seite weiterleiten
       res.redirect('/dashboard.html');
     });
+
   } catch (err) {
     console.error('❌ OAuth Fehler:', err);
     res.redirect('/?error=auth_failed');
@@ -544,7 +567,7 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
 });
 
 // ============================================================
-// EXPORT (für Vercel)
+// EXPORT
 // ============================================================
 module.exports = app;
 
