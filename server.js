@@ -19,11 +19,12 @@ const {
   NODE_ENV = 'production'
 } = process.env;
 
+// ===== DEBUG =====
 console.log('🔍 Server startet...');
 console.log('CLIENT_ID:', CLIENT_ID ? '✅' : '❌');
 console.log('MONGODB_URI:', MONGODB_URI ? '✅' : '❌');
 console.log('REDIRECT_URI:', REDIRECT_URI);
-console.log('NODE_ENV:', NODE_ENV);
+// =================
 
 const DISCORD_API = 'https://discord.com/api/v10';
 const ADMINISTRATOR = 0x8n;
@@ -35,32 +36,20 @@ const ALLOWED_MODULES = ['welcome', 'tickets', 'teamliste', 'support', 'moderati
 const app = express();
 app.set('trust proxy', 1);
 
-// --- LOGGER für jede Anfrage (wichtig für Debug) ---
-app.use((req, res, next) => {
-  console.log(`📥 ${req.method} ${req.url} – Session: ${req.session ? 'vorhanden' : 'fehlt'}, User: ${req.session?.user?.username || 'nicht eingeloggt'}`);
-  next();
-});
-
 app.use(express.static(__dirname));
 app.use(express.json({ limit: '8mb' }));
 
-// --- Session mit optimierten Einstellungen für Vercel ---
 app.use(cookieSession({
   name: 'apex_session',
-  keys: [SESSION_SECRET || 'default-secret-muss-geaendert-werden'],
+  keys: [SESSION_SECRET || 'default-secret'],
   maxAge: 24 * 60 * 60 * 1000,
-  secure: NODE_ENV === 'production', // auf Vercel immer HTTPS
-  sameSite: 'lax',                  // erlaubt Weiterleitungen von Discord
-  httpOnly: true,
-  // domain nicht setzen, sonst klappt es nicht mit Subdomains
+  secure: NODE_ENV === 'production',
+  sameSite: 'lax',
+  httpOnly: true
 }));
 
 // ============================================================
-// MONGODB (NUR WENN URI VORHANDEN) – mit Timeout-Absicherung.
-// WICHTIG: KEIN globales app.use() mehr hier! Das lief vorher vor
-// JEDER Route (auch /api/guilds, die gar keine DB braucht) und
-// konnte bei einem MongoDB-Verbindungsproblem das komplette
-// Dashboard-Laden unbegrenzt blockieren/hängen lassen.
+// MONGODB (NUR WENN URI VORHANDEN)
 // ============================================================
 let cachedConnection = global._apexMongooseConnection || { conn: null, promise: null };
 global._apexMongooseConnection = cachedConnection;
@@ -74,22 +63,28 @@ async function connectToDatabase() {
   if (!cachedConnection.promise) {
     cachedConnection.promise = mongoose.connect(MONGODB_URI, {
       dbName: 'apex',
-      serverSelectionTimeoutMS: 8000,
-      socketTimeoutMS: 20000,
+      serverSelectionTimeoutMS: 15000,
+      socketTimeoutMS: 60000,
       tls: true,
       retryWrites: true
-    }).then(m => m).catch(err => {
-      // Fehlgeschlagenen Verbindungsversuch NICHT dauerhaft cachen,
-      // sonst hängt jede weitere Anfrage am selben toten Promise.
-      cachedConnection.promise = null;
-      throw err;
-    });
+    }).then(m => m);
   }
   cachedConnection.conn = await cachedConnection.promise;
   return cachedConnection.conn;
 }
 
-if (!MONGODB_URI) {
+// Mongo Middleware NUR wenn URI da ist
+if (MONGODB_URI) {
+  app.use(async (req, res, next) => {
+    try {
+      await connectToDatabase();
+      next();
+    } catch (err) {
+      console.error('MongoDB Fehler:', err.message);
+      next();
+    }
+  });
+} else {
   console.log('⚠️ MongoDB deaktiviert (keine URI)');
 }
 
@@ -108,22 +103,13 @@ try {
 }
 
 async function getGuildConfig(guildId) {
-  if (!GuildConfig || !MONGODB_URI) return {};
-  try {
-    await connectToDatabase();
-    const doc = await GuildConfig.findOne({ guildId }).lean();
-    return doc?.data || {};
-  } catch (err) {
-    console.error('⚠️ MongoDB nicht erreichbar, laufe ohne Config:', err.message);
-    return {};
-  }
+  if (!GuildConfig) return {};
+  const doc = await GuildConfig.findOne({ guildId }).lean();
+  return doc?.data || {};
 }
 
 async function saveModuleConfig(guildId, moduleName, moduleData) {
-  if (!GuildConfig || !MONGODB_URI) {
-    throw new Error('MongoDB nicht konfiguriert - Speichern nicht möglich');
-  }
-  await connectToDatabase();
+  if (!GuildConfig) return;
   await GuildConfig.findOneAndUpdate(
     { guildId },
     { $set: { [`data.${moduleName}`]: moduleData } },
@@ -139,10 +125,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/dashboard.html', (req, res) => {
-  if (!req.session?.user) {
-    console.log('⛔ Zugriff auf dashboard.html ohne Session – leite zu / um');
-    return res.redirect('/');
-  }
+  if (!req.session?.user) return res.redirect('/');
   res.sendFile(path.join(__dirname, 'dashboard.html'));
 });
 
@@ -157,18 +140,13 @@ app.get('/auth/discord/login', (req, res) => {
     scope: 'identify guilds',
     prompt: 'consent'
   });
-  const url = `https://discord.com/api/oauth2/authorize?${params}`;
-  console.log('🔐 Weiterleitung zu Discord:', url);
-  res.redirect(url);
+  res.redirect(`https://discord.com/api/oauth2/authorize?${params}`);
 });
 
 app.get('/auth/discord/callback', async (req, res) => {
   const { code } = req.query;
-  if (!code) {
-    console.log('❌ Kein Code in der Callback-URL');
-    return res.redirect('/?error=missing_code');
-  }
-  console.log('🔁 Callback erhalten, Code:', code.substring(0, 10) + '...');
+  if (!code) return res.redirect('/?error=missing_code');
+  
   try {
     const tokenRes = await fetch(`${DISCORD_API}/oauth2/token`, {
       method: 'POST',
@@ -181,24 +159,15 @@ app.get('/auth/discord/callback', async (req, res) => {
         redirect_uri: REDIRECT_URI
       })
     });
-    if (!tokenRes.ok) {
-      const errorText = await tokenRes.text();
-      console.error('❌ Token exchange fehlgeschlagen:', tokenRes.status, errorText);
-      return res.redirect('/?error=token_exchange_failed');
-    }
+    if (!tokenRes.ok) throw new Error('Token exchange failed');
     const tokenData = await tokenRes.json();
-    console.log('✅ Token erhalten');
-
+    
     const userRes = await fetch(`${DISCORD_API}/users/@me`, {
       headers: { Authorization: `Bearer ${tokenData.access_token}` }
     });
-    if (!userRes.ok) {
-      console.error('❌ User fetch fehlgeschlagen:', userRes.status);
-      return res.redirect('/?error=user_fetch_failed');
-    }
+    if (!userRes.ok) throw new Error('User fetch failed');
     const user = await userRes.json();
-    console.log('👤 User eingeloggt:', user.username);
-
+    
     req.session.accessToken = tokenData.access_token;
     req.session.user = {
       id: user.id,
@@ -206,10 +175,9 @@ app.get('/auth/discord/callback', async (req, res) => {
       avatar: user.avatar,
       discriminator: user.discriminator
     };
-    console.log('✅ Session gespeichert, User:', req.session.user.username);
     res.redirect('/dashboard.html');
   } catch (err) {
-    console.error('❌ OAuth Fehler:', err);
+    console.error('OAuth Fehler:', err);
     res.redirect('/?error=auth_failed');
   }
 });
@@ -220,11 +188,10 @@ app.get('/auth/logout', (req, res) => {
 });
 
 // ============================================================
-// MIDDLEWARE: AUTH (mit Logging)
+// MIDDLEWARE: AUTH
 // ============================================================
 function requireAuth(req, res, next) {
   if (!req.session?.accessToken) {
-    console.log(`⛔ 401 – Kein AccessToken für ${req.method} ${req.url}`);
     return res.status(401).json({ error: 'not_authenticated' });
   }
   next();
@@ -258,31 +225,18 @@ async function getBotGuildIds() {
 }
 
 // ============================================================
-// API: TEST (ohne Auth, um Erreichbarkeit zu prüfen)
-// ============================================================
-app.get('/api/test', (req, res) => {
-  console.log('✅ /api/test wurde aufgerufen');
-  res.json({ status: '✅ Server läuft!', time: new Date().toISOString(), session: !!req.session?.user });
-});
-
-// ============================================================
 // API: GUILDS
 // ============================================================
 app.get('/api/guilds', requireAuth, async (req, res) => {
-  console.log(`📡 /api/guilds aufgerufen von User ${req.session.user?.username}`);
   try {
     const guildsRes = await fetch(`${DISCORD_API}/users/@me/guilds`, {
       headers: { Authorization: `Bearer ${req.session.accessToken}` }
     });
     if (guildsRes.status === 401) {
-      console.log('⛔ Discord-Token ungültig, Session zurücksetzen');
       req.session = null;
       return res.status(401).json({ error: 'session_expired' });
     }
-    if (!guildsRes.ok) {
-      console.error('❌ Discord API Fehler:', guildsRes.status);
-      return res.status(502).json({ error: 'discord_api_error' });
-    }
+    if (!guildsRes.ok) return res.status(502).json({ error: 'discord_api_error' });
     const guilds = await guildsRes.json();
     const adminGuilds = guilds.filter(g => {
       const perms = BigInt(g.permissions ?? 0);
@@ -295,10 +249,9 @@ app.get('/api/guilds', requireAuth, async (req, res) => {
       icon: g.icon ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png` : null,
       botIstDrauf: botGuildIds.has(g.id)
     })).sort((a, b) => Number(b.botIstDrauf) - Number(a.botIstDrauf) || a.name.localeCompare(b.name));
-    console.log(`✅ ${result.length} Server an Client gesendet`);
     res.json({ user: req.session.user, guilds: result, clientId: CLIENT_ID });
   } catch (err) {
-    console.error('❌ API /guilds Fehler:', err);
+    console.error('API /guilds Fehler:', err);
     res.status(500).json({ error: 'server_error' });
   }
 });
@@ -325,10 +278,14 @@ async function fetchGuildOwner(ownerId) {
   }
 }
 
+// ============================================================
+// BOT-ANZAHL (zählt Mitglieder mit user.bot === true)
+// ============================================================
 async function countGuildBots(guildId) {
   let count = 0;
   let after = '0';
   const MAX_PAGES = 10;
+
   try {
     for (let page = 0; page < MAX_PAGES; page++) {
       const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members?limit=1000&after=${after}`, {
@@ -347,6 +304,7 @@ async function countGuildBots(guildId) {
     console.error('Fehler beim Zählen der Bots:', err);
     return null;
   }
+
   return count;
 }
 
@@ -450,7 +408,14 @@ app.get('/api/me', requireAuth, (req, res) => {
 });
 
 // ============================================================
-// TICKET-PANEL SENDEN
+// TEST ROUTE
+// ============================================================
+app.get('/api/test', (req, res) => {
+  res.json({ status: '✅ Server läuft!', time: new Date().toISOString() });
+});
+
+// ============================================================
+// ⭐ TICKET-PANEL SENDEN (MIT EMBED + DROPDOWN)
 // ============================================================
 app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res) => {
   const { guildId } = req.params;
@@ -463,8 +428,11 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
   }
 
   try {
+    // 1. Konfiguration laden
     const config = await getGuildConfig(guildId);
     const tickets = config.tickets || {};
+    
+    // Die globale Liste aller Panels
     const panels = tickets.options || [];
 
     if (panelIndex < 0 || panelIndex >= panels.length) {
@@ -476,7 +444,9 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
       return res.status(404).json({ error: 'Panel-Daten ungültig.' });
     }
 
+    // 2. Die verlinkten Kategorien aus dem Panel holen
     const linkedOptions = panel.options || [];
+    
     if (linkedOptions.length === 0) {
       return res.status(400).json({
         error: '⚠️ Dieses Panel hat keine verlinkten Kategorien!',
@@ -484,11 +454,16 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
       });
     }
 
+    console.log('📋 Verlinkte Kategorien:', linkedOptions);
+
+    // 3. Embed erstellen
     const embed = {
       title: panel.title || 'Support Center',
       description: panel.description || 'Wähle eine Kategorie, um ein Ticket zu öffnen.',
       color: parseInt(panel.color ? panel.color.replace('#', '') : 'ffffff', 16),
-      footer: { text: 'Ticket System • Powered by Apex' },
+      footer: {
+        text: 'Ticket System • Powered by Apex'
+      },
       timestamp: new Date().toISOString()
     };
 
@@ -496,26 +471,33 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
       embed.image = { url: panel.image };
     }
 
-    const selectOptions = linkedOptions.map(opt => ({
-      label: opt.label || 'Unbenannt',
-      value: opt.categoryId || 'no_category',
-      description: `Ticket in ${opt.label || 'dieser Kategorie'} öffnen`,
-      ...(opt.emoji ? { emoji: { name: opt.emoji } } : {})
-    }));
+    // 4. Select Menu (Dropdown) erstellen
+    const selectOptions = linkedOptions.map(opt => {
+      const option = {
+        label: opt.label || 'Unbenannt',
+        value: opt.categoryId || 'no_category',
+        description: `Ticket in ${opt.label || 'dieser Kategorie'} öffnen`
+      };
+      if (opt.emoji) {
+        option.emoji = { name: opt.emoji };
+      }
+      return option;
+    });
 
     const components = [{
-      type: 1,
+      type: 1, // Action Row
       components: [{
-        type: 3,
+        type: 3, // Select Menu
         custom_id: `ticket_select_${panelIndex}_${guildId}`,
         placeholder: 'Wähle eine Kategorie aus...',
         options: selectOptions
       }]
     }];
 
+    // 5. An Discord senden
     const botToken = process.env.BOT_TOKEN;
     if (!botToken) {
-      console.error('❌ BOT_TOKEN fehlt!');
+      console.error('❌ BOT_TOKEN fehlt in .env!');
       return res.status(500).json({ error: 'BOT_TOKEN nicht konfiguriert.' });
     }
 
@@ -525,7 +507,10 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
         'Authorization': `Bot ${botToken}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ embeds: [embed], components })
+      body: JSON.stringify({
+        embeds: [embed],
+        components: components
+      })
     });
 
     const responseData = await response.json();
@@ -539,7 +524,11 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
     }
 
     console.log('✅ Panel gesendet, Nachricht-ID:', responseData.id);
-    res.json({ success: true, message: 'Panel erfolgreich gesendet!', data: responseData });
+    res.json({ 
+      success: true, 
+      message: 'Panel wurde erfolgreich gesendet!', 
+      data: responseData 
+    });
 
   } catch (err) {
     console.error('❌ Fehler beim Senden des Panels:', err);
