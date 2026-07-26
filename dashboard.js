@@ -576,12 +576,11 @@ async function loadAllModuleSettings(guildId) {
     applyAutomodConfig(config.automod || {});
     applyTeamupdateConfig(config.teamupdate || {});
     applyMinigamesConfig(config.minigames || {});
-    applySimpleConfig('stats', config.stats || {});        // bleibt für Basiseinstellungen
     applyVerificationConfig(config.verification || {});
     applySimpleConfig('antinuke', config.antinuke || {});
     applyRoleNicknamesConfig(config.rolenicknames || {});
     applyReactionRolesConfig(config.reactionroles || {});
-    applyStatsConfig(config.stats || {});                  // NEU: Statistik-Kanäle
+    applyStatsConfig(config.stats || {});   // NEU: Statistik-Kanäle
   } catch (err) { console.error('Fehler beim Laden der Konfiguration:', err); }
 }
 
@@ -908,7 +907,6 @@ function setColor(prefix, color) {
   if (hexEl) hexEl.value = color || '#ffffff';
   if (preview) preview.style.borderLeftColor = color || '#ffffff';
 }
-// setImage wurde oben bereits definiert
 
 // ============================================================
 // SAVE SETTINGS
