@@ -1447,7 +1447,6 @@
             <div class="switch-row"><label>Log aktiv</label><label class="switch"><input type="checkbox" id="teamupdate-enabled"><span class="switch-slider"></span></label></div>
           </div>
           <div class="form-group"><label for="teamupdate-channel">Log-Kanal</label><select id="teamupdate-channel"></select></div>
-          <div class="form-group"><label>Erlaubte Rollen (Command-Nutzung)</label><div id="teamupdate-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span></div></div>
           <div class="form-action"><button class="btn btn-primary" onclick="handleSaveClick('teamupdate')">Speichern</button></div>
         </div>
 
@@ -1464,8 +1463,11 @@
                 <button type="button" class="command-menu-btn" onclick="toggleCommandRoles('neuer_teamler')">⋮</button>
               </div>
               <div class="command-roles hidden" id="cmd-roles-neuer_teamler">
-                <label>Erlaubte Rollen</label>
-                <div class="chip-select" id="cmdrole-neuer_teamler"><span class="chip-empty">Lade Rollen...</span></div>
+                <div class="form-group"><label>Erlaubte Rollen</label><div class="chip-select" id="cmdrole-neuer_teamler"><span class="chip-empty">Lade Rollen...</span></div></div>
+                <div class="form-group"><label for="cmd-neuer_teamler-channel">Kanal für die Nachricht</label><select id="cmd-neuer_teamler-channel"></select></div>
+                <div class="form-group"><label for="cmd-neuer_teamler-title">Nachrichtentitel</label><input type="text" id="cmd-neuer_teamler-title" placeholder="/neuer_teamler ausgeführt"></div>
+                <div class="form-group"><label for="cmd-neuer_teamler-text">Nachrichtentext</label><textarea id="cmd-neuer_teamler-text" rows="2" placeholder="{user} wurde von {moderator} bearbeitet."></textarea><small>Platzhalter: <code>{user}</code>, <code>{moderator}</code>, <code>{rolle}</code>, <code>{grund}</code></small></div>
+                <div class="form-group"><label>Embed-Farbe</label><div class="color-row"><input type="color" id="cmd-neuer_teamler-color" value="#6d5ef8" oninput="syncColor('cmd-neuer_teamler')"><input type="text" id="cmd-neuer_teamler-color-hex" value="#6d5ef8" oninput="syncColorHex('cmd-neuer_teamler')"></div></div>
               </div>
             </div>
 
@@ -1478,8 +1480,11 @@
                 <button type="button" class="command-menu-btn" onclick="toggleCommandRoles('uprank')">⋮</button>
               </div>
               <div class="command-roles hidden" id="cmd-roles-uprank">
-                <label>Erlaubte Rollen</label>
-                <div class="chip-select" id="cmdrole-uprank"><span class="chip-empty">Lade Rollen...</span></div>
+                <div class="form-group"><label>Erlaubte Rollen</label><div class="chip-select" id="cmdrole-uprank"><span class="chip-empty">Lade Rollen...</span></div></div>
+                <div class="form-group"><label for="cmd-uprank-channel">Kanal für die Nachricht</label><select id="cmd-uprank-channel"></select></div>
+                <div class="form-group"><label for="cmd-uprank-title">Nachrichtentitel</label><input type="text" id="cmd-uprank-title" placeholder="/uprank ausgeführt"></div>
+                <div class="form-group"><label for="cmd-uprank-text">Nachrichtentext</label><textarea id="cmd-uprank-text" rows="2" placeholder="{user} wurde von {moderator} bearbeitet."></textarea><small>Platzhalter: <code>{user}</code>, <code>{moderator}</code>, <code>{rolle}</code>, <code>{grund}</code></small></div>
+                <div class="form-group"><label>Embed-Farbe</label><div class="color-row"><input type="color" id="cmd-uprank-color" value="#6d5ef8" oninput="syncColor('cmd-uprank')"><input type="text" id="cmd-uprank-color-hex" value="#6d5ef8" oninput="syncColorHex('cmd-uprank')"></div></div>
               </div>
             </div>
 
@@ -1492,8 +1497,11 @@
                 <button type="button" class="command-menu-btn" onclick="toggleCommandRoles('downrank')">⋮</button>
               </div>
               <div class="command-roles hidden" id="cmd-roles-downrank">
-                <label>Erlaubte Rollen</label>
-                <div class="chip-select" id="cmdrole-downrank"><span class="chip-empty">Lade Rollen...</span></div>
+                <div class="form-group"><label>Erlaubte Rollen</label><div class="chip-select" id="cmdrole-downrank"><span class="chip-empty">Lade Rollen...</span></div></div>
+                <div class="form-group"><label for="cmd-downrank-channel">Kanal für die Nachricht</label><select id="cmd-downrank-channel"></select></div>
+                <div class="form-group"><label for="cmd-downrank-title">Nachrichtentitel</label><input type="text" id="cmd-downrank-title" placeholder="/downrank ausgeführt"></div>
+                <div class="form-group"><label for="cmd-downrank-text">Nachrichtentext</label><textarea id="cmd-downrank-text" rows="2" placeholder="{user} wurde von {moderator} bearbeitet."></textarea><small>Platzhalter: <code>{user}</code>, <code>{moderator}</code>, <code>{rolle}</code>, <code>{grund}</code></small></div>
+                <div class="form-group"><label>Embed-Farbe</label><div class="color-row"><input type="color" id="cmd-downrank-color" value="#6d5ef8" oninput="syncColor('cmd-downrank')"><input type="text" id="cmd-downrank-color-hex" value="#6d5ef8" oninput="syncColorHex('cmd-downrank')"></div></div>
               </div>
             </div>
 
@@ -1506,8 +1514,11 @@
                 <button type="button" class="command-menu-btn" onclick="toggleCommandRoles('teamkick')">⋮</button>
               </div>
               <div class="command-roles hidden" id="cmd-roles-teamkick">
-                <label>Erlaubte Rollen</label>
-                <div class="chip-select" id="cmdrole-teamkick"><span class="chip-empty">Lade Rollen...</span></div>
+                <div class="form-group"><label>Erlaubte Rollen</label><div class="chip-select" id="cmdrole-teamkick"><span class="chip-empty">Lade Rollen...</span></div></div>
+                <div class="form-group"><label for="cmd-teamkick-channel">Kanal für die Nachricht</label><select id="cmd-teamkick-channel"></select></div>
+                <div class="form-group"><label for="cmd-teamkick-title">Nachrichtentitel</label><input type="text" id="cmd-teamkick-title" placeholder="/teamkick ausgeführt"></div>
+                <div class="form-group"><label for="cmd-teamkick-text">Nachrichtentext</label><textarea id="cmd-teamkick-text" rows="2" placeholder="{user} wurde von {moderator} bearbeitet."></textarea><small>Platzhalter: <code>{user}</code>, <code>{moderator}</code>, <code>{rolle}</code>, <code>{grund}</code></small></div>
+                <div class="form-group"><label>Embed-Farbe</label><div class="color-row"><input type="color" id="cmd-teamkick-color" value="#6d5ef8" oninput="syncColor('cmd-teamkick')"><input type="text" id="cmd-teamkick-color-hex" value="#6d5ef8" oninput="syncColorHex('cmd-teamkick')"></div></div>
               </div>
             </div>
 
@@ -1520,8 +1531,11 @@
                 <button type="button" class="command-menu-btn" onclick="toggleCommandRoles('teamwarn')">⋮</button>
               </div>
               <div class="command-roles hidden" id="cmd-roles-teamwarn">
-                <label>Erlaubte Rollen</label>
-                <div class="chip-select" id="cmdrole-teamwarn"><span class="chip-empty">Lade Rollen...</span></div>
+                <div class="form-group"><label>Erlaubte Rollen</label><div class="chip-select" id="cmdrole-teamwarn"><span class="chip-empty">Lade Rollen...</span></div></div>
+                <div class="form-group"><label for="cmd-teamwarn-channel">Kanal für die Nachricht</label><select id="cmd-teamwarn-channel"></select></div>
+                <div class="form-group"><label for="cmd-teamwarn-title">Nachrichtentitel</label><input type="text" id="cmd-teamwarn-title" placeholder="/teamwarn ausgeführt"></div>
+                <div class="form-group"><label for="cmd-teamwarn-text">Nachrichtentext</label><textarea id="cmd-teamwarn-text" rows="2" placeholder="{user} wurde von {moderator} bearbeitet."></textarea><small>Platzhalter: <code>{user}</code>, <code>{moderator}</code>, <code>{rolle}</code>, <code>{grund}</code></small></div>
+                <div class="form-group"><label>Embed-Farbe</label><div class="color-row"><input type="color" id="cmd-teamwarn-color" value="#6d5ef8" oninput="syncColor('cmd-teamwarn')"><input type="text" id="cmd-teamwarn-color-hex" value="#6d5ef8" oninput="syncColorHex('cmd-teamwarn')"></div></div>
               </div>
             </div>
           </div>
