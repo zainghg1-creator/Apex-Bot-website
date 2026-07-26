@@ -282,7 +282,7 @@
     margin-top: 10px;
   }
 
-  /* ========== NEUER FOOTER ========== */
+  /* FOOTER */
   footer {
     margin-top: 100px;
     background: var(--bg-surface);
@@ -463,7 +463,7 @@
 <main>
   <!-- HERO -->
   <section class="hero">
-    <div class="hero-badge"><span style="color: var(--accent-purple);">●</span> APEX SYSTEM v1.2 ONLINE</div>
+    <div class="hero-badge"><span style="color: var(--accent-purple);">●</span> APEX SYSTEM v2.4 ONLINE</div>
     <h1 class="hero-title">Maximale Kontrolle.<br>Minimaler Aufwand.</h1>
     <p class="hero-subtitle">Die modulare All-in-One Lösung für deinen Discord-Server. Von hochmodernen Ticketsystemen bis hin zu lückenlosem Anti-Nuke Schutz.</p>
     <div class="hero-buttons">
@@ -717,12 +717,9 @@
   </section>
 </main>
 
-<!-- ============================================================ -->
-<!-- NEUER FOOTER                                                -->
-<!-- ============================================================ -->
+<!-- FOOTER -->
 <footer>
   <div class="footer-inner">
-    <!-- Spalte 1: Brand -->
     <div class="footer-col">
       <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
         <div class="brand-logo" style="width:32px; height:32px;">
@@ -740,7 +737,6 @@
       </p>
     </div>
 
-    <!-- Spalte 2: Links -->
     <div class="footer-col">
       <h4>Navigation</h4>
       <ul>
@@ -751,7 +747,6 @@
       </ul>
     </div>
 
-    <!-- Spalte 3: Rechtliches -->
     <div class="footer-col">
       <h4>Rechtliches</h4>
       <ul>
@@ -761,7 +756,6 @@
       </ul>
     </div>
 
-    <!-- Spalte 4: Social -->
     <div class="footer-col">
       <h4>Social</h4>
       <div class="footer-social">
@@ -781,7 +775,6 @@
     </div>
   </div>
 
-  <!-- Footer Bottom -->
   <div class="footer-bottom">
     <span>&copy; <span id="year"></span> APEX BOT SYSTEM. All rights reserved.</span>
     <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Nach oben">
@@ -791,7 +784,6 @@
 </footer>
 
 <script>
-// Dynamisches Jahr im Footer
 document.getElementById('year').textContent = new Date().getFullYear();
 
 // ===== STARFIELD (unverändert) =====
