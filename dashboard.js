@@ -585,9 +585,14 @@ function applyTeamupdateConfig(cfg) {
     setChecked(`cmd-enabled-${cmd}`, c.enabled ?? true);
     renderRoleChips(`cmdrole-${cmd}`, c.roles || []);
     setSelectValue(`cmd-${cmd}-channel`, c.channelId || '');
-    setValue(`cmd-${cmd}-title`, c.title || '');
-    setValue(`cmd-${cmd}-text`, c.text || '');
-    setColor(`cmd-${cmd}`, c.color || '#6d5ef8');
+    setValue(`cmd-${cmd}-signatures`, c.signatures ?? 0);
+    if (cmd === 'teamwarn') {
+      const stages = c.warnStages || [];
+      renderRoleChips('cmdrole-teamwarn-stage1', stages[0] ? [stages[0]] : [], true);
+      renderRoleChips('cmdrole-teamwarn-stage2', stages[1] ? [stages[1]] : [], true);
+      renderRoleChips('cmdrole-teamwarn-stage3', stages[2] ? [stages[2]] : [], true);
+      renderRoleChips('cmdrole-teamwarn-stage4', stages[3] ? [stages[3]] : [], true);
+    }
   });
 }
 
@@ -701,14 +706,23 @@ async function saveModuleSettings(moduleName) {
         payload = {
           enabled: document.getElementById('teamupdate-enabled').checked,
           channelId: document.getElementById('teamupdate-channel').value,
-          commands: Object.fromEntries(TEAMUPDATE_COMMANDS.map(cmd => [cmd, {
-            enabled: document.getElementById(`cmd-enabled-${cmd}`)?.checked ?? true,
-            roles: getSelectedRoleIds(`cmdrole-${cmd}`),
-            channelId: document.getElementById(`cmd-${cmd}-channel`)?.value || '',
-            title: document.getElementById(`cmd-${cmd}-title`)?.value || '',
-            text: document.getElementById(`cmd-${cmd}-text`)?.value || '',
-            color: document.getElementById(`cmd-${cmd}-color`)?.value || '#6d5ef8'
-          }]))
+          commands: Object.fromEntries(TEAMUPDATE_COMMANDS.map(cmd => {
+            const entry = {
+              enabled: document.getElementById(`cmd-enabled-${cmd}`)?.checked ?? true,
+              roles: getSelectedRoleIds(`cmdrole-${cmd}`),
+              channelId: document.getElementById(`cmd-${cmd}-channel`)?.value || '',
+              signatures: parseInt(document.getElementById(`cmd-${cmd}-signatures`)?.value) || 0
+            };
+            if (cmd === 'teamwarn') {
+              entry.warnStages = [
+                getSelectedRoleIds('cmdrole-teamwarn-stage1')[0] || null,
+                getSelectedRoleIds('cmdrole-teamwarn-stage2')[0] || null,
+                getSelectedRoleIds('cmdrole-teamwarn-stage3')[0] || null,
+                getSelectedRoleIds('cmdrole-teamwarn-stage4')[0] || null
+              ];
+            }
+            return [cmd, entry];
+          }))
         };
         break;
       case 'verification':
