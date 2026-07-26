@@ -1396,9 +1396,6 @@
           <button class="tab-btn" data-tab="tickets" onclick="switchTab('tickets'); closeOverlayMenu();">
             <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><line x1="12" y1="9" x2="12" y2="15"/></svg></span> Tickets
           </button>
-          <button class="tab-btn" data-tab="support" onclick="switchTab('support'); closeOverlayMenu();">
-            <span class="tab-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> Support
-          </button>
           <button class="tab-btn" data-tab="teamliste" onclick="switchTab('teamliste'); closeOverlayMenu();">
             <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Teamliste
           </button>
@@ -1407,6 +1404,14 @@
           </button>
           <button class="tab-btn" data-tab="rolenicknames" onclick="switchTab('rolenicknames'); closeOverlayMenu();">
             <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M21 8l-2 2-2-2"/><path d="M15 3l6 0"/></svg></span> Rollen-Nicknames
+          </button>
+        </div>
+
+        <!-- 🆕 BOT CONTROL – NEUER TAB -->
+        <div class="sidebar-group">
+          <div class="sidebar-group-label">Bot</div>
+          <button class="tab-btn" data-tab="bot" onclick="switchTab('bot'); closeOverlayMenu();">
+            <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><circle cx="12" cy="12" r="3"/></svg></span> Bot Control
           </button>
         </div>
       </nav>
@@ -1547,7 +1552,7 @@
         </div>
       </div>
 
-      <!-- ===== TICKET SYSTEM – GALAXYBOT-STYLE ===== -->
+      <!-- ===== TICKET SYSTEM ===== -->
       <div id="mod-tickets" class="module-page hidden">
         <h2>🎫 Ticket System</h2>
         <p>Verwalte deine Ticket-Panels – übersichtlich wie bei GalaxyBot.</p>
@@ -1558,7 +1563,6 @@
           </div>
         </div>
 
-        <!-- Bearbeitungsansicht -->
         <div id="ticket-edit-container" class="edit-view hidden">
           <a href="#" onclick="closeEditView(); return false;" style="display:inline-flex; align-items:center; gap:4px; color:var(--text-muted); text-decoration:none; font-weight:600; font-size:0.8rem; margin-bottom:1rem; transition:color 0.2s;">← Zurück zur Übersicht</a>
           <div id="edit-panel-header" style="margin-bottom:16px;"></div>
@@ -1577,19 +1581,7 @@
         </div>
       </div>
 
-      <!-- ===== SUPPORT ===== -->
-      <div id="mod-support" class="module-page hidden">
-        <h2>❓ Support &amp; FAQ<span class="soon-badge">Grundeinrichtung</span></h2>
-        <div class="panel-card">
-          <div class="form-group">
-            <div class="switch-row"><label>Modul aktiv</label><label class="switch"><input type="checkbox" id="support-enabled"><span class="switch-slider"></span></label></div>
-          </div>
-          <div class="form-group"><label for="support-channel">FAQ-Kanal</label><select id="support-channel"></select></div>
-          <div class="form-action"><button class="btn btn-primary" onclick="handleSaveClick('support')">Speichern</button></div>
-        </div>
-      </div>
-
-      <!-- ===== MODERATION ===== -->
+      <!-- ===== AUTOMOD ===== -->
       <div id="mod-automod" class="module-page hidden">
         <h2>🛡️ Automod</h2>
         <p>Schütze deinen Server automatisch vor Spam und unerwünschten Links.</p>
@@ -1786,7 +1778,7 @@
         </div>
       </div>
 
-      <!-- ===== STATISTIKEN (NEU) ===== -->
+      <!-- ===== STATISTIKEN ===== -->
       <div id="mod-stats" class="module-page hidden">
         <h2>📈 Statistik-Kanäle</h2>
         <p>Erstelle Sprachkanäle, die automatisch Server-Statistiken anzeigen (z. B. Mitgliederzahl, Bots, Rollen, Boosts). Die Kanäle werden in einer Kategorie erstellt und sind für Mitglieder nicht betretbar.</p>
@@ -1806,7 +1798,7 @@
         </div>
       </div>
 
-      <!-- ===== LEVEL-SYSTEM (NEU) ===== -->
+      <!-- ===== LEVEL-SYSTEM ===== -->
       <div id="mod-levels" class="module-page hidden">
         <h2>⭐ Level-System</h2>
         <p>Mitglieder bekommen für jede Nachricht (und optional für Zeit im Voice-Chat) XP. Ist genug XP gesammelt, steigt das Level und eine Nachricht wird in einem Kanal deiner Wahl gesendet. Jedes weitere Level braucht mehr XP als das davor.</p>
@@ -1893,7 +1885,6 @@
         <p>Konfiguriere das Verifizierungs-Panel – inklusive Embed und Button-Text.</p>
 
         <div class="panel-card">
-          <!-- Aktiv/Inaktiv -->
           <div class="form-group">
             <div class="switch-row">
               <label>Verifizierung aktiv</label>
@@ -1901,7 +1892,6 @@
             </div>
           </div>
 
-          <!-- Methode -->
           <div class="form-group">
             <label>Verifizierungsmethode</label>
             <select id="verification-method">
@@ -1910,7 +1900,6 @@
             </select>
           </div>
 
-          <!-- Kanal & Rolle -->
           <div class="form-group">
             <label>Kanal für das Verifizierungs-Panel</label>
             <select id="verification-channel"></select>
@@ -1925,7 +1914,6 @@
             <div id="verification-remove-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span></div>
           </div>
 
-          <!-- Embed-Bearbeitung -->
           <div style="border-top:1px solid var(--border-subtle); margin:1rem 0 0.5rem; padding-top:1rem;">
             <div style="font-weight:700; margin-bottom:0.5rem;">📝 Embed anpassen</div>
             <div class="form-group">
@@ -1953,7 +1941,6 @@
             </div>
           </div>
 
-          <!-- Aktionen -->
           <div class="form-action">
             <button class="btn btn-primary" onclick="sendVerificationPanel()">📤 Panel senden</button>
             <button class="btn btn-secondary" onclick="handleSaveClick('verification')">💾 Speichern</button>
@@ -2009,6 +1996,47 @@
             <span id="rolenicknames-save-status" class="hidden status-success"></span>
             <button class="btn btn-primary" onclick="handleSaveClick('rolenicknames')">Speichern</button>
           </div>
+        </div>
+      </div>
+
+      <!-- ===== 🆕 BOT CONTROL ===== -->
+      <div id="mod-bot" class="module-page hidden">
+        <h2>🤖 Bot Control</h2>
+        <p>Sende Nachrichten als Bot, bearbeite bestehende Nachrichten und verwalte deine Bot-Nachrichten.</p>
+
+        <div class="panel-card">
+          <div class="form-group">
+            <label for="bot-channel">Kanal auswählen</label>
+            <select id="bot-channel"></select>
+          </div>
+          <button class="btn btn-secondary" onclick="loadBotMessages()" style="margin-top:6px;">📥 Nachrichten laden</button>
+        </div>
+
+        <div class="panel-card">
+          <h3 style="font-size:1rem; font-weight:700; margin-bottom:6px;">✏️ Nachricht verfassen</h3>
+          <div class="form-group">
+            <label>Text (optional)</label>
+            <textarea id="bot-content" rows="2" placeholder="Nachrichtentext..."></textarea>
+          </div>
+          <div class="form-group">
+            <label>Embed(s) – Titel, Beschreibung, Farbe, Bild-URL</label>
+            <div id="bot-embeds-list"></div>
+            <button type="button" class="add-option-btn" onclick="addBotEmbed()">+ Embed hinzufügen</button>
+          </div>
+          <div class="form-group">
+            <label>Buttons – Label, Stil (Primary/Success/Danger/Link), Custom-ID oder URL</label>
+            <div id="bot-buttons-list"></div>
+            <button type="button" class="add-option-btn" onclick="addBotButton()">+ Button hinzufügen</button>
+          </div>
+          <div class="form-action">
+            <button class="btn btn-primary" onclick="sendBotMessage()">📤 Senden</button>
+            <button class="btn btn-secondary" onclick="editBotMessage()">✏️ Bearbeiten (Nachricht-ID unten)</button>
+          </div>
+        </div>
+
+        <div class="panel-card">
+          <h3 style="font-size:1rem; font-weight:700; margin-bottom:6px;">📋 Bot-Nachrichten in diesem Kanal</h3>
+          <div id="bot-messages-list"><span class="chip-empty">Wähle einen Kanal und lade die Nachrichten.</span></div>
         </div>
       </div>
 
@@ -2191,6 +2219,9 @@
       if (activePage) activePage.classList.remove('hidden');
       if (tabName === 'tickets' && typeof renderTicketOverview === 'function') {
         setTimeout(renderTicketOverview, 50);
+      }
+      if (tabName === 'bot' && typeof renderBotChannelSelect === 'function') {
+        setTimeout(renderBotChannelSelect, 50);
       }
     }
     function switchSubtab(module, sub) {
