@@ -545,6 +545,7 @@ async function loadAllModuleSettings(guildId) {
     applySimpleConfig('stats', config.stats || {});
     applyVerificationConfig(config.verification || {});
     applySimpleConfig('antinuke', config.antinuke || {});
+    applyRoleNicknamesConfig(config.rolenicknames || {});
   } catch (err) { console.error('Fehler beim Laden der Konfiguration:', err); }
 }
 
@@ -620,6 +621,50 @@ function applyVerificationConfig(cfg) {
   setColor('verification', cfg.color || '#6d5ef8');
   setImage('verification', cfg.image);
   setValue('verification-button-label', cfg.buttonLabel || '');
+}
+
+function applyRoleNicknamesConfig(cfg) {
+  setChecked('rolenicknames-enabled', cfg.enabled ?? false);
+  const container = document.getElementById('rolenick-list');
+  if (container) container.innerHTML = '';
+  const entries = cfg.entries || [];
+  if (entries.length === 0) {
+    addRoleNicknameRow();
+  } else {
+    entries.forEach(entry => addRoleNicknameRow(entry));
+  }
+}
+
+window.addRoleNicknameRow = function(data = null) {
+  const container = document.getElementById('rolenick-list');
+  if (!container) return;
+  const rowId = `rolenick-${++rolenickCounter}`;
+  const row = document.createElement('div');
+  row.className = 'option-row';
+  row.id = rowId;
+
+  row.innerHTML = `
+    <select class="rn-role" style="flex:2; min-width:140px;"></select>
+    <input type="text" placeholder="Präfix (z.B. [Team] )" class="rn-prefix" value="${data ? escapeHtml(data.prefix || '') : ''}" style="flex:2; min-width:120px;">
+    <input type="text" placeholder="Suffix (z.B.  | Mod)" class="rn-suffix" value="${data ? escapeHtml(data.suffix || '') : ''}" style="flex:2; min-width:120px;">
+    <button type="button" class="option-remove" onclick="document.getElementById('${rowId}').remove()">✕</button>
+  `;
+  container.appendChild(row);
+
+  const select = row.querySelector('.rn-role');
+  select.innerHTML = state.guildRoles.length
+    ? state.guildRoles.map(r => `<option value="${r.id}">@${escapeHtml(r.name)}</option>`).join('')
+    : `<option value="">Keine Rollen gefunden</option>`;
+  if (data && data.roleId) select.value = data.roleId;
+};
+
+function collectRoleNicknames() {
+  const rows = document.querySelectorAll('#rolenick-list .option-row');
+  return Array.from(rows).map(row => ({
+    roleId: row.querySelector('.rn-role')?.value || '',
+    prefix: row.querySelector('.rn-prefix')?.value || '',
+    suffix: row.querySelector('.rn-suffix')?.value || ''
+  })).filter(e => e.roleId && (e.prefix || e.suffix));
 }
 
 function applySimpleConfig(prefix, cfg) {
@@ -751,6 +796,12 @@ async function saveModuleSettings(moduleName) {
           }
         };
         break;
+      case 'rolenicknames':
+        payload = {
+          enabled: document.getElementById('rolenicknames-enabled').checked,
+          entries: collectRoleNicknames()
+        };
+        break;
       default:
         const enabledEl = document.getElementById(`${moduleName}-enabled`);
         const channelEl = document.getElementById(`${moduleName}-channel`) || document.getElementById(`${moduleName}-log-channel`);
@@ -788,6 +839,7 @@ const editContent = document.getElementById('ticket-edit-content');
 let editingIndex = null;
 let buttonCounter = 0;
 let optionCounter = 0;
+let rolenickCounter = 0;
 
 // ---- Tab-Navigation ----
 function switchEditTab(tabName) {
@@ -1303,10 +1355,6 @@ async function showEditView(index) {
               <div class="embed-preview-title">${escapeHtml(data.title || 'Support Center')}</div>
               <div class="embed-preview-desc">${escapeHtml(data.description || 'Wähle eine Kategorie aus.')}</div>
               <img class="embed-preview-image ${data.image ? '' : 'hidden'}" src="${data.image || ''}">
-              <div class="embed-preview-footer">
-                <img src="apex_logo.png">
-                <span>Ticket System • Powered by Apex</span>
-              </div>
             </div>
           </div>
           <div class="form-group">
