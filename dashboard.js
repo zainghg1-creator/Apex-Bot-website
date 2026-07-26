@@ -537,7 +537,7 @@ async function loadAllModuleSettings(guildId) {
     applyTeamlisteConfig(config.teamliste || {});
     applySimpleConfig('support', config.support || {});
     applySimpleConfig('moderation', config.moderation || {});
-    applySimpleConfig('teamupdate', config.teamupdate || {});
+    applyTeamupdateConfig(config.teamupdate || {});
     applySimpleConfig('stats', config.stats || {});
     applyVerificationConfig(config.verification || {});
     applySimpleConfig('antinuke', config.antinuke || {});
@@ -571,6 +571,28 @@ function applyWelcomeConfig(cfg) {
 function applyTeamlisteConfig(cfg) {
   setSelectValue('teamliste-channel', cfg.channelId || '');
   renderRoleChips('teamliste-roles', cfg.roles || []);
+}
+
+const TEAMUPDATE_COMMANDS = ['neuer_teamler', 'uprank', 'downrank', 'teamkick', 'teamwarn'];
+
+function applyTeamupdateConfig(cfg) {
+  setChecked('teamupdate-enabled', cfg.enabled ?? false);
+  setSelectValue('teamupdate-channel', cfg.channelId || '');
+  renderRoleChips('teamupdate-roles', cfg.roles || []);
+  const commands = cfg.commands || {};
+  TEAMUPDATE_COMMANDS.forEach(cmd => {
+    const c = commands[cmd] || {};
+    setChecked(`cmd-enabled-${cmd}`, c.enabled ?? true);
+    renderRoleChips(`cmdrole-${cmd}`, c.roles || []);
+  });
+}
+
+function toggleCommandRoles(cmd) {
+  const panel = document.getElementById(`cmd-roles-${cmd}`);
+  const btn = document.querySelector(`.command-row[data-command="${cmd}"] .command-menu-btn`);
+  if (!panel) return;
+  panel.classList.toggle('hidden');
+  if (btn) btn.classList.toggle('active', !panel.classList.contains('hidden'));
 }
 
 function applyVerificationConfig(cfg) {
@@ -670,6 +692,17 @@ async function saveModuleSettings(moduleName) {
         break;
       case 'teamliste':
         payload = { channelId: document.getElementById('teamliste-channel').value, roles: getSelectedRoleIds('teamliste-roles') };
+        break;
+      case 'teamupdate':
+        payload = {
+          enabled: document.getElementById('teamupdate-enabled').checked,
+          channelId: document.getElementById('teamupdate-channel').value,
+          roles: getSelectedRoleIds('teamupdate-roles'),
+          commands: Object.fromEntries(TEAMUPDATE_COMMANDS.map(cmd => [cmd, {
+            enabled: document.getElementById(`cmd-enabled-${cmd}`)?.checked ?? true,
+            roles: getSelectedRoleIds(`cmdrole-${cmd}`)
+          }]))
+        };
         break;
       case 'verification':
         payload = {
