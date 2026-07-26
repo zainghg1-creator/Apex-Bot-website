@@ -28,7 +28,7 @@ console.log('REDIRECT_URI:', REDIRECT_URI);
 
 const DISCORD_API = 'https://discord.com/api/v10';
 const ADMINISTRATOR = 0x8n;
-const ALLOWED_MODULES = ['welcome', 'tickets', 'teamliste', 'support', 'automod', 'teamupdate', 'stats', 'levels', 'verification', 'antinuke', 'minigames', 'rolenicknames', 'reactionroles'];
+const ALLOWED_MODULES = ['welcome', 'tickets', 'teamliste', 'automod', 'teamupdate', 'stats', 'levels', 'verification', 'antinuke', 'minigames', 'rolenicknames', 'reactionroles'];
 
 // ============================================================
 // EXPRESS APP
@@ -37,7 +37,7 @@ const app = express();
 app.set('trust proxy', 1);
 
 app.use(express.static(__dirname));
-app.use(express.json({ limit: '20mb' })); // Größeres Limit für Base64-Bilder
+app.use(express.json({ limit: '20mb' }));
 
 app.use(cookieSession({
   name: 'apex_session',
@@ -73,7 +73,6 @@ async function connectToDatabase() {
   return cachedConnection.conn;
 }
 
-// Mongo Middleware NUR wenn URI da ist
 if (MONGODB_URI) {
   app.use(async (req, res, next) => {
     try {
@@ -197,6 +196,42 @@ function requireAuth(req, res, next) {
   next();
 }
 
+// NEU: Prüft, ob der User Admin auf der angeforderten Guild ist
+async function requireGuildAdmin(req, res, next) {
+  if (!req.session?.accessToken) {
+    return res.status(401).json({ error: 'not_authenticated' });
+  }
+  const guildId = req.params.guildId;
+  if (!guildId) return res.status(400).json({ error: 'missing_guild_id' });
+
+  try {
+    const guildsRes = await fetch(`${DISCORD_API}/users/@me/guilds`, {
+      headers: { Authorization: `Bearer ${req.session.accessToken}` }
+    });
+    if (!guildsRes.ok) {
+      if (guildsRes.status === 401) {
+        req.session = null;
+        return res.status(401).json({ error: 'session_expired' });
+      }
+      return res.status(502).json({ error: 'discord_api_error' });
+    }
+    const guilds = await guildsRes.json();
+    const guild = guilds.find(g => g.id === guildId);
+    if (!guild) {
+      return res.status(403).json({ error: 'not_in_guild' });
+    }
+    const perms = BigInt(guild.permissions ?? 0);
+    const isAdmin = guild.owner || (perms & ADMINISTRATOR) === ADMINISTRATOR;
+    if (!isAdmin) {
+      return res.status(403).json({ error: 'not_admin' });
+    }
+    next();
+  } catch (err) {
+    console.error('requireGuildAdmin Fehler:', err);
+    res.status(500).json({ error: 'server_error' });
+  }
+}
+
 // ============================================================
 // BOT GUILD CACHE
 // ============================================================
@@ -279,7 +314,7 @@ async function fetchGuildOwner(ownerId) {
 }
 
 // ============================================================
-// BOT-ANZAHL (zählt Mitglieder mit user.bot === true)
+// BOT-ANZAHL
 // ============================================================
 async function countGuildBots(guildId) {
   let count = 0;
@@ -350,7 +385,7 @@ app.get('/api/guild/:guildId/config', requireAuth, async (req, res) => {
 });
 
 // ============================================================
-// STATISTIK-KANÄLE: SOFORT ERSTELLEN (statt auf den Bot-Loop zu warten)
+// STATISTIK-KANÄLE: SOFORT ERSTELLEN
 // ============================================================
 async function getGuildRolesCount(guildId) {
   try {
@@ -359,7 +394,7 @@ async function getGuildRolesCount(guildId) {
     });
     if (!res.ok) return 0;
     const roles = await res.json();
-    return Math.max(roles.length - 1, 0); // @everyone ausschließen
+    return Math.max(roles.length - 1, 0);
   } catch (err) {
     console.error('Fehler beim Zählen der Rollen:', err);
     return 0;
@@ -418,9 +453,6 @@ async function countGuildMembersWithRole(guildId, roleId) {
   return count;
 }
 
-// Erstellt fehlende Statistik-Kanäle sofort per Discord-API, statt auf den
-// 30-Sekunden-Loop des Bots zu warten. Bereits vorhandene Kanäle lässt der
-// Bot-Loop wie gewohnt aktualisieren.
 async function syncStatsChannelsNow(guildId, statsData) {
   if (!BOT_TOKEN || !statsData?.enabled) return statsData;
   const channels = Array.isArray(statsData.channels) ? statsData.channels : [];
@@ -457,10 +489,10 @@ async function syncStatsChannelsNow(guildId, statsData) {
         },
         body: JSON.stringify({
           name: channelName,
-          type: 2, // Voice-Channel
+          type: 2,
           parent_id: entry.categoryId,
           permission_overwrites: [
-            { id: guildId, type: 0, deny: '1048576' }, // @everyone: Connect verboten
+            { id: guildId, type: 0, deny: '1048576' },
             ...(CLIENT_ID ? [{ id: CLIENT_ID, type: 1, allow: '1048576' }] : [])
           ]
         })
@@ -550,7 +582,7 @@ app.get('/api/test', (req, res) => {
 });
 
 // ============================================================
-// HELPER: Bild als Base64 erkennen und in Attachment konvertieren
+// HELPER: Bild als Base64 erkennen
 // ============================================================
 function isBase64Image(str) {
   return str && str.startsWith('data:image');
@@ -566,7 +598,7 @@ function stripBase64Header(base64) {
 }
 
 // ============================================================
-// ⭐ TICKET-PANEL SENDEN (MIT EMBED + DROPDOWN + BASE64-BILD)
+// TICKET-PANEL SENDEN
 // ============================================================
 app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res) => {
   const { guildId } = req.params;
@@ -602,7 +634,6 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
 
     console.log('📋 Verlinkte Kategorien:', linkedOptions);
 
-    // Embed erstellen
     const embed = {
       title: panel.title || 'Support Center',
       description: panel.description || 'Wähle eine Kategorie, um ein Ticket zu öffnen.',
@@ -610,11 +641,9 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
       timestamp: new Date().toISOString()
     };
 
-    // ========== BILD VERARBEITEN ==========
     let files = [];
     let imageUrl = panel.image || '';
     if (imageUrl && isBase64Image(imageUrl)) {
-      // Base64-Bild – als Attachment senden
       const mimeType = getMimeTypeFromBase64(imageUrl);
       const base64Data = stripBase64Header(imageUrl);
       const buffer = Buffer.from(base64Data, 'base64');
@@ -622,14 +651,11 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
         name: `panel_image.${mimeType}`,
         data: buffer
       });
-      // Embed verweist auf Attachment
       embed.image = { url: `attachment://panel_image.${mimeType}` };
     } else if (imageUrl && imageUrl.startsWith('http')) {
-      // Externe URL – direkt setzen
       embed.image = { url: imageUrl };
     }
 
-    // Select Menu (Dropdown) erstellen
     const selectOptions = linkedOptions.map(opt => {
       const option = {
         label: opt.label || 'Unbenannt',
@@ -658,13 +684,11 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
       return res.status(500).json({ error: 'BOT_TOKEN nicht konfiguriert.' });
     }
 
-    // Body für Discord-API
     const payload = {
       embeds: [embed],
       components: components
     };
 
-    // Falls Dateien vorhanden, als FormData senden
     let response;
     if (files.length > 0) {
       const formData = new FormData();
@@ -681,7 +705,6 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
         body: formData
       });
     } else {
-      // Normales JSON
       response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
         method: 'POST',
         headers: {
@@ -716,7 +739,7 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
 });
 
 // ============================================================
-// VERIFICATION PANEL SENDEN (MIT BASE64-BILD)
+// VERIFICATION PANEL SENDEN
 // ============================================================
 app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req, res) => {
   const { guildId } = req.params;
@@ -743,7 +766,6 @@ app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req,
       return res.status(500).json({ error: 'BOT_TOKEN nicht konfiguriert.' });
     }
 
-    // Farbkonvertierung
     let parsedColor = 0x5865f2;
     if (color) {
       let hex = color.replace(/[^0-9a-fA-F]/g, '');
@@ -758,7 +780,6 @@ app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req,
       }
     }
 
-    // Embed
     const embed = {
       title: title || '🔐 Verifizierung',
       description: description || (method === 'button'
@@ -767,7 +788,6 @@ app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req,
       color: parsedColor
     };
 
-    // ========== BILD VERARBEITEN ==========
     let files = [];
     let imageUrl = image || '';
     if (imageUrl && isBase64Image(imageUrl)) {
@@ -783,7 +803,6 @@ app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req,
       embed.image = { url: imageUrl };
     }
 
-    // Button
     let components = [];
     const label = buttonLabel || (method === 'button' ? 'Verifizieren' : 'Aufgabe lösen');
     if (method === 'button') {
@@ -856,11 +875,9 @@ app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req,
 });
 
 // ============================================================
-// REACTION ROLES: NACHRICHT SENDEN + REAKTIONEN HINZUFÜGEN
+// REACTION ROLES: NACHRICHT SENDEN
 // ============================================================
 function formatEmojiForApi(raw) {
-  // Wandelt "<:name:id>" oder "<a:name:id>" in das von der Discord-API
-  // erwartete Format "name:id" um. Unicode-Emojis bleiben unverändert.
   const customMatch = raw.match(/^<a?:(\w+):(\d+)>$/);
   if (customMatch) {
     return `${customMatch[1]}:${customMatch[2]}`;
@@ -931,7 +948,6 @@ app.post('/api/guild/:guildId/reactionroles/send-panel', requireAuth, async (req
       return res.status(messageRes.status).json({ error: `Discord Fehler: ${messageData.message || 'Unbekannt'}` });
     }
 
-    // Reaktionen nacheinander hinzufügen (Rate-Limit-schonend)
     for (const mapping of mappings) {
       const encodedEmoji = encodeURIComponent(formatEmojiForApi(mapping.emoji));
       try {
@@ -948,7 +964,6 @@ app.post('/api/guild/:guildId/reactionroles/send-panel', requireAuth, async (req
       await new Promise(r => setTimeout(r, 300));
     }
 
-    // messageId in der Konfiguration speichern
     panels[panelIndex] = { ...panel, messageId: messageData.id };
     reactionroles.panels = panels;
     await saveModuleConfig(guildId, 'reactionroles', reactionroles);
@@ -961,11 +976,145 @@ app.post('/api/guild/:guildId/reactionroles/send-panel', requireAuth, async (req
 });
 
 // ============================================================
-// EXPORT (für Vercel)
+// 🆕 BOT CONTROL: Nachricht senden
+// ============================================================
+app.post('/api/guild/:guildId/bot/send', requireAuth, requireGuildAdmin, async (req, res) => {
+  const { guildId } = req.params;
+  const { channelId, content, embeds, components } = req.body;
+
+  if (!channelId) {
+    return res.status(400).json({ error: 'channelId ist erforderlich' });
+  }
+
+  const botToken = process.env.BOT_TOKEN;
+  if (!botToken) {
+    return res.status(500).json({ error: 'BOT_TOKEN nicht konfiguriert' });
+  }
+
+  // Prüfen, ob Bot auf der Guild ist
+  const botGuilds = await getBotGuildIds();
+  if (!botGuilds.has(guildId)) {
+    return res.status(403).json({ error: 'Bot ist nicht auf diesem Server' });
+  }
+
+  const payload = {};
+  if (content && content.trim()) payload.content = content;
+  if (embeds && Array.isArray(embeds) && embeds.length > 0) payload.embeds = embeds;
+  if (components && Array.isArray(components) && components.length > 0) payload.components = components;
+
+  try {
+    const response = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bot ${botToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      console.error('Discord API Fehler beim Senden:', response.status, data);
+      return res.status(response.status).json({ error: `Discord Fehler: ${data.message || 'Unbekannt'}` });
+    }
+    res.json({ success: true, message: data });
+  } catch (err) {
+    console.error('Fehler beim Senden der Bot-Nachricht:', err);
+    res.status(500).json({ error: 'Interner Serverfehler: ' + err.message });
+  }
+});
+
+// ============================================================
+// 🆕 BOT CONTROL: Nachricht bearbeiten
+// ============================================================
+app.post('/api/guild/:guildId/bot/edit', requireAuth, requireGuildAdmin, async (req, res) => {
+  const { guildId } = req.params;
+  const { channelId, messageId, content, embeds, components } = req.body;
+
+  if (!channelId || !messageId) {
+    return res.status(400).json({ error: 'channelId und messageId sind erforderlich' });
+  }
+
+  const botToken = process.env.BOT_TOKEN;
+  if (!botToken) {
+    return res.status(500).json({ error: 'BOT_TOKEN nicht konfiguriert' });
+  }
+
+  const botGuilds = await getBotGuildIds();
+  if (!botGuilds.has(guildId)) {
+    return res.status(403).json({ error: 'Bot ist nicht auf diesem Server' });
+  }
+
+  const payload = {};
+  if (content !== undefined) payload.content = content; // kann leer sein
+  if (embeds && Array.isArray(embeds)) payload.embeds = embeds;
+  if (components && Array.isArray(components)) payload.components = components;
+
+  try {
+    const response = await fetch(`${DISCORD_API}/channels/${channelId}/messages/${messageId}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bot ${botToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      console.error('Discord API Fehler beim Bearbeiten:', response.status, data);
+      return res.status(response.status).json({ error: `Discord Fehler: ${data.message || 'Unbekannt'}` });
+    }
+    res.json({ success: true, message: data });
+  } catch (err) {
+    console.error('Fehler beim Bearbeiten der Bot-Nachricht:', err);
+    res.status(500).json({ error: 'Interner Serverfehler: ' + err.message });
+  }
+});
+
+// ============================================================
+// 🆕 BOT CONTROL: Nachrichtenliste abrufen
+// ============================================================
+app.get('/api/guild/:guildId/bot/messages', requireAuth, requireGuildAdmin, async (req, res) => {
+  const { guildId } = req.params;
+  const { channelId, limit = 20 } = req.query;
+
+  if (!channelId) {
+    return res.status(400).json({ error: 'channelId ist erforderlich' });
+  }
+
+  const botToken = process.env.BOT_TOKEN;
+  if (!botToken) {
+    return res.status(500).json({ error: 'BOT_TOKEN nicht konfiguriert' });
+  }
+
+  const botGuilds = await getBotGuildIds();
+  if (!botGuilds.has(guildId)) {
+    return res.status(403).json({ error: 'Bot ist nicht auf diesem Server' });
+  }
+
+  try {
+    const response = await fetch(`${DISCORD_API}/channels/${channelId}/messages?limit=${Math.min(parseInt(limit) || 20, 50)}`, {
+      headers: { 'Authorization': `Bot ${botToken}` }
+    });
+    if (!response.ok) {
+      const errData = await response.json();
+      return res.status(response.status).json({ error: `Discord Fehler: ${errData.message || 'Unbekannt'}` });
+    }
+    const messages = await response.json();
+    // Nur Nachrichten vom Bot selbst
+    const botId = process.env.CLIENT_ID || (await fetch(`${DISCORD_API}/users/@me`, { headers: { 'Authorization': `Bot ${botToken}` } }).then(r => r.json()).then(u => u.id));
+    const filtered = messages.filter(m => m.author.id === botId);
+    res.json(filtered);
+  } catch (err) {
+    console.error('Fehler beim Abrufen der Nachrichten:', err);
+    res.status(500).json({ error: 'Interner Serverfehler: ' + err.message });
+  }
+});
+
+// ============================================================
+// EXPORT
 // ============================================================
 module.exports = app;
 
-// Lokaler Start (nur wenn nicht auf Vercel)
 if (NODE_ENV !== 'production') {
   connectToDatabase().then(() => {
     app.listen(PORT, () => {
