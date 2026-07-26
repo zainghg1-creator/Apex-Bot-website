@@ -28,7 +28,7 @@ console.log('REDIRECT_URI:', REDIRECT_URI);
 
 const DISCORD_API = 'https://discord.com/api/v10';
 const ADMINISTRATOR = 0x8n;
-const ALLOWED_MODULES = ['welcome', 'tickets', 'teamliste', 'support', 'automod', 'teamupdate', 'stats', 'verification', 'antinuke', 'minigames', 'rolenicknames', 'reactionroles'];
+const ALLOWED_MODULES = ['welcome', 'tickets', 'teamliste', 'support', 'automod', 'teamupdate', 'stats', 'levels', 'verification', 'antinuke', 'minigames', 'rolenicknames', 'reactionroles'];
 
 // ============================================================
 // EXPRESS APP
@@ -349,14 +349,149 @@ app.get('/api/guild/:guildId/config', requireAuth, async (req, res) => {
   }
 });
 
+// ============================================================
+// STATISTIK-KANÄLE: SOFORT ERSTELLEN (statt auf den Bot-Loop zu warten)
+// ============================================================
+async function getGuildRolesCount(guildId) {
+  try {
+    const res = await fetch(`${DISCORD_API}/guilds/${guildId}/roles`, {
+      headers: { Authorization: `Bot ${BOT_TOKEN}` }
+    });
+    if (!res.ok) return 0;
+    const roles = await res.json();
+    return Math.max(roles.length - 1, 0); // @everyone ausschließen
+  } catch (err) {
+    console.error('Fehler beim Zählen der Rollen:', err);
+    return 0;
+  }
+}
+
+async function getGuildBoostsCount(guildId) {
+  try {
+    const res = await fetch(`${DISCORD_API}/guilds/${guildId}?with_counts=true`, {
+      headers: { Authorization: `Bot ${BOT_TOKEN}` }
+    });
+    if (!res.ok) return 0;
+    const g = await res.json();
+    return g.premium_subscription_count ?? 0;
+  } catch (err) {
+    console.error('Fehler beim Zählen der Boosts:', err);
+    return 0;
+  }
+}
+
+async function getMemberAndBotCounts(guildId) {
+  const botCount = (await countGuildBots(guildId)) ?? 0;
+  let approxTotal = 0;
+  try {
+    const res = await fetch(`${DISCORD_API}/guilds/${guildId}?with_counts=true`, {
+      headers: { Authorization: `Bot ${BOT_TOKEN}` }
+    });
+    if (res.ok) {
+      const g = await res.json();
+      approxTotal = g.approximate_member_count ?? 0;
+    }
+  } catch (err) {
+    console.error('Fehler beim Zählen der Mitglieder:', err);
+  }
+  return { members: Math.max(approxTotal - botCount, 0), bots: botCount };
+}
+
+async function countGuildMembersWithRole(guildId, roleId) {
+  let count = 0;
+  let after = '0';
+  const MAX_PAGES = 10;
+  try {
+    for (let page = 0; page < MAX_PAGES; page++) {
+      const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members?limit=1000&after=${after}`, {
+        headers: { Authorization: `Bot ${BOT_TOKEN}` }
+      });
+      if (!res.ok) { if (page === 0) return 0; break; }
+      const members = await res.json();
+      count += members.filter(m => (m.roles || []).includes(roleId)).length;
+      if (members.length < 1000) break;
+      after = members[members.length - 1].user.id;
+    }
+  } catch (err) {
+    console.error('Fehler beim Zählen der Rollen-Mitglieder:', err);
+  }
+  return count;
+}
+
+// Erstellt fehlende Statistik-Kanäle sofort per Discord-API, statt auf den
+// 30-Sekunden-Loop des Bots zu warten. Bereits vorhandene Kanäle lässt der
+// Bot-Loop wie gewohnt aktualisieren.
+async function syncStatsChannelsNow(guildId, statsData) {
+  if (!BOT_TOKEN || !statsData?.enabled) return statsData;
+  const channels = Array.isArray(statsData.channels) ? statsData.channels : [];
+  const pending = channels.filter(ch => !ch.channelId && ch.categoryId && ch.channelName && ch.statType);
+  if (pending.length === 0) return statsData;
+
+  const [{ members, bots }, rolesCount, boostsCount] = await Promise.all([
+    getMemberAndBotCounts(guildId),
+    getGuildRolesCount(guildId),
+    getGuildBoostsCount(guildId)
+  ]);
+
+  for (const entry of pending) {
+    let count = 0;
+    switch (entry.statType) {
+      case 'members': count = members; break;
+      case 'bots': count = bots; break;
+      case 'roles': count = rolesCount; break;
+      case 'boosts': count = boostsCount; break;
+      case 'role_count':
+        count = entry.roleId ? await countGuildMembersWithRole(guildId, entry.roleId) : 0;
+        break;
+      default: continue;
+    }
+
+    const channelName = entry.channelName.replace('{stat}', String(count)).slice(0, 100);
+
+    try {
+      const createRes = await fetch(`${DISCORD_API}/guilds/${guildId}/channels`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bot ${BOT_TOKEN}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: channelName,
+          type: 2, // Voice-Channel
+          parent_id: entry.categoryId,
+          permission_overwrites: [
+            { id: guildId, type: 0, deny: '1048576' }, // @everyone: Connect verboten
+            ...(CLIENT_ID ? [{ id: CLIENT_ID, type: 1, allow: '1048576' }] : [])
+          ]
+        })
+      });
+      const created = await createRes.json();
+      if (createRes.ok) {
+        entry.channelId = created.id;
+        console.log(`✅ Statistik-Kanal sofort erstellt: ${channelName} (${created.id})`);
+      } else {
+        console.warn('⚠️ Statistik-Kanal konnte nicht sofort erstellt werden:', created);
+      }
+    } catch (err) {
+      console.error('❌ Fehler beim Sofort-Erstellen des Statistik-Kanals:', err);
+    }
+  }
+
+  return { ...statsData, channels };
+}
+
 app.post('/api/guild/:guildId/config/:module', requireAuth, async (req, res) => {
   const { guildId, module } = req.params;
   if (!ALLOWED_MODULES.includes(module)) {
     return res.status(400).json({ error: 'unknown_module' });
   }
   try {
-    await saveModuleConfig(guildId, module, req.body);
-    res.json({ success: true });
+    let moduleData = req.body;
+    if (module === 'stats') {
+      moduleData = await syncStatsChannelsNow(guildId, moduleData);
+    }
+    await saveModuleConfig(guildId, module, moduleData);
+    res.json({ success: true, data: moduleData });
   } catch (err) {
     console.error('Fehler beim Speichern der Konfiguration:', err);
     res.status(500).json({ error: 'server_error' });
