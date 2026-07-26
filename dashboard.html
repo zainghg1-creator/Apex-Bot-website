@@ -1228,8 +1228,8 @@
         <button class="tab-btn" data-tab="support" onclick="switchTab('support'); closeOverlayMenu();">
           <span class="tab-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> Support
         </button>
-        <button class="tab-btn" data-tab="moderation" onclick="switchTab('moderation'); closeOverlayMenu();">
-          <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span> Moderation
+        <button class="tab-btn" data-tab="automod" onclick="switchTab('automod'); closeOverlayMenu();">
+          <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span> Automod
         </button>
         <button class="tab-btn" data-tab="teamupdate" onclick="switchTab('teamupdate'); closeOverlayMenu();">
           <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></span> Teamupdate
@@ -1430,14 +1430,86 @@
       </div>
 
       <!-- ===== MODERATION ===== -->
-      <div id="mod-moderation" class="module-page hidden">
-        <h2>🛡️ Moderation<span class="soon-badge">Grundeinrichtung</span></h2>
+      <div id="mod-automod" class="module-page hidden">
+        <h2>🛡️ Automod</h2>
+        <p>Schütze deinen Server automatisch vor Spam und unerwünschten Links.</p>
+
         <div class="panel-card">
           <div class="form-group">
-            <div class="switch-row"><label>Automod aktiv</label><label class="switch"><input type="checkbox" id="moderation-enabled"><span class="switch-slider"></span></label></div>
+            <div class="switch-row"><label>Automod aktiv</label><label class="switch"><input type="checkbox" id="automod-enabled"><span class="switch-slider"></span></label></div>
           </div>
-          <div class="form-group"><label for="moderation-log-channel">Log-Kanal</label><select id="moderation-log-channel"></select></div>
-          <div class="form-action"><button class="btn btn-primary" onclick="handleSaveClick('moderation')">Speichern</button></div>
+          <div class="form-group"><label for="automod-log-channel">Log-Kanal</label><select id="automod-log-channel"></select><small>Hier werden gelöschte Nachrichten und ausgeführte Aktionen protokolliert.</small></div>
+        </div>
+
+        <div class="panel-card">
+          <h3 style="font-size:1rem; font-weight:700; margin-bottom:4px;">🚫 Spam-Schutz</h3>
+          <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:8px;">Löst aus, wenn ein Mitglied zu viele Nachrichten in kurzer Zeit schreibt.</p>
+          <div class="form-group">
+            <div class="switch-row"><label>Spam-Schutz aktiv</label><label class="switch"><input type="checkbox" id="automod-spam-enabled"><span class="switch-slider"></span></label></div>
+          </div>
+          <div class="form-group">
+            <label for="automod-spam-max">Maximale Nachrichten</label>
+            <input type="number" id="automod-spam-max" min="2" max="50" value="5">
+            <small>Ab wie vielen Nachrichten im Zeitraum gilt es als Spam.</small>
+          </div>
+          <div class="form-group">
+            <label for="automod-spam-seconds">Zeitraum (Sekunden)</label>
+            <input type="number" id="automod-spam-seconds" min="1" max="120" value="5">
+            <small>Innerhalb welcher Zeitspanne die Nachrichten gezählt werden.</small>
+          </div>
+          <div class="form-group">
+            <label for="automod-spam-action">Aktion bei Spam</label>
+            <select id="automod-spam-action">
+              <option value="delete">Nur Nachrichten löschen</option>
+              <option value="delete_timeout">Nachrichten löschen + Timeout</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="automod-spam-timeout">Timeout-Dauer (Sekunden)</label>
+            <input type="number" id="automod-spam-timeout" min="10" max="604800" value="60">
+          </div>
+        </div>
+
+        <div class="panel-card">
+          <h3 style="font-size:1rem; font-weight:700; margin-bottom:4px;">🔗 Link-Filter</h3>
+          <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:8px;">Legt fest, ob Links im Server erlaubt sind.</p>
+          <div class="form-group">
+            <div class="switch-row"><label>Links blockieren (nicht erlaubt)</label><label class="switch"><input type="checkbox" id="automod-links-enabled"><span class="switch-slider"></span></label></div>
+          </div>
+          <div class="form-group">
+            <label for="automod-links-action">Aktion bei Links</label>
+            <select id="automod-links-action">
+              <option value="delete">Nur Nachricht löschen</option>
+              <option value="delete_timeout">Nachricht löschen + Timeout</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="automod-links-timeout">Timeout-Dauer (Sekunden)</label>
+            <input type="number" id="automod-links-timeout" min="10" max="604800" value="60">
+          </div>
+        </div>
+
+        <div class="panel-card">
+          <h3 style="font-size:1rem; font-weight:700; margin-bottom:4px;">✅ Whitelist</h3>
+          <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:8px;">Kanäle, Rollen und Nutzer, die vom Automod ausgenommen sind. Server-Administratoren sind immer automatisch ausgenommen.</p>
+          <div class="form-group">
+            <label>Ausgenommene Kanäle</label>
+            <div id="automod-whitelist-channels" class="chip-select"><span class="chip-empty">Lade Kanäle...</span></div>
+          </div>
+          <div class="form-group">
+            <label>Ausgenommene Rollen</label>
+            <div id="automod-whitelist-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span></div>
+          </div>
+          <div class="form-group">
+            <label>Ausgenommene User-IDs</label>
+            <div id="automod-whitelist-users-list"></div>
+            <button type="button" class="add-option-btn" onclick="addAutomodUserIdRow()">+ User-ID hinzufügen</button>
+          </div>
+        </div>
+
+        <div class="form-action">
+          <span id="automod-save-status" class="hidden status-success"></span>
+          <button class="btn btn-primary" onclick="handleSaveClick('automod')">Speichern</button>
         </div>
       </div>
 
