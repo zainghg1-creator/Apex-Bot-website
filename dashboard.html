@@ -1465,9 +1465,7 @@
               <div class="command-roles hidden" id="cmd-roles-neuer_teamler">
                 <div class="form-group"><label>Erlaubte Rollen</label><div class="chip-select" id="cmdrole-neuer_teamler"><span class="chip-empty">Lade Rollen...</span></div></div>
                 <div class="form-group"><label for="cmd-neuer_teamler-channel">Kanal für die Nachricht</label><select id="cmd-neuer_teamler-channel"></select></div>
-                <div class="form-group"><label for="cmd-neuer_teamler-title">Nachrichtentitel</label><input type="text" id="cmd-neuer_teamler-title" placeholder="/neuer_teamler ausgeführt"></div>
-                <div class="form-group"><label for="cmd-neuer_teamler-text">Nachrichtentext</label><textarea id="cmd-neuer_teamler-text" rows="2" placeholder="{user} wurde von {moderator} bearbeitet."></textarea><small>Platzhalter: <code>{user}</code>, <code>{moderator}</code>, <code>{rolle}</code>, <code>{grund}</code></small></div>
-                <div class="form-group"><label>Embed-Farbe</label><div class="color-row"><input type="color" id="cmd-neuer_teamler-color" value="#6d5ef8" oninput="syncColor('cmd-neuer_teamler')"><input type="text" id="cmd-neuer_teamler-color-hex" value="#6d5ef8" oninput="syncColorHex('cmd-neuer_teamler')"></div></div>
+                <div class="form-group"><label for="cmd-neuer_teamler-signatures">Zusätzliche Unterschriften benötigt</label><input type="number" id="cmd-neuer_teamler-signatures" min="0" max="10" value="0"><small>Anzahl weiterer Teammitglieder, die den Befehl bestätigen müssen, bevor er ausgeführt wird.</small></div>
               </div>
             </div>
 
@@ -1482,9 +1480,7 @@
               <div class="command-roles hidden" id="cmd-roles-uprank">
                 <div class="form-group"><label>Erlaubte Rollen</label><div class="chip-select" id="cmdrole-uprank"><span class="chip-empty">Lade Rollen...</span></div></div>
                 <div class="form-group"><label for="cmd-uprank-channel">Kanal für die Nachricht</label><select id="cmd-uprank-channel"></select></div>
-                <div class="form-group"><label for="cmd-uprank-title">Nachrichtentitel</label><input type="text" id="cmd-uprank-title" placeholder="/uprank ausgeführt"></div>
-                <div class="form-group"><label for="cmd-uprank-text">Nachrichtentext</label><textarea id="cmd-uprank-text" rows="2" placeholder="{user} wurde von {moderator} bearbeitet."></textarea><small>Platzhalter: <code>{user}</code>, <code>{moderator}</code>, <code>{rolle}</code>, <code>{grund}</code></small></div>
-                <div class="form-group"><label>Embed-Farbe</label><div class="color-row"><input type="color" id="cmd-uprank-color" value="#6d5ef8" oninput="syncColor('cmd-uprank')"><input type="text" id="cmd-uprank-color-hex" value="#6d5ef8" oninput="syncColorHex('cmd-uprank')"></div></div>
+                <div class="form-group"><label for="cmd-uprank-signatures">Zusätzliche Unterschriften benötigt</label><input type="number" id="cmd-uprank-signatures" min="0" max="10" value="0"><small>Anzahl weiterer Teammitglieder, die den Befehl bestätigen müssen, bevor er ausgeführt wird.</small></div>
               </div>
             </div>
 
@@ -1499,9 +1495,7 @@
               <div class="command-roles hidden" id="cmd-roles-downrank">
                 <div class="form-group"><label>Erlaubte Rollen</label><div class="chip-select" id="cmdrole-downrank"><span class="chip-empty">Lade Rollen...</span></div></div>
                 <div class="form-group"><label for="cmd-downrank-channel">Kanal für die Nachricht</label><select id="cmd-downrank-channel"></select></div>
-                <div class="form-group"><label for="cmd-downrank-title">Nachrichtentitel</label><input type="text" id="cmd-downrank-title" placeholder="/downrank ausgeführt"></div>
-                <div class="form-group"><label for="cmd-downrank-text">Nachrichtentext</label><textarea id="cmd-downrank-text" rows="2" placeholder="{user} wurde von {moderator} bearbeitet."></textarea><small>Platzhalter: <code>{user}</code>, <code>{moderator}</code>, <code>{rolle}</code>, <code>{grund}</code></small></div>
-                <div class="form-group"><label>Embed-Farbe</label><div class="color-row"><input type="color" id="cmd-downrank-color" value="#6d5ef8" oninput="syncColor('cmd-downrank')"><input type="text" id="cmd-downrank-color-hex" value="#6d5ef8" oninput="syncColorHex('cmd-downrank')"></div></div>
+                <div class="form-group"><label for="cmd-downrank-signatures">Zusätzliche Unterschriften benötigt</label><input type="number" id="cmd-downrank-signatures" min="0" max="10" value="0"><small>Anzahl weiterer Teammitglieder, die den Befehl bestätigen müssen, bevor er ausgeführt wird.</small></div>
               </div>
             </div>
 
@@ -1516,9 +1510,7 @@
               <div class="command-roles hidden" id="cmd-roles-teamkick">
                 <div class="form-group"><label>Erlaubte Rollen</label><div class="chip-select" id="cmdrole-teamkick"><span class="chip-empty">Lade Rollen...</span></div></div>
                 <div class="form-group"><label for="cmd-teamkick-channel">Kanal für die Nachricht</label><select id="cmd-teamkick-channel"></select></div>
-                <div class="form-group"><label for="cmd-teamkick-title">Nachrichtentitel</label><input type="text" id="cmd-teamkick-title" placeholder="/teamkick ausgeführt"></div>
-                <div class="form-group"><label for="cmd-teamkick-text">Nachrichtentext</label><textarea id="cmd-teamkick-text" rows="2" placeholder="{user} wurde von {moderator} bearbeitet."></textarea><small>Platzhalter: <code>{user}</code>, <code>{moderator}</code>, <code>{rolle}</code>, <code>{grund}</code></small></div>
-                <div class="form-group"><label>Embed-Farbe</label><div class="color-row"><input type="color" id="cmd-teamkick-color" value="#6d5ef8" oninput="syncColor('cmd-teamkick')"><input type="text" id="cmd-teamkick-color-hex" value="#6d5ef8" oninput="syncColorHex('cmd-teamkick')"></div></div>
+                <div class="form-group"><label for="cmd-teamkick-signatures">Zusätzliche Unterschriften benötigt</label><input type="number" id="cmd-teamkick-signatures" min="0" max="10" value="0"><small>Anzahl weiterer Teammitglieder, die den Befehl bestätigen müssen, bevor er ausgeführt wird.</small></div>
               </div>
             </div>
 
@@ -1533,9 +1525,17 @@
               <div class="command-roles hidden" id="cmd-roles-teamwarn">
                 <div class="form-group"><label>Erlaubte Rollen</label><div class="chip-select" id="cmdrole-teamwarn"><span class="chip-empty">Lade Rollen...</span></div></div>
                 <div class="form-group"><label for="cmd-teamwarn-channel">Kanal für die Nachricht</label><select id="cmd-teamwarn-channel"></select></div>
-                <div class="form-group"><label for="cmd-teamwarn-title">Nachrichtentitel</label><input type="text" id="cmd-teamwarn-title" placeholder="/teamwarn ausgeführt"></div>
-                <div class="form-group"><label for="cmd-teamwarn-text">Nachrichtentext</label><textarea id="cmd-teamwarn-text" rows="2" placeholder="{user} wurde von {moderator} bearbeitet."></textarea><small>Platzhalter: <code>{user}</code>, <code>{moderator}</code>, <code>{rolle}</code>, <code>{grund}</code></small></div>
-                <div class="form-group"><label>Embed-Farbe</label><div class="color-row"><input type="color" id="cmd-teamwarn-color" value="#6d5ef8" oninput="syncColor('cmd-teamwarn')"><input type="text" id="cmd-teamwarn-color-hex" value="#6d5ef8" oninput="syncColorHex('cmd-teamwarn')"></div></div>
+                <div class="form-group"><label for="cmd-teamwarn-signatures">Zusätzliche Unterschriften benötigt</label><input type="number" id="cmd-teamwarn-signatures" min="0" max="10" value="0"><small>Anzahl weiterer Teammitglieder, die den Befehl bestätigen müssen, bevor er ausgeführt wird.</small></div>
+                <div class="form-group">
+                  <label>Warnstufen (optional)</label>
+                  <small style="display:block; margin-bottom:6px;">Lege bis zu vier Rollen fest, die bei den jeweiligen Warnstufen automatisch vergeben werden.</small>
+                  <div style="display:flex; flex-direction:column; gap:10px;">
+                    <div><label for="cmdrole-teamwarn-stage1" style="font-size:0.7rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">Warnstufe 1</label><div class="chip-select" id="cmdrole-teamwarn-stage1"><span class="chip-empty">Lade Rollen...</span></div></div>
+                    <div><label for="cmdrole-teamwarn-stage2" style="font-size:0.7rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">Warnstufe 2</label><div class="chip-select" id="cmdrole-teamwarn-stage2"><span class="chip-empty">Lade Rollen...</span></div></div>
+                    <div><label for="cmdrole-teamwarn-stage3" style="font-size:0.7rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">Warnstufe 3</label><div class="chip-select" id="cmdrole-teamwarn-stage3"><span class="chip-empty">Lade Rollen...</span></div></div>
+                    <div><label for="cmdrole-teamwarn-stage4" style="font-size:0.7rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">Warnstufe 4</label><div class="chip-select" id="cmdrole-teamwarn-stage4"><span class="chip-empty">Lade Rollen...</span></div></div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
