@@ -28,7 +28,7 @@ console.log('REDIRECT_URI:', REDIRECT_URI);
 
 const DISCORD_API = 'https://discord.com/api/v10';
 const ADMINISTRATOR = 0x8n;
-const ALLOWED_MODULES = ['welcome', 'tickets', 'teamliste', 'support', 'automod', 'teamupdate', 'stats', 'verification', 'antinuke', 'minigames', 'rolenicknames'];
+const ALLOWED_MODULES = ['welcome', 'tickets', 'teamliste', 'support', 'automod', 'teamupdate', 'stats', 'verification', 'antinuke', 'minigames', 'rolenicknames', 'reactionroles'];
 
 // ============================================================
 // EXPRESS APP
@@ -716,6 +716,111 @@ app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req,
     res.json({ success: true, message: 'Verifizierungs-Panel gesendet!', data });
   } catch (err) {
     console.error('❌ Fehler beim Senden des Verifizierungs-Panels:', err);
+    res.status(500).json({ error: 'Interner Serverfehler: ' + err.message });
+  }
+});
+
+// ============================================================
+// REACTION ROLES: NACHRICHT SENDEN + REAKTIONEN HINZUFÜGEN
+// ============================================================
+function formatEmojiForApi(raw) {
+  // Wandelt "<:name:id>" oder "<a:name:id>" in das von der Discord-API
+  // erwartete Format "name:id" um. Unicode-Emojis bleiben unverändert.
+  const customMatch = raw.match(/^<a?:(\w+):(\d+)>$/);
+  if (customMatch) {
+    return `${customMatch[1]}:${customMatch[2]}`;
+  }
+  return raw;
+}
+
+app.post('/api/guild/:guildId/reactionroles/send-panel', requireAuth, async (req, res) => {
+  const { guildId } = req.params;
+  const { panelIndex } = req.body;
+
+  if (panelIndex === undefined || panelIndex === null) {
+    return res.status(400).json({ error: 'panelIndex ist erforderlich.' });
+  }
+
+  try {
+    const config = await getGuildConfig(guildId);
+    const reactionroles = config.reactionroles || {};
+    const panels = reactionroles.panels || [];
+
+    if (panelIndex < 0 || panelIndex >= panels.length) {
+      return res.status(404).json({ error: `Nachricht mit Index ${panelIndex} nicht gefunden.` });
+    }
+
+    const panel = panels[panelIndex];
+    if (!panel || !panel.channelId) {
+      return res.status(400).json({ error: 'Kein Kanal für diese Nachricht ausgewählt.' });
+    }
+
+    const mappings = (panel.mappings || []).filter(m => m.emoji && m.roleId);
+    if (mappings.length === 0) {
+      return res.status(400).json({ error: 'Diese Nachricht hat keine Emoji-Rollen-Zuordnungen.' });
+    }
+
+    const botToken = process.env.BOT_TOKEN;
+    if (!botToken) {
+      return res.status(500).json({ error: 'BOT_TOKEN nicht konfiguriert.' });
+    }
+
+    let parsedColor = 0xffffff;
+    if (panel.color) {
+      let hex = panel.color.replace(/[^0-9a-fA-F]/g, '');
+      if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+      if (hex.length === 6) parsedColor = parseInt(hex, 16);
+    }
+
+    const embed = {
+      title: panel.title || '🎭 Reaction Roles',
+      description: panel.description || 'Reagiere mit einem Emoji, um eine Rolle zu erhalten!',
+      color: parsedColor
+    };
+    if (panel.image && panel.image.startsWith('http')) {
+      embed.image = { url: panel.image };
+    }
+
+    const messageRes = await fetch(`https://discord.com/api/v10/channels/${panel.channelId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bot ${botToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ embeds: [embed] })
+    });
+    const messageData = await messageRes.json();
+
+    if (!messageRes.ok) {
+      console.error('❌ Discord API Fehler (Reaction Roles):', messageRes.status, messageData);
+      return res.status(messageRes.status).json({ error: `Discord Fehler: ${messageData.message || 'Unbekannt'}` });
+    }
+
+    // Reaktionen nacheinander hinzufügen (Rate-Limit-schonend)
+    for (const mapping of mappings) {
+      const encodedEmoji = encodeURIComponent(formatEmojiForApi(mapping.emoji));
+      try {
+        const reactionRes = await fetch(
+          `https://discord.com/api/v10/channels/${panel.channelId}/messages/${messageData.id}/reactions/${encodedEmoji}/@me`,
+          { method: 'PUT', headers: { 'Authorization': `Bot ${botToken}` } }
+        );
+        if (!reactionRes.ok) {
+          console.warn('⚠️ Reaktion konnte nicht hinzugefügt werden:', mapping.emoji, reactionRes.status);
+        }
+      } catch (err) {
+        console.error('⚠️ Fehler beim Hinzufügen der Reaktion:', mapping.emoji, err);
+      }
+      await new Promise(r => setTimeout(r, 300));
+    }
+
+    // messageId in der Konfiguration speichern
+    panels[panelIndex] = { ...panel, messageId: messageData.id };
+    reactionroles.panels = panels;
+    await saveModuleConfig(guildId, 'reactionroles', reactionroles);
+
+    res.json({ success: true, messageId: messageData.id });
+  } catch (err) {
+    console.error('❌ Fehler beim Senden der Reaction-Role Nachricht:', err);
     res.status(500).json({ error: 'Interner Serverfehler: ' + err.message });
   }
 });
