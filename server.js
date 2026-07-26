@@ -28,7 +28,7 @@ console.log('REDIRECT_URI:', REDIRECT_URI);
 
 const DISCORD_API = 'https://discord.com/api/v10';
 const ADMINISTRATOR = 0x8n;
-const ALLOWED_MODULES = ['welcome', 'tickets', 'teamliste', 'support', 'moderation', 'teamupdate', 'stats', 'verification', 'antinuke', 'minigames'];
+const ALLOWED_MODULES = ['welcome', 'tickets', 'teamliste', 'support', 'moderation', 'teamupdate', 'stats', 'verification', 'antinuke', 'minigames', 'rolenicknames'];
 
 // ============================================================
 // EXPRESS APP
@@ -472,9 +472,6 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
       title: panel.title || 'Support Center',
       description: panel.description || 'Wähle eine Kategorie, um ein Ticket zu öffnen.',
       color: parseInt(panel.color ? panel.color.replace('#', '') : 'ffffff', 16),
-      footer: {
-        text: 'Ticket System • Powered by Apex'
-      },
       timestamp: new Date().toISOString()
     };
 
@@ -632,8 +629,7 @@ app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req,
       description: description || (method === 'button'
         ? 'Klicke auf den Button, um dich zu verifizieren.'
         : 'Beantworte die folgende Aufgabe, um dich zu verifizieren.'),
-      color: parsedColor,
-      footer: { text: 'Verifizierungssystem • Powered by Apex' }
+      color: parsedColor
     };
 
     // ========== BILD VERARBEITEN ==========
