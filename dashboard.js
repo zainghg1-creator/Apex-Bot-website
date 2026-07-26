@@ -47,6 +47,8 @@ let state = {
   ticketConfigCacheGuildId: null
 };
 
+const TEAMUPDATE_COMMANDS = ['neuer_teamler', 'uprank', 'downrank', 'teamkick', 'teamwarn'];
+
 // ============================================================
 // UTILITY FUNCTIONS
 // ============================================================
@@ -294,6 +296,7 @@ async function loadRolesAndChannels(guildId) {
 function renderAllSelects() {
   const selectIds = ['join-channel', 'leave-channel', 'teamliste-channel', 'support-channel', 'moderation-log-channel', 'teamupdate-channel', 'verification-channel'];
   selectIds.forEach(id => renderChannelSelect(id, 0));
+  TEAMUPDATE_COMMANDS.forEach(cmd => renderChannelSelect(`cmd-${cmd}-channel`, 0));
 }
 
 function renderChannelSelect(selectId, filterType) {
@@ -573,17 +576,18 @@ function applyTeamlisteConfig(cfg) {
   renderRoleChips('teamliste-roles', cfg.roles || []);
 }
 
-const TEAMUPDATE_COMMANDS = ['neuer_teamler', 'uprank', 'downrank', 'teamkick', 'teamwarn'];
-
 function applyTeamupdateConfig(cfg) {
   setChecked('teamupdate-enabled', cfg.enabled ?? false);
   setSelectValue('teamupdate-channel', cfg.channelId || '');
-  renderRoleChips('teamupdate-roles', cfg.roles || []);
   const commands = cfg.commands || {};
   TEAMUPDATE_COMMANDS.forEach(cmd => {
     const c = commands[cmd] || {};
     setChecked(`cmd-enabled-${cmd}`, c.enabled ?? true);
     renderRoleChips(`cmdrole-${cmd}`, c.roles || []);
+    setSelectValue(`cmd-${cmd}-channel`, c.channelId || '');
+    setValue(`cmd-${cmd}-title`, c.title || '');
+    setValue(`cmd-${cmd}-text`, c.text || '');
+    setColor(`cmd-${cmd}`, c.color || '#6d5ef8');
   });
 }
 
@@ -697,10 +701,13 @@ async function saveModuleSettings(moduleName) {
         payload = {
           enabled: document.getElementById('teamupdate-enabled').checked,
           channelId: document.getElementById('teamupdate-channel').value,
-          roles: getSelectedRoleIds('teamupdate-roles'),
           commands: Object.fromEntries(TEAMUPDATE_COMMANDS.map(cmd => [cmd, {
             enabled: document.getElementById(`cmd-enabled-${cmd}`)?.checked ?? true,
-            roles: getSelectedRoleIds(`cmdrole-${cmd}`)
+            roles: getSelectedRoleIds(`cmdrole-${cmd}`),
+            channelId: document.getElementById(`cmd-${cmd}-channel`)?.value || '',
+            title: document.getElementById(`cmd-${cmd}-title`)?.value || '',
+            text: document.getElementById(`cmd-${cmd}-text`)?.value || '',
+            color: document.getElementById(`cmd-${cmd}-color`)?.value || '#6d5ef8'
           }]))
         };
         break;
