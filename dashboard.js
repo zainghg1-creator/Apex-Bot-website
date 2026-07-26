@@ -580,6 +580,7 @@ async function loadAllModuleSettings(guildId) {
     applyVerificationConfig(config.verification || {});
     applySimpleConfig('antinuke', config.antinuke || {});
     applyRoleNicknamesConfig(config.rolenicknames || {});
+    applyReactionRolesConfig(config.reactionroles || {});
   } catch (err) { console.error('Fehler beim Laden der Konfiguration:', err); }
 }
 
@@ -702,6 +703,7 @@ function applyVerificationConfig(cfg) {
   setSelectValue('verification-method', cfg.method || 'button');
   setSelectValue('verification-channel', cfg.channelId || '');
   renderRoleChips('verification-roles', cfg.roleId ? [cfg.roleId] : [], true);
+  renderRoleChips('verification-remove-roles', cfg.removeRoleIds || []);
   setValue('verification-title', cfg.title || '');
   setValue('verification-description', cfg.description || '');
   setColor('verification', cfg.color || '#6d5ef8');
@@ -751,6 +753,140 @@ function collectRoleNicknames() {
     prefix: row.querySelector('.rn-prefix')?.value || '',
     suffix: row.querySelector('.rn-suffix')?.value || ''
   })).filter(e => e.roleId && (e.prefix || e.suffix));
+}
+
+// ============================================================
+// REACTION ROLES
+// ============================================================
+function applyReactionRolesConfig(cfg) {
+  const container = document.getElementById('reactionroles-list');
+  if (container) container.innerHTML = '';
+  const panels = cfg.panels || [];
+  panels.forEach(panel => addReactionRolePanel(panel));
+}
+
+window.addReactionRolePanel = function(data = null) {
+  const container = document.getElementById('reactionroles-list');
+  if (!container) return;
+  const panelId = `rr-panel-${++reactionRolePanelCounter}`;
+  const wrapper = document.createElement('div');
+  wrapper.className = 'panel-card';
+  wrapper.id = panelId;
+  wrapper.dataset.messageId = (data && data.messageId) || '';
+
+  const color = (data && data.color) || '#ffffff';
+  wrapper.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:8px; flex-wrap:wrap;">
+      <h3 style="font-size:0.95rem; font-weight:700; margin:0;">🎭 Reaction-Role Nachricht</h3>
+      <button type="button" class="option-remove" onclick="document.getElementById('${panelId}').remove()">✕ Entfernen</button>
+    </div>
+    <div class="form-group"><label>Kanal</label><select class="rr-channel"></select></div>
+    <div class="form-group"><label>Titel</label><input type="text" class="rr-title" placeholder="🎭 Wähle deine Rollen" value="${data ? escapeHtml(data.title || '') : ''}"></div>
+    <div class="form-group"><label>Beschreibung</label><textarea class="rr-description" rows="3" placeholder="Reagiere mit einem Emoji, um eine Rolle zu erhalten!">${data ? escapeHtml(data.description || '') : ''}</textarea></div>
+    <div class="form-group">
+      <label>Farbe</label>
+      <div class="color-row">
+        <input type="color" class="rr-color" value="${color}" oninput="this.nextElementSibling.value=this.value;">
+        <input type="text" class="rr-color-hex" value="${color}" oninput="this.previousElementSibling.value=this.value;">
+      </div>
+    </div>
+    <div class="form-group"><label>Bild-URL (optional)</label><input type="text" class="rr-image" placeholder="https://example.com/bild.png" value="${data ? escapeHtml(data.image || '') : ''}"></div>
+    <div class="form-group">
+      <label>Emoji → Rolle Zuordnungen</label>
+      <small style="display:block; margin-bottom:6px;">Trage ein Emoji ein (z.B. 😀 oder ein Server-Emoji wie &lt;:name:123456789&gt;) und wähle die Rolle, die dafür vergeben werden soll.</small>
+      <div class="rr-mappings-list"></div>
+      <button type="button" class="add-option-btn" onclick="addReactionRoleMapping(this)">+ Zuordnung hinzufügen</button>
+    </div>
+    <div class="form-action">
+      <button type="button" class="btn btn-secondary" onclick="sendReactionRolePanel('${panelId}')">📤 Nachricht senden</button>
+      <span class="rr-send-status" style="align-self:center; font-size:0.8rem; color:var(--text-muted);">${data && data.messageId ? '✓ Gesendet' : 'Noch nicht gesendet'}</span>
+    </div>
+  `;
+  container.appendChild(wrapper);
+
+  const channelSelect = wrapper.querySelector('.rr-channel');
+  const textChannels = state.guildChannels.filter(c => c.type === 0);
+  channelSelect.innerHTML = textChannels.length
+    ? textChannels.map(c => `<option value="${c.id}"># ${escapeHtml(c.name)}</option>`).join('')
+    : `<option value="">Keine Textkanäle gefunden</option>`;
+  if (data && data.channelId) channelSelect.value = data.channelId;
+
+  const addMappingBtn = wrapper.querySelector('.add-option-btn');
+  const mappings = (data && data.mappings) || [];
+  if (mappings.length === 0) {
+    addReactionRoleMapping(addMappingBtn);
+  } else {
+    mappings.forEach(m => addReactionRoleMapping(addMappingBtn, m));
+  }
+};
+
+window.addReactionRoleMapping = function(btnEl, data = null) {
+  const panelCard = btnEl.closest('.panel-card');
+  if (!panelCard) return;
+  const list = panelCard.querySelector('.rr-mappings-list');
+  const row = document.createElement('div');
+  row.className = 'option-row rr-mapping-row';
+  row.innerHTML = `
+    <input type="text" class="rr-emoji" placeholder="Emoji" value="${data ? escapeHtml(data.emoji || '') : ''}" style="flex:1; min-width:80px;">
+    <select class="rr-role" style="flex:2; min-width:140px;"></select>
+    <button type="button" class="option-remove" onclick="this.parentElement.remove()">✕</button>
+  `;
+  list.appendChild(row);
+  const select = row.querySelector('.rr-role');
+  select.innerHTML = state.guildRoles.length
+    ? state.guildRoles.map(r => `<option value="${r.id}">@${escapeHtml(r.name)}</option>`).join('')
+    : `<option value="">Keine Rollen gefunden</option>`;
+  if (data && data.roleId) select.value = data.roleId;
+};
+
+function collectReactionRolePanels() {
+  const panels = Array.from(document.querySelectorAll('#reactionroles-list .panel-card'));
+  return panels.map(panel => {
+    const mappings = Array.from(panel.querySelectorAll('.rr-mapping-row')).map(row => ({
+      emoji: row.querySelector('.rr-emoji')?.value.trim() || '',
+      roleId: row.querySelector('.rr-role')?.value || ''
+    })).filter(m => m.emoji && m.roleId);
+    return {
+      channelId: panel.querySelector('.rr-channel')?.value || '',
+      title: panel.querySelector('.rr-title')?.value || '',
+      description: panel.querySelector('.rr-description')?.value || '',
+      color: panel.querySelector('.rr-color-hex')?.value || '#ffffff',
+      image: panel.querySelector('.rr-image')?.value || '',
+      messageId: panel.dataset.messageId || null,
+      mappings
+    };
+  }).filter(p => p.channelId);
+}
+
+async function sendReactionRolePanel(panelId) {
+  if (!state.activeGuildId) return;
+  const allPanels = Array.from(document.querySelectorAll('#reactionroles-list .panel-card'));
+  const panelIndex = allPanels.findIndex(p => p.id === panelId);
+  if (panelIndex === -1) return;
+
+  const panelEl = document.getElementById(panelId);
+  const mappingCount = panelEl ? panelEl.querySelectorAll('.rr-mapping-row').length : 0;
+  if (mappingCount === 0) {
+    showToast('Bitte füge mindestens eine Emoji-Rollen Zuordnung hinzu.', 'error');
+    return;
+  }
+
+  try {
+    // Erst speichern, damit der Server die aktuelle Konfiguration kennt
+    await saveModuleSettings('reactionroles');
+    const data = await apiFetch(`/guild/${state.activeGuildId}/reactionroles/send-panel`, {
+      method: 'POST',
+      body: JSON.stringify({ panelIndex })
+    });
+    if (data?.messageId && panelEl) {
+      panelEl.dataset.messageId = data.messageId;
+      const statusEl = panelEl.querySelector('.rr-send-status');
+      if (statusEl) statusEl.textContent = '✓ Gesendet';
+    }
+    showToast('Reaction-Role Nachricht gesendet!', 'success');
+  } catch (err) {
+    showToast(`Fehler: ${err.message}`, 'error');
+  }
 }
 
 function applySimpleConfig(prefix, cfg) {
@@ -890,6 +1026,7 @@ async function saveModuleSettings(moduleName) {
           method: document.getElementById('verification-method').value,
           channelId: document.getElementById('verification-channel').value,
           roleId: getSelectedRoleIds('verification-roles')[0] || null,
+          removeRoleIds: getSelectedRoleIds('verification-remove-roles'),
           title: document.getElementById('verification-title').value,
           description: document.getElementById('verification-description').value,
           color: document.getElementById('verification-color').value,
@@ -910,6 +1047,9 @@ async function saveModuleSettings(moduleName) {
           enabled: document.getElementById('rolenicknames-enabled').checked,
           entries: collectRoleNicknames()
         };
+        break;
+      case 'reactionroles':
+        payload = { panels: collectReactionRolePanels() };
         break;
       default:
         const enabledEl = document.getElementById(`${moduleName}-enabled`);
@@ -949,6 +1089,7 @@ let editingIndex = null;
 let buttonCounter = 0;
 let optionCounter = 0;
 let rolenickCounter = 0;
+let reactionRolePanelCounter = 0;
 
 // ---- Tab-Navigation ----
 function switchEditTab(tabName) {
