@@ -805,8 +805,6 @@
     .embed-preview-desc { font-size: 0.8rem; line-height: 1.4; white-space: pre-wrap; word-break: break-word; }
     .embed-preview-image { width: 100%; border-radius: 6px; margin-top: 6px; max-height: 120px; object-fit: cover; }
     .embed-preview-image.hidden { display: none; }
-    .embed-preview-footer { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 0.65rem; color: #949ba4; }
-    .embed-preview-footer img { width: 14px; height: 14px; border-radius: 50%; }
 
     .edit-preview-wrap { margin-bottom: 16px; background: var(--bg-surface); border-radius: 10px; padding: 14px; border: 1px solid var(--border-subtle); }
 
@@ -1248,6 +1246,9 @@
         <button class="tab-btn" data-tab="antinuke" onclick="switchTab('antinuke'); closeOverlayMenu();">
           <span class="tab-icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span> Anti Nuke
         </button>
+        <button class="tab-btn" data-tab="rolenicknames" onclick="switchTab('rolenicknames'); closeOverlayMenu();">
+          <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M21 8l-2 2-2-2"/><path d="M15 3l6 0"/></svg></span> Rollen-Nicknames
+        </button>
       </nav>
       <button class="btn btn-secondary back-btn" onclick="closeManagement(); closeOverlayMenu();">← Server wechseln</button>
     </div>
@@ -1345,7 +1346,6 @@
               <div class="embed-preview-title" id="join-preview-title">Willkommen auf {server}! 🎉</div>
               <div class="embed-preview-desc" id="join-preview-desc">Hey {user}, schön dass du da bist!</div>
               <img class="embed-preview-image hidden" id="join-preview-image" src="">
-              <div class="embed-preview-footer"><img src="apex_logo.png"><span>Willkommens System • Powered by Apex</span></div>
             </div>
           </div>
         </div>
@@ -1382,7 +1382,6 @@
               <div class="embed-preview-title" id="leave-preview-title">Auf Wiedersehen 👋</div>
               <div class="embed-preview-desc" id="leave-preview-desc">{username} hat den Server verlassen.</div>
               <img class="embed-preview-image hidden" id="leave-preview-image" src="">
-              <div class="embed-preview-footer"><img src="apex_logo.png"><span>Verlassen System • Powered by Apex</span></div>
             </div>
           </div>
         </div>
@@ -1643,6 +1642,32 @@
             <div class="switch-row"><label>Anti Nuke aktiv</label><label class="switch"><input type="checkbox" id="antinuke-enabled" checked><span class="switch-slider"></span></label></div>
           </div>
           <div class="form-action"><button class="btn btn-primary" onclick="handleSaveClick('antinuke')">Speichern</button></div>
+        </div>
+      </div>
+
+      <!-- ===== ROLLEN-NICKNAMES ===== -->
+      <div id="mod-rolenicknames" class="module-page hidden">
+        <h2>🏷️ Rollen-Nicknames</h2>
+        <p>Wähle eine Rolle aus und lege ein Präfix und/oder Suffix fest. Hat ein Mitglied diese Rolle, wird der Nickname automatisch angepasst – entfernst du die Rolle, wird es automatisch zurückgesetzt.</p>
+
+        <div class="panel-card">
+          <div class="form-group">
+            <div class="switch-row">
+              <label>Rollen-Nicknames aktiv</label>
+              <label class="switch"><input type="checkbox" id="rolenicknames-enabled"><span class="switch-slider"></span></label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Regeln</label>
+            <div id="rolenick-list"></div>
+            <button type="button" class="add-option-btn" onclick="addRoleNicknameRow()">+ Regel hinzufügen</button>
+          </div>
+
+          <div class="form-action">
+            <span id="rolenicknames-save-status" class="hidden status-success"></span>
+            <button class="btn btn-primary" onclick="handleSaveClick('rolenicknames')">Speichern</button>
+          </div>
         </div>
       </div>
 
