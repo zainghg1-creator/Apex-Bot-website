@@ -585,7 +585,7 @@ function applyTeamupdateConfig(cfg) {
     setChecked(`cmd-enabled-${cmd}`, c.enabled ?? true);
     renderRoleChips(`cmdrole-${cmd}`, c.roles || []);
     setSelectValue(`cmd-${cmd}-channel`, c.channelId || '');
-    setValue(`cmd-${cmd}-signatures`, c.signatures ?? 0);
+    setValue(`cmd-${cmd}-signatures`, c.signatures ?? 1);
     if (cmd === 'teamwarn') {
       const stages = c.warnStages || [];
       renderRoleChips('cmdrole-teamwarn-stage1', stages[0] ? [stages[0]] : [], true);
@@ -711,7 +711,7 @@ async function saveModuleSettings(moduleName) {
               enabled: document.getElementById(`cmd-enabled-${cmd}`)?.checked ?? true,
               roles: getSelectedRoleIds(`cmdrole-${cmd}`),
               channelId: document.getElementById(`cmd-${cmd}-channel`)?.value || '',
-              signatures: parseInt(document.getElementById(`cmd-${cmd}-signatures`)?.value) || 0
+              signatures: parseInt(document.getElementById(`cmd-${cmd}-signatures`)?.value) || 1
             };
             if (cmd === 'teamwarn') {
               entry.warnStages = [
