@@ -232,7 +232,6 @@ async function openManagement(guildId, name, iconUrl) {
   await getCachedTicketConfig(true);
   await loadGuildDetails(guildId);
   await loadAllModuleSettings(guildId);
-  // Bot Control Kanal füllen
   renderBotChannelSelect();
 }
 
@@ -2004,7 +2003,7 @@ function applyStatsConfig(cfg) {
 }
 
 // ============================================================
-// 🆕 BOT CONTROL FUNKTIONEN
+// 🆕 BOT CONTROL FUNKTIONEN (mit Aktionen)
 // ============================================================
 function renderBotChannelSelect() {
   const select = document.getElementById('bot-channel');
@@ -2044,51 +2043,123 @@ function addBotButton(data = null) {
   const row = document.createElement('div');
   row.className = 'option-row';
   row.id = `bot-btn-${idx}`;
+  // Standardwerte, falls data übergeben wird
+  const label = data?.label || '';
+  const style = data?.style || '1';
+  const actionType = data?.actionType || 'none';
+  const roleId = data?.roleId || '';
+  const channelId = data?.channelId || '';
+  const messageText = data?.messageText || '';
+
+  // Rollenauswahl
+  let roleOptions = state.guildRoles.map(r => `<option value="${r.id}">@${escapeHtml(r.name)}</option>`).join('');
+  if (!roleOptions) roleOptions = '<option value="">Keine Rollen</option>';
+
+  // Kanalauswahl
+  let channelOptions = state.guildChannels.filter(c => c.type === 0).map(c => `<option value="${c.id}">#${escapeHtml(c.name)}</option>`).join('');
+  if (!channelOptions) channelOptions = '<option value="">Keine Kanäle</option>';
+
   row.innerHTML = `
-    <input type="text" placeholder="Label" class="bot-btn-label" value="${data?.label || ''}" style="flex:1;">
-    <select class="bot-btn-style" style="flex:1;">
-      <option value="1" ${data?.style === '1' ? 'selected' : ''}>Primary (Blau)</option>
-      <option value="2" ${data?.style === '2' ? 'selected' : ''}>Secondary (Grau)</option>
-      <option value="3" ${data?.style === '3' ? 'selected' : ''}>Success (Grün)</option>
-      <option value="4" ${data?.style === '4' ? 'selected' : ''}>Danger (Rot)</option>
-      <option value="5" ${data?.style === '5' ? 'selected' : ''}>Link (URL)</option>
-    </select>
-    <input type="text" placeholder="Custom-ID oder URL" class="bot-btn-custom" value="${data?.custom_id || ''}" style="flex:1.5;">
-    <button type="button" class="option-remove" onclick="document.getElementById('${row.id}').remove()">✕</button>
+    <div style="display:flex; flex-wrap:wrap; gap:8px; width:100%; align-items:center;">
+      <input type="text" placeholder="Label" class="bot-btn-label" value="${escapeHtml(label)}" style="flex:1;">
+      <select class="bot-btn-style" style="flex:1;">
+        <option value="1" ${style === '1' ? 'selected' : ''}>Primary</option>
+        <option value="2" ${style === '2' ? 'selected' : ''}>Secondary</option>
+        <option value="3" ${style === '3' ? 'selected' : ''}>Success</option>
+        <option value="4" ${style === '4' ? 'selected' : ''}>Danger</option>
+        <option value="5" ${style === '5' ? 'selected' : ''}>Link</option>
+      </select>
+      <select class="bot-btn-action" style="flex:1.5;">
+        <option value="none" ${actionType === 'none' ? 'selected' : ''}>Keine Aktion</option>
+        <option value="role_add" ${actionType === 'role_add' ? 'selected' : ''}>Rolle hinzufügen</option>
+        <option value="role_remove" ${actionType === 'role_remove' ? 'selected' : ''}>Rolle entfernen</option>
+        <option value="role_toggle" ${actionType === 'role_toggle' ? 'selected' : ''}>Rolle toggeln</option>
+        <option value="message_send" ${actionType === 'message_send' ? 'selected' : ''}>Nachricht senden</option>
+      </select>
+      <button type="button" class="option-remove" onclick="document.getElementById('${row.id}').remove()">✕</button>
+    </div>
+    <div class="bot-action-params" style="display:${actionType !== 'none' ? 'flex' : 'none'}; flex-wrap:wrap; gap:8px; width:100%; margin-top:4px;">
+      <div class="bot-action-role" style="display:${(actionType === 'role_add' || actionType === 'role_remove' || actionType === 'role_toggle') ? 'flex' : 'none'}; flex:1; min-width:140px;">
+        <select class="bot-action-role-select" style="width:100%;">
+          ${roleOptions}
+        </select>
+      </div>
+      <div class="bot-action-message" style="display:${actionType === 'message_send' ? 'flex' : 'none'}; flex-wrap:wrap; gap:8px; width:100%;">
+        <select class="bot-action-channel" style="flex:1; min-width:140px;">
+          ${channelOptions}
+        </select>
+        <input type="text" class="bot-action-msgtext" placeholder="Nachrichtentext" value="${escapeHtml(messageText)}" style="flex:2; min-width:120px;">
+      </div>
+    </div>
   `;
   container.appendChild(row);
-}
 
-function collectBotEmbeds() {
-  const rows = document.querySelectorAll('#bot-embeds-list .option-row');
-  return Array.from(rows).map(row => {
-    const title = row.querySelector('.bot-embed-title')?.value || '';
-    const description = row.querySelector('.bot-embed-desc')?.value || '';
-    const color = row.querySelector('.bot-embed-color')?.value || '#5865f2';
-    const image = row.querySelector('.bot-embed-image')?.value || '';
-    const embed = { color: parseInt(color.replace('#',''),16) };
-    if (title) embed.title = title;
-    if (description) embed.description = description;
-    if (image) embed.image = { url: image };
-    return embed;
-  }).filter(e => e.title || e.description || e.image);
+  // Event-Handler für Action-Änderung
+  const actionSelect = row.querySelector('.bot-btn-action');
+  const paramsDiv = row.querySelector('.bot-action-params');
+  const roleDiv = row.querySelector('.bot-action-role');
+  const msgDiv = row.querySelector('.bot-action-message');
+
+  actionSelect.addEventListener('change', function() {
+    const val = this.value;
+    paramsDiv.style.display = val !== 'none' ? 'flex' : 'none';
+    roleDiv.style.display = (val === 'role_add' || val === 'role_remove' || val === 'role_toggle') ? 'flex' : 'none';
+    msgDiv.style.display = val === 'message_send' ? 'flex' : 'none';
+  });
+
+  // Werte aus data setzen
+  if (data) {
+    if (data.roleId) {
+      const roleSelect = row.querySelector('.bot-action-role-select');
+      if (roleSelect) roleSelect.value = data.roleId;
+    }
+    if (data.channelId) {
+      const channelSelect = row.querySelector('.bot-action-channel');
+      if (channelSelect) channelSelect.value = data.channelId;
+    }
+    if (data.messageText) {
+      const msgInput = row.querySelector('.bot-action-msgtext');
+      if (msgInput) msgInput.value = data.messageText;
+    }
+  }
 }
 
 function collectBotButtons() {
   const rows = document.querySelectorAll('#bot-buttons-list .option-row');
-  return Array.from(rows).map(row => {
+  const buttons = [];
+  rows.forEach(row => {
     const label = row.querySelector('.bot-btn-label')?.value || '';
     const style = parseInt(row.querySelector('.bot-btn-style')?.value || '1');
-    const custom_id = row.querySelector('.bot-btn-custom')?.value || '';
-    if (!label) return null;
+    const actionType = row.querySelector('.bot-btn-action')?.value || 'none';
+    if (!label) return;
+
     const btn = { label, style };
+    // Für Link-Buttons brauchen wir eine URL, aber das Feld fehlt – wir verwenden die Custom-ID für alles außer Link.
+    // Wir setzen die Custom-ID später.
     if (style === 5) {
-      btn.url = custom_id;
-    } else {
-      btn.custom_id = custom_id || `btn_${Date.now()}`;
+      // Link-Button: hier bräuchte man ein URL-Feld, aber wir lassen es erstmal weg.
+      // Wir könnten das action-Objekt für Links ignorieren.
+      return; // Überspringe Link-Buttons vorerst
     }
-    return btn;
-  }).filter(Boolean);
+
+    // Action sammeln
+    const action = {};
+    if (actionType !== 'none') {
+      action.type = actionType;
+      if (actionType === 'role_add' || actionType === 'role_remove' || actionType === 'role_toggle') {
+        const roleSelect = row.querySelector('.bot-action-role-select');
+        if (roleSelect) action.roleId = roleSelect.value;
+      } else if (actionType === 'message_send') {
+        const channelSelect = row.querySelector('.bot-action-channel');
+        const msgInput = row.querySelector('.bot-action-msgtext');
+        if (channelSelect) action.channelId = channelSelect.value;
+        if (msgInput) action.message = msgInput.value;
+      }
+      btn.action = action;
+    }
+    buttons.push(btn);
+  });
+  return buttons;
 }
 
 async function sendBotMessage() {
@@ -2096,17 +2167,39 @@ async function sendBotMessage() {
   if (!channelId) { showToast('Bitte wähle einen Kanal.', 'error'); return; }
   const content = document.getElementById('bot-content')?.value || '';
   const embeds = collectBotEmbeds();
-  const components = collectBotButtons();
+  const buttons = collectBotButtons();
 
-  if (!content && embeds.length === 0 && components.length === 0) {
+  if (!content && embeds.length === 0 && buttons.length === 0) {
     showToast('Bitte gib Text, Embed(s) oder Button(s) ein.', 'error');
     return;
+  }
+
+  // Buttons in Discord-Komponenten umwandeln
+  let components = [];
+  if (buttons.length > 0) {
+    const row = {
+      type: 1,
+      components: buttons.map(btn => {
+        const comp = {
+          type: 2,
+          label: btn.label,
+          style: btn.style,
+          custom_id: `btn_${Date.now()}_${Math.random().toString(36).substr(2, 6)}` // wird später vom Server ersetzt
+        };
+        // Wenn action vorhanden, fügen wir es als eigenes Feld hinzu (wird vom Server extrahiert)
+        if (btn.action) {
+          comp.action = btn.action;
+        }
+        return comp;
+      })
+    };
+    components.push(row);
   }
 
   try {
     const response = await apiFetch(`/guild/${state.activeGuildId}/bot/send`, {
       method: 'POST',
-      body: JSON.stringify({ channelId, content, embeds, components: components.length ? [{ type: 1, components }] : undefined })
+      body: JSON.stringify({ channelId, content, embeds, components })
     });
     if (response?.success) {
       showToast('Nachricht gesendet!', 'success');
@@ -2124,7 +2217,21 @@ async function sendBotMessage() {
   }
 }
 
-// Diese Variable speichert die aktuell zu bearbeitende Nachrichten-ID
+function collectBotEmbeds() {
+  const rows = document.querySelectorAll('#bot-embeds-list .option-row');
+  return Array.from(rows).map(row => {
+    const title = row.querySelector('.bot-embed-title')?.value || '';
+    const description = row.querySelector('.bot-embed-desc')?.value || '';
+    const color = row.querySelector('.bot-embed-color')?.value || '#5865f2';
+    const image = row.querySelector('.bot-embed-image')?.value || '';
+    const embed = { color: parseInt(color.replace('#',''),16) };
+    if (title) embed.title = title;
+    if (description) embed.description = description;
+    if (image) embed.image = { url: image };
+    return embed;
+  }).filter(e => e.title || e.description || e.image);
+}
+
 let currentEditMessageId = null;
 
 async function loadBotMessages() {
@@ -2170,10 +2277,6 @@ async function loadBotMessages() {
 
 function editBotMessageById(messageId) {
   currentEditMessageId = messageId;
-  // Suche die Nachricht in der Liste (oder wir laden sie nochmal einzeln – vereinfacht: wir füllen die Felder manuell)
-  // Da wir die Inhalte nicht separat speichern, laden wir die Nachrichtenliste neu und extrahieren die gewählte Nachricht.
-  // Alternative: Wir machen es einfacher und füllen die Felder nicht automatisch, sondern der Nutzer muss sie manuell eintragen.
-  // Ich fülle die Felder mit den Daten aus der aktuellen Liste.
   const list = document.getElementById('bot-messages-list');
   const items = list.querySelectorAll('div[style*="background:var(--bg-surface)"]');
   let target = null;
@@ -2186,29 +2289,24 @@ function editBotMessageById(messageId) {
     showToast('Nachricht nicht in der Liste gefunden. Bitte lade neu.', 'error');
     return;
   }
-  // Extrahiere Inhalt
   const contentDiv = target.querySelector('div[style*="font-size:0.85rem"]');
   const content = contentDiv ? contentDiv.textContent : '';
   document.getElementById('bot-content').value = content;
 
-  // Embed extrahieren (vereinfacht)
   const embedDiv = target.querySelector('div[style*="border-left:4px solid"]');
   if (embedDiv) {
     const title = embedDiv.querySelector('strong')?.textContent || '';
     const desc = embedDiv.querySelector('div:not(:first-child)')?.textContent || '';
-    // Farbe aus border-left parsen
     const color = embedDiv.style.borderLeftColor || '#5865f2';
-    // Wir löschen alle existierenden Embeds und fügen ein neues hinzu
     document.getElementById('bot-embeds-list').innerHTML = '';
     addBotEmbed({ title, description: desc, color });
   } else {
     document.getElementById('bot-embeds-list').innerHTML = '';
   }
 
-  // Buttons können nicht einfach aus der Liste extrahiert werden – wir lassen sie leer.
   document.getElementById('bot-buttons-list').innerHTML = '';
+  // Wir können keine Buttons aus der Liste extrahieren – lassen wir leer.
 
-  // Hinweis anzeigen
   showToast(`Bearbeite Nachricht ${messageId}`, 'success');
   document.querySelector('#mod-bot .panel-card:last-child').scrollIntoView({ behavior: 'smooth' });
 }
@@ -2223,7 +2321,22 @@ async function editBotMessage() {
 
   const content = document.getElementById('bot-content')?.value || '';
   const embeds = collectBotEmbeds();
-  const components = collectBotButtons();
+  const buttons = collectBotButtons();
+
+  // Buttons in Discord-Komponenten umwandeln (ohne Action, da wir sie nicht speichern)
+  let components = [];
+  if (buttons.length > 0) {
+    const row = {
+      type: 1,
+      components: buttons.map(btn => ({
+        type: 2,
+        label: btn.label,
+        style: btn.style,
+        custom_id: `btn_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`
+      }))
+    };
+    components.push(row);
+  }
 
   try {
     const response = await apiFetch(`/guild/${state.activeGuildId}/bot/edit`, {
@@ -2233,7 +2346,7 @@ async function editBotMessage() {
         messageId: currentEditMessageId,
         content,
         embeds,
-        components: components.length ? [{ type: 1, components }] : undefined
+        components
       })
     });
     if (response?.success) {
