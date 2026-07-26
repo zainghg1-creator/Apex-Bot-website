@@ -4,6 +4,7 @@ const express = require('express');
 const cookieSession = require('cookie-session');
 const path = require('path');
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 
 // ============================================================
 // VARIABLEN
@@ -28,7 +29,7 @@ console.log('REDIRECT_URI:', REDIRECT_URI);
 
 const DISCORD_API = 'https://discord.com/api/v10';
 const ADMINISTRATOR = 0x8n;
-const ALLOWED_MODULES = ['welcome', 'tickets', 'teamliste', 'automod', 'teamupdate', 'stats', 'levels', 'verification', 'antinuke', 'minigames', 'rolenicknames', 'reactionroles'];
+const ALLOWED_MODULES = ['welcome', 'tickets', 'teamliste', 'automod', 'teamupdate', 'stats', 'levels', 'verification', 'antinuke', 'minigames', 'rolenicknames', 'reactionroles', 'custom_buttons'];
 
 // ============================================================
 // EXPRESS APP
@@ -91,12 +92,22 @@ if (MONGODB_URI) {
 // SCHEMA (nur wenn mongoose verfügbar)
 // ============================================================
 let GuildConfig = null;
+let ButtonAction = null;
 try {
   const guildConfigSchema = new mongoose.Schema({
     guildId: { type: String, required: true, unique: true, index: true },
     data: { type: mongoose.Schema.Types.Mixed, default: {} }
   }, { timestamps: true });
   GuildConfig = mongoose.models.GuildConfig || mongoose.model('GuildConfig', guildConfigSchema);
+
+  // Tabelle für temporäre Button-Aktionen
+  const buttonActionSchema = new mongoose.Schema({
+    id: { type: String, required: true, unique: true, index: true },
+    guildId: { type: String, required: true, index: true },
+    action: { type: mongoose.Schema.Types.Mixed, required: true },
+    createdAt: { type: Date, default: Date.now, expires: 3600 } // TTL 1 Stunde
+  });
+  ButtonAction = mongoose.models.ButtonAction || mongoose.model('ButtonAction', buttonActionSchema);
 } catch (e) {
   console.log('⚠️ Mongoose Schema nicht geladen');
 }
@@ -196,7 +207,6 @@ function requireAuth(req, res, next) {
   next();
 }
 
-// NEU: Prüft, ob der User Admin auf der angeforderten Guild ist
 async function requireGuildAdmin(req, res, next) {
   if (!req.session?.accessToken) {
     return res.status(401).json({ error: 'not_authenticated' });
@@ -976,7 +986,7 @@ app.post('/api/guild/:guildId/reactionroles/send-panel', requireAuth, async (req
 });
 
 // ============================================================
-// 🆕 BOT CONTROL: Nachricht senden
+// 🆕 BOT CONTROL: Nachricht senden (mit Action-Buttons)
 // ============================================================
 app.post('/api/guild/:guildId/bot/send', requireAuth, requireGuildAdmin, async (req, res) => {
   const { guildId } = req.params;
@@ -991,16 +1001,60 @@ app.post('/api/guild/:guildId/bot/send', requireAuth, requireGuildAdmin, async (
     return res.status(500).json({ error: 'BOT_TOKEN nicht konfiguriert' });
   }
 
-  // Prüfen, ob Bot auf der Guild ist
   const botGuilds = await getBotGuildIds();
   if (!botGuilds.has(guildId)) {
     return res.status(403).json({ error: 'Bot ist nicht auf diesem Server' });
   }
 
+  // Button-Actions in der DB speichern und custom_ids ersetzen
+  let processedComponents = components;
+  if (components && Array.isArray(components) && components.length > 0) {
+    // Wir erwarten, dass components ein Array von Action-Row-Objekten ist, wie von Discord akzeptiert.
+    // Wir durchlaufen alle Buttons in allen Action-Rows.
+    for (const row of components) {
+      if (row.type === 1 && row.components) {
+        for (const btn of row.components) {
+          if (btn.type === 2 && btn.action) {
+            // Button hat eine Aktion
+            const action = btn.action;
+            // Generiere eindeutige ID
+            const id = crypto.randomBytes(8).toString('hex');
+            // Speichere Aktion in DB
+            if (ButtonAction) {
+              try {
+                await ButtonAction.create({
+                  id,
+                  guildId,
+                  action: {
+                    type: action.type,
+                    roleId: action.roleId || null,
+                    channelId: action.channelId || null,
+                    message: action.message || null
+                  }
+                });
+              } catch (err) {
+                console.error('Fehler beim Speichern der Button-Action:', err);
+                return res.status(500).json({ error: 'Fehler beim Speichern der Aktion' });
+              }
+            } else {
+              // Fallback: Wenn keine DB, können wir keine Actions speichern
+              return res.status(500).json({ error: 'Datenbank nicht verfügbar für Button-Actions' });
+            }
+            // Ersetze custom_id durch act_<id>
+            btn.custom_id = `act_${id}`;
+            // Entferne das action-Feld, da es nicht an Discord gesendet werden darf
+            delete btn.action;
+          }
+        }
+      }
+    }
+  }
+
+  // Payload für Discord erstellen
   const payload = {};
   if (content && content.trim()) payload.content = content;
   if (embeds && Array.isArray(embeds) && embeds.length > 0) payload.embeds = embeds;
-  if (components && Array.isArray(components) && components.length > 0) payload.components = components;
+  if (processedComponents && processedComponents.length > 0) payload.components = processedComponents;
 
   try {
     const response = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
@@ -1044,8 +1098,10 @@ app.post('/api/guild/:guildId/bot/edit', requireAuth, requireGuildAdmin, async (
     return res.status(403).json({ error: 'Bot ist nicht auf diesem Server' });
   }
 
+  // Für bearbeitete Nachrichten: Wir speichern keine neuen Actions, da die Buttons bereits existieren.
+  // Wir lassen die custom_ids unverändert.
   const payload = {};
-  if (content !== undefined) payload.content = content; // kann leer sein
+  if (content !== undefined) payload.content = content;
   if (embeds && Array.isArray(embeds)) payload.embeds = embeds;
   if (components && Array.isArray(components)) payload.components = components;
 
@@ -1100,7 +1156,6 @@ app.get('/api/guild/:guildId/bot/messages', requireAuth, requireGuildAdmin, asyn
       return res.status(response.status).json({ error: `Discord Fehler: ${errData.message || 'Unbekannt'}` });
     }
     const messages = await response.json();
-    // Nur Nachrichten vom Bot selbst
     const botId = process.env.CLIENT_ID || (await fetch(`${DISCORD_API}/users/@me`, { headers: { 'Authorization': `Bot ${botToken}` } }).then(r => r.json()).then(u => u.id));
     const filtered = messages.filter(m => m.author.id === botId);
     res.json(filtered);
