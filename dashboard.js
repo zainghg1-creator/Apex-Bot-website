@@ -142,7 +142,7 @@ function invalidateTicketCache() {
 }
 
 // ============================================================
-// GUILD LIST – DAS LÄDT DIE SERVER
+// GUILD LIST
 // ============================================================
 async function loadDashboard() {
   showState(DOM.loadingState);
@@ -170,7 +170,6 @@ function renderUser(user) {
       : 'https://cdn.discordapp.com/embed/avatars/0.png';
     DOM.userAvatar.alt = `${user.username}s Avatar`;
   }
-  // Sidebar user
   const sidebarAvatar = document.getElementById('sidebar-user-avatar');
   if (sidebarAvatar) {
     sidebarAvatar.src = user.avatar
@@ -233,6 +232,8 @@ async function openManagement(guildId, name, iconUrl) {
   await getCachedTicketConfig(true);
   await loadGuildDetails(guildId);
   await loadAllModuleSettings(guildId);
+  // Bot Control Kanal füllen
+  renderBotChannelSelect();
 }
 
 function closeManagement() {
@@ -294,7 +295,7 @@ async function loadRolesAndChannels(guildId) {
 }
 
 function renderAllSelects() {
-  const selectIds = ['join-channel', 'leave-channel', 'teamliste-channel', 'support-channel', 'automod-log-channel', 'teamupdate-channel', 'verification-channel', 'minigames-counting-channel', 'levels-channel'];
+  const selectIds = ['join-channel', 'leave-channel', 'teamliste-channel', 'automod-log-channel', 'teamupdate-channel', 'verification-channel', 'minigames-counting-channel', 'levels-channel'];
   selectIds.forEach(id => renderChannelSelect(id, 0));
   TEAMUPDATE_COMMANDS.forEach(cmd => renderChannelSelect(`cmd-${cmd}-channel`, 0));
 }
@@ -346,7 +347,7 @@ function getSelectedRoleIds(containerId) {
 }
 
 // ============================================================
-// CHANNEL CHIPS (z.B. für Automod-Whitelist)
+// CHANNEL CHIPS
 // ============================================================
 function renderChannelChips(containerId, selectedIds = []) {
   const el = document.getElementById(containerId);
@@ -392,6 +393,9 @@ function switchTab(tabName) {
   if (tabName === 'tickets' && state.activeGuildId) {
     setTimeout(() => renderTicketOverview(), 50);
   }
+  if (tabName === 'bot') {
+    renderBotChannelSelect();
+  }
 }
 
 function switchSubtab(moduleName, subName) {
@@ -406,7 +410,7 @@ function switchSubtab(moduleName, subName) {
 }
 
 // ============================================================
-// COLOR SYNC (Welcome)
+// COLOR SYNC
 // ============================================================
 function syncColor(prefix) {
   const color = document.getElementById(`${prefix}-color`).value;
@@ -429,7 +433,7 @@ function syncColorHex(prefix) {
 }
 
 // ============================================================
-// BILD-KOMPRIMIERUNG (max. 300 KB)
+// BILD-KOMPRIMIERUNG
 // ============================================================
 function compressImage(dataUrl, maxSizeKB = 300) {
   return new Promise((resolve) => {
@@ -439,7 +443,6 @@ function compressImage(dataUrl, maxSizeKB = 300) {
       let width = img.width;
       let height = img.height;
       
-      // Maximal 800px Breite/Höhe (Discord-Embeds sind sowieso klein)
       const maxDim = 800;
       if (width > maxDim || height > maxDim) {
         const ratio = Math.min(maxDim / width, maxDim / height);
@@ -452,7 +455,6 @@ function compressImage(dataUrl, maxSizeKB = 300) {
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, width, height);
       
-      // Qualität reduzieren bis unter maxSizeKB
       let quality = 0.9;
       let result = canvas.toDataURL('image/jpeg', quality);
       while (result.length > maxSizeKB * 1024 && quality > 0.1) {
@@ -461,13 +463,13 @@ function compressImage(dataUrl, maxSizeKB = 300) {
       }
       resolve(result);
     };
-    img.onerror = () => resolve(dataUrl); // Fallback: Original
+    img.onerror = () => resolve(dataUrl);
     img.src = dataUrl;
   });
 }
 
 // ============================================================
-// IMAGE UPLOAD (Welcome & Verification) – mit Komprimierung
+// IMAGE UPLOAD
 // ============================================================
 async function handleImageUpload(input, prefix) {
   const file = input.files?.[0];
@@ -506,9 +508,6 @@ async function handleImageUpload(input, prefix) {
   }
 }
 
-// ============================================================
-// BILD ENTFERNEN
-// ============================================================
 function clearImage(prefix) {
   const input = document.getElementById(`${prefix}-image-input`);
   if (input) { input.value = ''; input.dataset.value = ''; }
@@ -517,9 +516,6 @@ function clearImage(prefix) {
   updateEmbedPreview(prefix);
 }
 
-// ============================================================
-// BILD AUS KONFIGURATION LADEN
-// ============================================================
 function setImage(prefix, url) {
   const preview = document.getElementById(`${prefix}-image-preview`);
   const input = document.getElementById(`${prefix}-image-input`);
@@ -540,7 +536,7 @@ function setImage(prefix, url) {
 }
 
 // ============================================================
-// EMBED VORSCHAU (Welcome)
+// EMBED VORSCHAU
 // ============================================================
 const updateEmbedPreview = debounce((prefix) => {
   const titleEl = document.getElementById(`${prefix}-title`);
@@ -576,7 +572,6 @@ async function loadAllModuleSettings(guildId) {
     const config = await apiFetch(`/guild/${guildId}/config`).catch(() => ({}));
     applyWelcomeConfig(config.welcome || {});
     applyTeamlisteConfig(config.teamliste || {});
-    applySimpleConfig('support', config.support || {});
     applyAutomodConfig(config.automod || {});
     applyTeamupdateConfig(config.teamupdate || {});
     applyMinigamesConfig(config.minigames || {});
@@ -584,8 +579,8 @@ async function loadAllModuleSettings(guildId) {
     applySimpleConfig('antinuke', config.antinuke || {});
     applyRoleNicknamesConfig(config.rolenicknames || {});
     applyReactionRolesConfig(config.reactionroles || {});
-    applyStatsConfig(config.stats || {});   // NEU: Statistik-Kanäle
-    applyLevelsConfig(config.levels || {}); // NEU: Level-System
+    applyStatsConfig(config.stats || {});
+    applyLevelsConfig(config.levels || {});
   } catch (err) { console.error('Fehler beim Laden der Konfiguration:', err); }
 }
 
@@ -696,7 +691,7 @@ function applyMinigamesConfig(cfg) {
 }
 
 // ============================================================
-// LEVEL-SYSTEM (NEU)
+// LEVEL-SYSTEM
 // ============================================================
 function applyLevelsConfig(cfg) {
   setChecked('levels-enabled', cfg.enabled ?? false);
@@ -894,7 +889,6 @@ async function sendReactionRolePanel(panelId) {
   }
 
   try {
-    // Erst speichern, damit der Server die aktuelle Konfiguration kennt
     await saveModuleSettings('reactionroles');
     const data = await apiFetch(`/guild/${state.activeGuildId}/reactionroles/send-panel`, {
       method: 'POST',
@@ -1071,13 +1065,13 @@ async function saveModuleSettings(moduleName) {
       case 'reactionroles':
         payload = { panels: collectReactionRolePanels() };
         break;
-      case 'stats':   // NEU
+      case 'stats':
         payload = {
           enabled: document.getElementById('stats-enabled').checked,
           channels: collectStatsChannels()
         };
         break;
-      case 'levels':   // NEU
+      case 'levels':
         payload = {
           enabled: document.getElementById('levels-enabled').checked,
           channelId: document.getElementById('levels-channel')?.value || '',
@@ -1121,7 +1115,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ============================================================
-// TICKET SYSTEM – GALAXYBOT-STYLE
+// TICKET SYSTEM
 // ============================================================
 
 const ticketGrid = document.getElementById('ticket-overview-grid');
@@ -1133,7 +1127,6 @@ let optionCounter = 0;
 let rolenickCounter = 0;
 let reactionRolePanelCounter = 0;
 
-// ---- Tab-Navigation ----
 function switchEditTab(tabName) {
   document.querySelectorAll('.edit-tab-btn').forEach(btn => btn.classList.remove('active'));
   document.querySelectorAll('.edit-tab-content').forEach(el => el.classList.add('hidden'));
@@ -1144,7 +1137,6 @@ function switchEditTab(tabName) {
   updateEditPreview();
 }
 
-// ---- Hilfsfunktionen ----
 function populateCategorySelects() {
   const ids = ['edit-ticket-overflow', 'edit-option-category'];
   ids.forEach(id => {
@@ -1192,7 +1184,6 @@ function getEditSelectedRoles(containerId) {
   return Array.from(el.querySelectorAll('.role-chip.selected')).map(c => c.dataset.roleId);
 }
 
-// ---- Buttons ----
 const TPE_SWATCHES = [
   { hex: '#5865f2', name: 'blue' },
   { hex: '#6d7079', name: 'gray' },
@@ -1282,7 +1273,6 @@ function collectButtons() {
   }));
 }
 
-// ---- Optionen (mit Support-Rollen) ----
 window.addOptionRow = function(data = null) {
   const container = document.getElementById('edit-options-list');
   if (!container) return;
@@ -1335,7 +1325,6 @@ function collectOptions() {
   });
 }
 
-// ---- Farb-Swatches (Embed-Tab) ----
 window.tpeSelectPanelColor = function(hex) {
   const colorInput = document.getElementById('edit-panel-color');
   const hexInput = document.getElementById('edit-panel-color-hex');
@@ -1347,7 +1336,6 @@ window.tpeSelectPanelColor = function(hex) {
   updateEditPreview();
 };
 
-// ---- Live-Vorschau (Edit) ----
 function updateEditPreview() {
   const preview = document.getElementById('edit-embed-preview');
   if (!preview) return;
@@ -1380,7 +1368,6 @@ function updateEditPreview() {
   }
 }
 
-// ---- Panel in Discord senden ----
 async function sendPanelToChannel(channelId, panelIndex) {
   if (!state.activeGuildId) { showToast('Kein Server ausgewählt.', 'error'); return; }
   if (!channelId) { showToast('Bitte wähle einen Kanal aus.', 'error'); return; }
@@ -1401,7 +1388,6 @@ async function sendPanelToChannel(channelId, panelIndex) {
   }
 }
 
-// ---- Übersicht rendern (GalaxyBot-Style) ----
 async function renderTicketOverview() {
   if (!ticketGrid) return;
   if (!state.activeGuildId) {
@@ -1429,7 +1415,6 @@ async function renderTicketOverview() {
       return;
     }
 
-    // Statistik-Leiste
     const activeCount = panels.filter(p => p.enabled !== false).length;
     const optionTotal = panels.reduce((sum, p) => sum + (p.options || []).length, 0);
     const statsHtml = `
@@ -1440,7 +1425,6 @@ async function renderTicketOverview() {
       </div>
     `;
 
-    // Toolbar
     const toolbarHtml = `
       <div class="ticket-toolbar">
         <label>Panel:</label>
@@ -1507,7 +1491,6 @@ async function renderTicketOverview() {
   }
 }
 
-// ---- Ticket löschen ----
 window.deleteTicketOption = async function(index) {
   if (!confirm('Möchtest du dieses Panel wirklich löschen?')) return;
   try {
@@ -1523,11 +1506,9 @@ window.deleteTicketOption = async function(index) {
   }
 };
 
-// ---- Neues Ticket / Bearbeiten ----
 window.openAddTicket = function() { editingIndex = null; showEditView(null); };
 window.openEditView = function(index) { editingIndex = index; showEditView(index); };
 
-// ---- Bearbeitungsansicht ----
 async function showEditView(index) {
   document.getElementById('ticket-overview-container').classList.add('hidden');
   editContainer.classList.remove('hidden');
@@ -1576,7 +1557,6 @@ async function showEditView(index) {
   let html = `
     <div class="tpe">
 
-      <!-- Header: Zurück / Panel-Auswahl / Kanal + Senden -->
       <div class="tpe-header">
         <button class="tpe-back" onclick="closeEditView()" title="Zurück">←</button>
         <div class="tpe-header-titles">
@@ -1594,7 +1574,6 @@ async function showEditView(index) {
         </div>
       </div>
 
-      <!-- Tabs -->
       <div class="edit-tabs">
         <button class="edit-tab-btn active" data-edit-tab="general" onclick="switchEditTab('general')">Allgemein</button>
         <button class="edit-tab-btn" data-edit-tab="embed" onclick="switchEditTab('embed')">Embed</button>
@@ -1604,7 +1583,6 @@ async function showEditView(index) {
         <button class="edit-tab-btn" data-edit-tab="options" onclick="switchEditTab('options')">Optionen</button>
       </div>
 
-      <!-- TAB: Allgemein -->
       <div id="edit-tab-general" class="edit-tab-content">
 
         <div class="tpe-card">
@@ -1639,13 +1617,12 @@ async function showEditView(index) {
             <small>Logs und Transkripte werden hier gesendet.</small>
           </div>
           <div class="form-group">
-            <small>ℹ️ Die Kategorie für Tickets legst du pro Option im Tab „Optionen" fest – jede Dropdown-Option kann eine eigene Kategorie haben.</small>
+            <small>ℹ️ Die Kategorie für Tickets legst du pro Option im Tab „Optionen“ fest – jede Dropdown-Option kann eine eigene Kategorie haben.</small>
           </div>
         </div>
 
       </div>
 
-      <!-- TAB: Embed -->
       <div id="edit-tab-embed" class="edit-tab-content hidden">
 
         <div class="tpe-card">
@@ -1693,7 +1670,6 @@ async function showEditView(index) {
 
       </div>
 
-      <!-- TAB: Nachrichten -->
       <div id="edit-tab-messages" class="edit-tab-content hidden">
 
         <div class="tpe-card">
@@ -1730,7 +1706,6 @@ async function showEditView(index) {
 
       </div>
 
-      <!-- TAB: Berechtigungen -->
       <div id="edit-tab-roles" class="edit-tab-content hidden">
 
         <div class="tpe-card">
@@ -1760,7 +1735,6 @@ async function showEditView(index) {
 
       </div>
 
-      <!-- TAB: Fortgeschritten -->
       <div id="edit-tab-advanced" class="edit-tab-content hidden">
 
         <div class="tpe-card">
@@ -1819,7 +1793,6 @@ async function showEditView(index) {
 
       </div>
 
-      <!-- TAB: Optionen -->
       <div id="edit-tab-options" class="edit-tab-content hidden">
 
         <div class="tpe-card">
@@ -1831,7 +1804,6 @@ async function showEditView(index) {
 
       </div>
 
-      <!-- Speichern -->
       <div class="tpe-footer">
         <button class="btn btn-primary" onclick="saveEditView()">💾 Speichern</button>
         <button class="btn btn-secondary" onclick="closeEditView()">Abbrechen</button>
@@ -1842,7 +1814,6 @@ async function showEditView(index) {
 
   editContent.innerHTML = html;
 
-  // ---- Befüllen ----
   populateCategorySelects();
 
   renderEditRoleChips('edit-support-roles', data.supportRoles || []);
@@ -1891,7 +1862,6 @@ async function showEditView(index) {
   }
 }
 
-// ---- Bearbeitungsansicht schließen ----
 window.closeEditView = function() {
   editContainer.classList.add('hidden');
   document.getElementById('ticket-overview-container').classList.remove('hidden');
@@ -1942,7 +1912,7 @@ async function sendVerificationPanel() {
 }
 
 // ============================================================
-// NEUE STATISTIK-FUNKTIONEN
+// STATISTIK-FUNKTIONEN
 // ============================================================
 let statsChannelCounter = 0;
 
@@ -2030,6 +2000,254 @@ function applyStatsConfig(cfg) {
     addStatsChannel();
   } else {
     channels.forEach(ch => addStatsChannel(ch));
+  }
+}
+
+// ============================================================
+// 🆕 BOT CONTROL FUNKTIONEN
+// ============================================================
+function renderBotChannelSelect() {
+  const select = document.getElementById('bot-channel');
+  if (!select) return;
+  const textChannels = state.guildChannels.filter(c => c.type === 0);
+  if (textChannels.length === 0) {
+    select.innerHTML = `<option value="">Keine Textkanäle</option>`;
+    return;
+  }
+  select.innerHTML = textChannels.map(c => `<option value="${c.id}"># ${escapeHtml(c.name)}</option>`).join('');
+}
+
+let botEmbedCounter = 0;
+let botButtonCounter = 0;
+
+function addBotEmbed(data = null) {
+  const container = document.getElementById('bot-embeds-list');
+  if (!container) return;
+  const idx = ++botEmbedCounter;
+  const row = document.createElement('div');
+  row.className = 'option-row';
+  row.id = `bot-embed-${idx}`;
+  row.innerHTML = `
+    <input type="text" placeholder="Titel" class="bot-embed-title" value="${data?.title || ''}" style="flex:1;">
+    <input type="text" placeholder="Beschreibung" class="bot-embed-desc" value="${data?.description || ''}" style="flex:2;">
+    <input type="color" class="bot-embed-color" value="${data?.color || '#5865f2'}" style="width:40px;">
+    <input type="text" placeholder="Bild-URL" class="bot-embed-image" value="${data?.image || ''}" style="flex:1;">
+    <button type="button" class="option-remove" onclick="document.getElementById('${row.id}').remove()">✕</button>
+  `;
+  container.appendChild(row);
+}
+
+function addBotButton(data = null) {
+  const container = document.getElementById('bot-buttons-list');
+  if (!container) return;
+  const idx = ++botButtonCounter;
+  const row = document.createElement('div');
+  row.className = 'option-row';
+  row.id = `bot-btn-${idx}`;
+  row.innerHTML = `
+    <input type="text" placeholder="Label" class="bot-btn-label" value="${data?.label || ''}" style="flex:1;">
+    <select class="bot-btn-style" style="flex:1;">
+      <option value="1" ${data?.style === '1' ? 'selected' : ''}>Primary (Blau)</option>
+      <option value="2" ${data?.style === '2' ? 'selected' : ''}>Secondary (Grau)</option>
+      <option value="3" ${data?.style === '3' ? 'selected' : ''}>Success (Grün)</option>
+      <option value="4" ${data?.style === '4' ? 'selected' : ''}>Danger (Rot)</option>
+      <option value="5" ${data?.style === '5' ? 'selected' : ''}>Link (URL)</option>
+    </select>
+    <input type="text" placeholder="Custom-ID oder URL" class="bot-btn-custom" value="${data?.custom_id || ''}" style="flex:1.5;">
+    <button type="button" class="option-remove" onclick="document.getElementById('${row.id}').remove()">✕</button>
+  `;
+  container.appendChild(row);
+}
+
+function collectBotEmbeds() {
+  const rows = document.querySelectorAll('#bot-embeds-list .option-row');
+  return Array.from(rows).map(row => {
+    const title = row.querySelector('.bot-embed-title')?.value || '';
+    const description = row.querySelector('.bot-embed-desc')?.value || '';
+    const color = row.querySelector('.bot-embed-color')?.value || '#5865f2';
+    const image = row.querySelector('.bot-embed-image')?.value || '';
+    const embed = { color: parseInt(color.replace('#',''),16) };
+    if (title) embed.title = title;
+    if (description) embed.description = description;
+    if (image) embed.image = { url: image };
+    return embed;
+  }).filter(e => e.title || e.description || e.image);
+}
+
+function collectBotButtons() {
+  const rows = document.querySelectorAll('#bot-buttons-list .option-row');
+  return Array.from(rows).map(row => {
+    const label = row.querySelector('.bot-btn-label')?.value || '';
+    const style = parseInt(row.querySelector('.bot-btn-style')?.value || '1');
+    const custom_id = row.querySelector('.bot-btn-custom')?.value || '';
+    if (!label) return null;
+    const btn = { label, style };
+    if (style === 5) {
+      btn.url = custom_id;
+    } else {
+      btn.custom_id = custom_id || `btn_${Date.now()}`;
+    }
+    return btn;
+  }).filter(Boolean);
+}
+
+async function sendBotMessage() {
+  const channelId = document.getElementById('bot-channel')?.value;
+  if (!channelId) { showToast('Bitte wähle einen Kanal.', 'error'); return; }
+  const content = document.getElementById('bot-content')?.value || '';
+  const embeds = collectBotEmbeds();
+  const components = collectBotButtons();
+
+  if (!content && embeds.length === 0 && components.length === 0) {
+    showToast('Bitte gib Text, Embed(s) oder Button(s) ein.', 'error');
+    return;
+  }
+
+  try {
+    const response = await apiFetch(`/guild/${state.activeGuildId}/bot/send`, {
+      method: 'POST',
+      body: JSON.stringify({ channelId, content, embeds, components: components.length ? [{ type: 1, components }] : undefined })
+    });
+    if (response?.success) {
+      showToast('Nachricht gesendet!', 'success');
+      loadBotMessages();
+      document.getElementById('bot-content').value = '';
+      document.getElementById('bot-embeds-list').innerHTML = '';
+      document.getElementById('bot-buttons-list').innerHTML = '';
+      botEmbedCounter = 0;
+      botButtonCounter = 0;
+    } else {
+      showToast(response?.error || 'Fehler beim Senden.', 'error');
+    }
+  } catch (err) {
+    showToast(`Fehler: ${err.message}`, 'error');
+  }
+}
+
+// Diese Variable speichert die aktuell zu bearbeitende Nachrichten-ID
+let currentEditMessageId = null;
+
+async function loadBotMessages() {
+  const channelId = document.getElementById('bot-channel')?.value;
+  if (!channelId) { showToast('Bitte wähle einen Kanal.', 'error'); return; }
+  const list = document.getElementById('bot-messages-list');
+  list.innerHTML = '<span class="loading-spinner"></span> Lade Nachrichten...';
+
+  try {
+    const messages = await apiFetch(`/guild/${state.activeGuildId}/bot/messages?channelId=${channelId}&limit=20`);
+    if (!messages || messages.length === 0) {
+      list.innerHTML = '<span class="chip-empty">Keine Bot-Nachrichten in diesem Kanal gefunden.</span>';
+      return;
+    }
+    let html = '<div style="display:flex;flex-direction:column;gap:8px;">';
+    messages.forEach(msg => {
+      const embedPreview = msg.embeds && msg.embeds.length > 0
+        ? `<div style="background:var(--bg-base);border-left:4px solid #${msg.embeds[0].color?.toString(16).padStart(6,'0') || 'ffffff'};padding:6px 10px;border-radius:4px;font-size:0.75rem;margin-top:4px;">
+            ${msg.embeds[0].title ? `<strong>${escapeHtml(msg.embeds[0].title)}</strong>` : ''}
+            ${msg.embeds[0].description ? `<div>${escapeHtml(msg.embeds[0].description)}</div>` : ''}
+           </div>`
+        : '';
+      html += `
+        <div style="background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:8px;padding:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span style="font-size:0.7rem;color:var(--text-muted);">ID: ${msg.id}</span>
+            <span style="font-size:0.65rem;color:var(--text-dim);">${new Date(msg.timestamp).toLocaleString()}</span>
+          </div>
+          <div style="font-size:0.85rem;word-break:break-word;">${escapeHtml(msg.content || '')}</div>
+          ${embedPreview}
+          <div style="margin-top:6px;">
+            <button class="btn btn-secondary" style="font-size:0.65rem;padding:4px 10px;" onclick="editBotMessageById('${msg.id}')">✏️ Bearbeiten</button>
+          </div>
+        </div>
+      `;
+    });
+    html += '</div>';
+    list.innerHTML = html;
+  } catch (err) {
+    list.innerHTML = `<span class="chip-empty" style="color:#ef4444;">Fehler: ${err.message}</span>`;
+  }
+}
+
+function editBotMessageById(messageId) {
+  currentEditMessageId = messageId;
+  // Suche die Nachricht in der Liste (oder wir laden sie nochmal einzeln – vereinfacht: wir füllen die Felder manuell)
+  // Da wir die Inhalte nicht separat speichern, laden wir die Nachrichtenliste neu und extrahieren die gewählte Nachricht.
+  // Alternative: Wir machen es einfacher und füllen die Felder nicht automatisch, sondern der Nutzer muss sie manuell eintragen.
+  // Ich fülle die Felder mit den Daten aus der aktuellen Liste.
+  const list = document.getElementById('bot-messages-list');
+  const items = list.querySelectorAll('div[style*="background:var(--bg-surface)"]');
+  let target = null;
+  items.forEach(el => {
+    if (el.textContent.includes(messageId)) {
+      target = el;
+    }
+  });
+  if (!target) {
+    showToast('Nachricht nicht in der Liste gefunden. Bitte lade neu.', 'error');
+    return;
+  }
+  // Extrahiere Inhalt
+  const contentDiv = target.querySelector('div[style*="font-size:0.85rem"]');
+  const content = contentDiv ? contentDiv.textContent : '';
+  document.getElementById('bot-content').value = content;
+
+  // Embed extrahieren (vereinfacht)
+  const embedDiv = target.querySelector('div[style*="border-left:4px solid"]');
+  if (embedDiv) {
+    const title = embedDiv.querySelector('strong')?.textContent || '';
+    const desc = embedDiv.querySelector('div:not(:first-child)')?.textContent || '';
+    // Farbe aus border-left parsen
+    const color = embedDiv.style.borderLeftColor || '#5865f2';
+    // Wir löschen alle existierenden Embeds und fügen ein neues hinzu
+    document.getElementById('bot-embeds-list').innerHTML = '';
+    addBotEmbed({ title, description: desc, color });
+  } else {
+    document.getElementById('bot-embeds-list').innerHTML = '';
+  }
+
+  // Buttons können nicht einfach aus der Liste extrahiert werden – wir lassen sie leer.
+  document.getElementById('bot-buttons-list').innerHTML = '';
+
+  // Hinweis anzeigen
+  showToast(`Bearbeite Nachricht ${messageId}`, 'success');
+  document.querySelector('#mod-bot .panel-card:last-child').scrollIntoView({ behavior: 'smooth' });
+}
+
+async function editBotMessage() {
+  if (!currentEditMessageId) {
+    showToast('Keine Nachricht zum Bearbeiten ausgewählt. Klicke zuerst auf "Bearbeiten" in der Liste.', 'error');
+    return;
+  }
+  const channelId = document.getElementById('bot-channel')?.value;
+  if (!channelId) { showToast('Bitte wähle einen Kanal.', 'error'); return; }
+
+  const content = document.getElementById('bot-content')?.value || '';
+  const embeds = collectBotEmbeds();
+  const components = collectBotButtons();
+
+  try {
+    const response = await apiFetch(`/guild/${state.activeGuildId}/bot/edit`, {
+      method: 'POST',
+      body: JSON.stringify({
+        channelId,
+        messageId: currentEditMessageId,
+        content,
+        embeds,
+        components: components.length ? [{ type: 1, components }] : undefined
+      })
+    });
+    if (response?.success) {
+      showToast('Nachricht bearbeitet!', 'success');
+      currentEditMessageId = null;
+      loadBotMessages();
+      document.getElementById('bot-content').value = '';
+      document.getElementById('bot-embeds-list').innerHTML = '';
+      document.getElementById('bot-buttons-list').innerHTML = '';
+    } else {
+      showToast(response?.error || 'Fehler beim Bearbeiten.', 'error');
+    }
+  } catch (err) {
+    showToast(`Fehler: ${err.message}`, 'error');
   }
 }
 
