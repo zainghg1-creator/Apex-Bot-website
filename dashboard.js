@@ -576,11 +576,12 @@ async function loadAllModuleSettings(guildId) {
     applyAutomodConfig(config.automod || {});
     applyTeamupdateConfig(config.teamupdate || {});
     applyMinigamesConfig(config.minigames || {});
-    applySimpleConfig('stats', config.stats || {});
+    applySimpleConfig('stats', config.stats || {});        // bleibt für Basiseinstellungen
     applyVerificationConfig(config.verification || {});
     applySimpleConfig('antinuke', config.antinuke || {});
     applyRoleNicknamesConfig(config.rolenicknames || {});
     applyReactionRolesConfig(config.reactionroles || {});
+    applyStatsConfig(config.stats || {});                  // NEU: Statistik-Kanäle
   } catch (err) { console.error('Fehler beim Laden der Konfiguration:', err); }
 }
 
@@ -1050,6 +1051,12 @@ async function saveModuleSettings(moduleName) {
         break;
       case 'reactionroles':
         payload = { panels: collectReactionRolePanels() };
+        break;
+      case 'stats':   // NEU
+        payload = {
+          enabled: document.getElementById('stats-enabled').checked,
+          channels: collectStatsChannels()
+        };
         break;
       default:
         const enabledEl = document.getElementById(`${moduleName}-enabled`);
@@ -1882,6 +1889,98 @@ async function sendVerificationPanel() {
     }
   } catch (err) {
     showToast(`Fehler: ${err.message}`, 'error');
+  }
+}
+
+// ============================================================
+// NEUE STATISTIK-FUNKTIONEN
+// ============================================================
+let statsChannelCounter = 0;
+
+function addStatsChannel(data = null) {
+  const container = document.getElementById('stats-channels-list');
+  if (!container) return;
+  const id = (data && data.id) || `stats-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+  const rowId = `stats-${++statsChannelCounter}`;
+  const row = document.createElement('div');
+  row.className = 'panel-card';
+  row.id = rowId;
+  row.dataset.id = id;
+  row.style.marginBottom = '12px';
+
+  const categoryId = data?.categoryId || '';
+  const channelName = data?.channelName || '📊 {stat}';
+  const statType = data?.statType || 'members';
+  const roleId = data?.roleId || '';
+
+  row.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+      <span style="font-weight:700;">Statistik-Kanal</span>
+      <button type="button" class="option-remove" onclick="document.getElementById('${rowId}').remove()">✕</button>
+    </div>
+    <input type="hidden" class="stats-id" value="${escapeHtml(id)}">
+    <div class="form-group">
+      <label>Kategorie</label>
+      <select class="stats-category">
+        ${state.guildChannels.filter(c => c.type === 4).map(c =>
+          `<option value="${c.id}" ${c.id === categoryId ? 'selected' : ''}>📁 ${escapeHtml(c.name)}</option>`
+        ).join('') || '<option value="">Keine Kategorien gefunden</option>'}
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Kanalname (Platzhalter: <code>{stat}</code> wird durch den Wert ersetzt)</label>
+      <input type="text" class="stats-name" placeholder="📊 {stat}" value="${escapeHtml(channelName)}">
+    </div>
+    <div class="form-group">
+      <label>Statistik-Typ</label>
+      <select class="stats-type" onchange="toggleStatsRoleSelect('${rowId}')">
+        <option value="members" ${statType === 'members' ? 'selected' : ''}>Mitglieder (ohne Bots)</option>
+        <option value="bots" ${statType === 'bots' ? 'selected' : ''}>Bots</option>
+        <option value="roles" ${statType === 'roles' ? 'selected' : ''}>Rollen</option>
+        <option value="boosts" ${statType === 'boosts' ? 'selected' : ''}>Boosts</option>
+        <option value="role_count" ${statType === 'role_count' ? 'selected' : ''}>Anzahl einer bestimmten Rolle</option>
+      </select>
+    </div>
+    <div class="form-group stats-role-group" style="${statType === 'role_count' ? '' : 'display:none;'}">
+      <label>Rolle</label>
+      <select class="stats-role">
+        ${state.guildRoles.map(r =>
+          `<option value="${r.id}" ${r.id === roleId ? 'selected' : ''}>@${escapeHtml(r.name)}</option>`
+        ).join('') || '<option value="">Keine Rollen gefunden</option>'}
+      </select>
+    </div>
+  `;
+  container.appendChild(row);
+}
+
+function toggleStatsRoleSelect(rowId) {
+  const row = document.getElementById(rowId);
+  if (!row) return;
+  const type = row.querySelector('.stats-type').value;
+  const group = row.querySelector('.stats-role-group');
+  group.style.display = type === 'role_count' ? '' : 'none';
+}
+
+function collectStatsChannels() {
+  const rows = document.querySelectorAll('#stats-channels-list .panel-card');
+  return Array.from(rows).map(row => ({
+    id: row.dataset.id,
+    categoryId: row.querySelector('.stats-category').value,
+    channelName: row.querySelector('.stats-name').value,
+    statType: row.querySelector('.stats-type').value,
+    roleId: row.querySelector('.stats-role')?.value || ''
+  }));
+}
+
+function applyStatsConfig(cfg) {
+  setChecked('stats-enabled', cfg.enabled ?? false);
+  const container = document.getElementById('stats-channels-list');
+  if (container) container.innerHTML = '';
+  const channels = cfg.channels || [];
+  if (channels.length === 0) {
+    addStatsChannel();
+  } else {
+    channels.forEach(ch => addStatsChannel(ch));
   }
 }
 
