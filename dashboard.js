@@ -294,7 +294,7 @@ async function loadRolesAndChannels(guildId) {
 }
 
 function renderAllSelects() {
-  const selectIds = ['join-channel', 'leave-channel', 'teamliste-channel', 'support-channel', 'automod-log-channel', 'teamupdate-channel', 'verification-channel', 'minigames-counting-channel'];
+  const selectIds = ['join-channel', 'leave-channel', 'teamliste-channel', 'support-channel', 'automod-log-channel', 'teamupdate-channel', 'verification-channel', 'minigames-counting-channel', 'levels-channel'];
   selectIds.forEach(id => renderChannelSelect(id, 0));
   TEAMUPDATE_COMMANDS.forEach(cmd => renderChannelSelect(`cmd-${cmd}-channel`, 0));
 }
@@ -552,7 +552,11 @@ const updateEmbedPreview = debounce((prefix) => {
   const colorInput = document.getElementById(`${prefix}-color`);
   const preview = document.getElementById(`${prefix}-preview`);
 
-  if (previewTitle && titleEl) previewTitle.textContent = titleEl.value || titleEl.placeholder;
+  if (previewTitle && titleEl) {
+    const titleVal = titleEl.value.trim();
+    previewTitle.textContent = titleVal;
+    previewTitle.classList.toggle('hidden', !titleVal);
+  }
   if (previewDesc && descEl) previewDesc.textContent = descEl.value || descEl.placeholder;
   if (previewImage) {
     const val = imageInput?.dataset.value;
@@ -581,6 +585,7 @@ async function loadAllModuleSettings(guildId) {
     applyRoleNicknamesConfig(config.rolenicknames || {});
     applyReactionRolesConfig(config.reactionroles || {});
     applyStatsConfig(config.stats || {});   // NEU: Statistik-Kanäle
+    applyLevelsConfig(config.levels || {}); // NEU: Level-System
   } catch (err) { console.error('Fehler beim Laden der Konfiguration:', err); }
 }
 
@@ -688,6 +693,23 @@ function applyMinigamesConfig(cfg) {
   const c = cfg.counting || {};
   setChecked('minigames-counting-enabled', c.enabled ?? false);
   setSelectValue('minigames-counting-channel', c.channelId || '');
+}
+
+// ============================================================
+// LEVEL-SYSTEM (NEU)
+// ============================================================
+function applyLevelsConfig(cfg) {
+  setChecked('levels-enabled', cfg.enabled ?? false);
+  setValue('levels-xp-min', cfg.xpMin ?? 15);
+  setValue('levels-xp-max', cfg.xpMax ?? 25);
+  setValue('levels-cooldown', cfg.cooldownSeconds ?? 60);
+  setValue('levels-base-xp', cfg.baseXp ?? 100);
+  setValue('levels-xp-increment', cfg.xpIncrement ?? 50);
+  setValue('levels-message', cfg.levelUpMessage ?? '🎉 {user} hat **Level {level}** erreicht!');
+  setSelectValue('levels-channel', cfg.channelId || '');
+  const voice = cfg.voice || {};
+  setChecked('levels-voice-enabled', voice.enabled ?? false);
+  setValue('levels-voice-xp', voice.xpPerMinute ?? 10);
 }
 
 function toggleCommandRoles(cmd) {
@@ -953,7 +975,6 @@ async function saveModuleSettings(moduleName) {
           enabled: document.getElementById('edit-panel-enabled')?.checked ?? true,
           panelName: document.getElementById('edit-panel-name')?.value || '',
           supportRoles: getEditSelectedRoles('edit-support-roles') || [],
-          categoryId: document.getElementById('edit-ticket-category')?.value || '',
           logChannelId: document.getElementById('edit-log-channel')?.value || '',
           overflowEnabled: document.getElementById('edit-overflow-enabled')?.checked ?? false,
           overflowCategories: getSelectedOptions('edit-ticket-overflow') || [],
@@ -1056,6 +1077,22 @@ async function saveModuleSettings(moduleName) {
           channels: collectStatsChannels()
         };
         break;
+      case 'levels':   // NEU
+        payload = {
+          enabled: document.getElementById('levels-enabled').checked,
+          channelId: document.getElementById('levels-channel')?.value || '',
+          xpMin: parseInt(document.getElementById('levels-xp-min')?.value) || 15,
+          xpMax: parseInt(document.getElementById('levels-xp-max')?.value) || 25,
+          cooldownSeconds: parseInt(document.getElementById('levels-cooldown')?.value) || 60,
+          baseXp: parseInt(document.getElementById('levels-base-xp')?.value) || 100,
+          xpIncrement: parseInt(document.getElementById('levels-xp-increment')?.value) || 50,
+          levelUpMessage: document.getElementById('levels-message')?.value || '🎉 {user} hat **Level {level}** erreicht!',
+          voice: {
+            enabled: document.getElementById('levels-voice-enabled')?.checked ?? false,
+            xpPerMinute: parseInt(document.getElementById('levels-voice-xp')?.value) || 10
+          }
+        };
+        break;
       default:
         const enabledEl = document.getElementById(`${moduleName}-enabled`);
         const channelEl = document.getElementById(`${moduleName}-channel`) || document.getElementById(`${moduleName}-log-channel`);
@@ -1109,7 +1146,7 @@ function switchEditTab(tabName) {
 
 // ---- Hilfsfunktionen ----
 function populateCategorySelects() {
-  const ids = ['edit-ticket-category', 'edit-ticket-overflow', 'edit-option-category'];
+  const ids = ['edit-ticket-overflow', 'edit-option-category'];
   ids.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -1315,7 +1352,7 @@ function updateEditPreview() {
   const preview = document.getElementById('edit-embed-preview');
   if (!preview) return;
 
-  const title = document.getElementById('edit-panel-title')?.value || 'Support Center';
+  const title = document.getElementById('edit-panel-title')?.value?.trim() || '';
   const desc = document.getElementById('edit-panel-desc')?.value || 'Wähle eine Kategorie aus.';
   const color = document.getElementById('edit-panel-color')?.value || '#ffffff';
   const imageInput = document.getElementById('edit-image-input');
@@ -1325,7 +1362,10 @@ function updateEditPreview() {
   const descEl = preview.querySelector('.embed-preview-desc');
   const imgEl = preview.querySelector('.embed-preview-image');
 
-  if (titleEl) titleEl.textContent = title;
+  if (titleEl) {
+    titleEl.textContent = title;
+    titleEl.classList.toggle('hidden', !title);
+  }
   if (descEl) descEl.textContent = desc;
   preview.style.borderLeftColor = color;
 
@@ -1389,6 +1429,17 @@ async function renderTicketOverview() {
       return;
     }
 
+    // Statistik-Leiste
+    const activeCount = panels.filter(p => p.enabled !== false).length;
+    const optionTotal = panels.reduce((sum, p) => sum + (p.options || []).length, 0);
+    const statsHtml = `
+      <div class="ticket-stats">
+        <div class="ticket-stat accent"><div class="num">${panels.length}</div><div class="lbl">Panels</div></div>
+        <div class="ticket-stat ok"><div class="num">${activeCount}</div><div class="lbl">Aktiv</div></div>
+        <div class="ticket-stat"><div class="num">${optionTotal}</div><div class="lbl">Kategorien</div></div>
+      </div>
+    `;
+
     // Toolbar
     const toolbarHtml = `
       <div class="ticket-toolbar">
@@ -1407,7 +1458,7 @@ async function renderTicketOverview() {
       </div>
     `;
 
-    let html = toolbarHtml;
+    let html = statsHtml + toolbarHtml;
     html += `<div class="ticket-grid">`;
 
     panels.forEach((panel, index) => {
@@ -1416,11 +1467,15 @@ async function renderTicketOverview() {
       const categoryName = state.guildChannels.find(c => c.id === panel.categoryId)?.name || 'Keine Kategorie';
       const isActive = panel.enabled !== false;
       const optionCount = (panel.options || []).length;
+      const accent = isActive ? '#22c55e' : '#ef4444';
 
       html += `
-        <div class="ticket-card" style="border-left-color: ${isActive ? '#22c55e' : '#ef4444'};">
+        <div class="ticket-card" style="--ticket-accent: ${accent};">
           <div class="header">
-            <div class="title"><span class="emoji">${escapeHtml(emoji)}</span> ${escapeHtml(label)}</div>
+            <div class="title-row">
+              <div class="emoji-badge">${escapeHtml(emoji)}</div>
+              <div class="title">${escapeHtml(label)}</div>
+            </div>
             <span class="status-pill ${isActive ? 'active' : ''}">
               <span class="dot"></span> ${isActive ? 'Aktiv' : 'Inaktiv'}
             </span>
@@ -1584,9 +1639,7 @@ async function showEditView(index) {
             <small>Logs und Transkripte werden hier gesendet.</small>
           </div>
           <div class="form-group">
-            <label for="edit-ticket-category">Kategorie für Tickets</label>
-            <select id="edit-ticket-category"></select>
-            <small>Tickets werden in dieser Kategorie erstellt.</small>
+            <small>ℹ️ Die Kategorie für Tickets legst du pro Option im Tab „Optionen" fest – jede Dropdown-Option kann eine eigene Kategorie haben.</small>
           </div>
         </div>
 
@@ -1607,14 +1660,14 @@ async function showEditView(index) {
               </div>
             </div>
             <div class="embed-preview" id="edit-embed-preview" style="border-left-color:${data.color || '#6d5ef8'};">
-              <div class="embed-preview-title">${escapeHtml(data.title || 'Support Center')}</div>
+              <div class="embed-preview-title ${data.title ? '' : 'hidden'}">${escapeHtml(data.title || '')}</div>
               <div class="embed-preview-desc">${escapeHtml(data.description || 'Wähle eine Kategorie aus.')}</div>
               <img class="embed-preview-image ${data.image ? '' : 'hidden'}" src="${data.image || ''}">
             </div>
           </div>
           <div class="form-group">
             <label for="edit-panel-title">Titel</label>
-            <input type="text" id="edit-panel-title" value="${escapeHtml(data.title || 'Support Center')}" placeholder="Support Center" oninput="updateEditPreview()">
+            <input type="text" id="edit-panel-title" value="${escapeHtml(data.title || '')}" placeholder="Support Center" oninput="updateEditPreview()">
           </div>
           <div class="form-group">
             <label for="edit-panel-desc">Beschreibung</label>
@@ -1811,8 +1864,6 @@ async function showEditView(index) {
       ? textChannels.map(c => `<option value="${c.id}" ${c.id === data.logChannelId ? 'selected' : ''}># ${escapeHtml(c.name)}</option>`).join('')
       : `<option value="">Keine Textkanäle</option>`;
   }
-
-  if (data.categoryId) document.getElementById('edit-ticket-category').value = data.categoryId;
 
   if (data.overflowCategories) {
     const overflowSelect = document.getElementById('edit-ticket-overflow');
