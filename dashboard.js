@@ -294,7 +294,7 @@ async function loadRolesAndChannels(guildId) {
 }
 
 function renderAllSelects() {
-  const selectIds = ['join-channel', 'leave-channel', 'teamliste-channel', 'support-channel', 'moderation-log-channel', 'teamupdate-channel', 'verification-channel'];
+  const selectIds = ['join-channel', 'leave-channel', 'teamliste-channel', 'support-channel', 'moderation-log-channel', 'teamupdate-channel', 'verification-channel', 'minigames-counting-channel'];
   selectIds.forEach(id => renderChannelSelect(id, 0));
   TEAMUPDATE_COMMANDS.forEach(cmd => renderChannelSelect(`cmd-${cmd}-channel`, 0));
 }
@@ -541,6 +541,7 @@ async function loadAllModuleSettings(guildId) {
     applySimpleConfig('support', config.support || {});
     applySimpleConfig('moderation', config.moderation || {});
     applyTeamupdateConfig(config.teamupdate || {});
+    applyMinigamesConfig(config.minigames || {});
     applySimpleConfig('stats', config.stats || {});
     applyVerificationConfig(config.verification || {});
     applySimpleConfig('antinuke', config.antinuke || {});
@@ -593,6 +594,12 @@ function applyTeamupdateConfig(cfg) {
       renderRoleChips('cmdrole-teamwarn-stage4', stages[3] ? [stages[3]] : [], true);
     }
   });
+}
+
+function applyMinigamesConfig(cfg) {
+  const c = cfg.counting || {};
+  setChecked('minigames-counting-enabled', c.enabled ?? false);
+  setSelectValue('minigames-counting-channel', c.channelId || '');
 }
 
 function toggleCommandRoles(cmd) {
@@ -734,6 +741,14 @@ async function saveModuleSettings(moduleName) {
           color: document.getElementById('verification-color').value,
           image: document.getElementById('verification-image-input')?.dataset.value || '',
           buttonLabel: document.getElementById('verification-button-label').value
+        };
+        break;
+      case 'minigames':
+        payload = {
+          counting: {
+            enabled: document.getElementById('minigames-counting-enabled').checked,
+            channelId: document.getElementById('minigames-counting-channel').value
+          }
         };
         break;
       default:
