@@ -294,7 +294,7 @@ async function loadRolesAndChannels(guildId) {
 }
 
 function renderAllSelects() {
-  const selectIds = ['join-channel', 'leave-channel', 'teamliste-channel', 'support-channel', 'moderation-log-channel', 'teamupdate-channel', 'verification-channel', 'minigames-counting-channel'];
+  const selectIds = ['join-channel', 'leave-channel', 'teamliste-channel', 'support-channel', 'automod-log-channel', 'teamupdate-channel', 'verification-channel', 'minigames-counting-channel'];
   selectIds.forEach(id => renderChannelSelect(id, 0));
   TEAMUPDATE_COMMANDS.forEach(cmd => renderChannelSelect(`cmd-${cmd}-channel`, 0));
 }
@@ -343,6 +343,40 @@ function getSelectedRoleIds(containerId) {
   const el = document.getElementById(containerId);
   if (!el) return [];
   return Array.from(el.querySelectorAll('.role-chip.selected')).map(c => c.dataset.roleId);
+}
+
+// ============================================================
+// CHANNEL CHIPS (z.B. für Automod-Whitelist)
+// ============================================================
+function renderChannelChips(containerId, selectedIds = []) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const textChannels = state.guildChannels.filter(c => c.type === 0);
+  if (textChannels.length === 0) {
+    el.innerHTML = `<span class="chip-empty">Keine Textkanäle gefunden</span>`;
+    return;
+  }
+  const selectedSet = new Set(selectedIds);
+  el.innerHTML = textChannels.map(c => {
+    const isSelected = selectedSet.has(c.id);
+    return `<div class="role-chip ${isSelected ? 'selected' : ''}" data-channel-id="${c.id}" onclick="toggleChannelChip('${containerId}', '${c.id}')">
+      <span class="chip-icon">#</span>
+      <span class="chip-label">${escapeHtml(c.name)}</span>
+    </div>`;
+  }).join('');
+}
+
+function toggleChannelChip(containerId, channelId) {
+  const el = document.getElementById(containerId);
+  const chip = el.querySelector(`[data-channel-id="${channelId}"]`);
+  if (!chip) return;
+  chip.classList.toggle('selected');
+}
+
+function getSelectedChannelIds(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return [];
+  return Array.from(el.querySelectorAll('.role-chip.selected')).map(c => c.dataset.channelId);
 }
 
 // ============================================================
@@ -539,7 +573,7 @@ async function loadAllModuleSettings(guildId) {
     applyWelcomeConfig(config.welcome || {});
     applyTeamlisteConfig(config.teamliste || {});
     applySimpleConfig('support', config.support || {});
-    applySimpleConfig('moderation', config.moderation || {});
+    applyAutomodConfig(config.automod || {});
     applyTeamupdateConfig(config.teamupdate || {});
     applyMinigamesConfig(config.minigames || {});
     applySimpleConfig('stats', config.stats || {});
@@ -576,6 +610,58 @@ function applyWelcomeConfig(cfg) {
 function applyTeamlisteConfig(cfg) {
   setSelectValue('teamliste-channel', cfg.channelId || '');
   renderRoleChips('teamliste-roles', cfg.roles || []);
+}
+
+function applyAutomodConfig(cfg) {
+  setChecked('automod-enabled', cfg.enabled ?? false);
+  setSelectValue('automod-log-channel', cfg.logChannelId || '');
+
+  const spam = cfg.spam || {};
+  setChecked('automod-spam-enabled', spam.enabled ?? false);
+  setValue('automod-spam-max', spam.maxMessages ?? 5);
+  setValue('automod-spam-seconds', spam.perSeconds ?? 5);
+  setSelectValue('automod-spam-action', spam.action || 'delete');
+  setValue('automod-spam-timeout', spam.timeoutSeconds ?? 60);
+
+  const links = cfg.links || {};
+  setChecked('automod-links-enabled', links.enabled ?? false);
+  setSelectValue('automod-links-action', links.action || 'delete');
+  setValue('automod-links-timeout', links.timeoutSeconds ?? 60);
+
+  const whitelist = cfg.whitelist || {};
+  renderChannelChips('automod-whitelist-channels', whitelist.channelIds || []);
+  renderRoleChips('automod-whitelist-roles', whitelist.roleIds || []);
+
+  const userContainer = document.getElementById('automod-whitelist-users-list');
+  if (userContainer) userContainer.innerHTML = '';
+  const userIds = whitelist.userIds || [];
+  if (userIds.length === 0) {
+    addAutomodUserIdRow();
+  } else {
+    userIds.forEach(id => addAutomodUserIdRow(id));
+  }
+}
+
+let automodUserIdCounter = 0;
+window.addAutomodUserIdRow = function(value = '') {
+  const container = document.getElementById('automod-whitelist-users-list');
+  if (!container) return;
+  const rowId = `automod-uid-${++automodUserIdCounter}`;
+  const row = document.createElement('div');
+  row.className = 'option-row';
+  row.id = rowId;
+  row.innerHTML = `
+    <input type="text" placeholder="User-ID (z.B. 123456789012345678)" class="automod-uid-input" value="${escapeHtml(value)}" style="flex:1;">
+    <button type="button" class="option-remove" onclick="document.getElementById('${rowId}').remove()">✕</button>
+  `;
+  container.appendChild(row);
+};
+
+function collectAutomodUserIds() {
+  const inputs = document.querySelectorAll('#automod-whitelist-users-list .automod-uid-input');
+  return Array.from(inputs)
+    .map(el => el.value.trim())
+    .filter(v => /^\d{15,25}$/.test(v));
 }
 
 function applyTeamupdateConfig(cfg) {
@@ -752,6 +838,29 @@ async function saveModuleSettings(moduleName) {
         break;
       case 'teamliste':
         payload = { channelId: document.getElementById('teamliste-channel').value, roles: getSelectedRoleIds('teamliste-roles') };
+        break;
+      case 'automod':
+        payload = {
+          enabled: document.getElementById('automod-enabled').checked,
+          logChannelId: document.getElementById('automod-log-channel').value,
+          spam: {
+            enabled: document.getElementById('automod-spam-enabled').checked,
+            maxMessages: parseInt(document.getElementById('automod-spam-max').value) || 5,
+            perSeconds: parseInt(document.getElementById('automod-spam-seconds').value) || 5,
+            action: document.getElementById('automod-spam-action').value,
+            timeoutSeconds: parseInt(document.getElementById('automod-spam-timeout').value) || 60
+          },
+          links: {
+            enabled: document.getElementById('automod-links-enabled').checked,
+            action: document.getElementById('automod-links-action').value,
+            timeoutSeconds: parseInt(document.getElementById('automod-links-timeout').value) || 60
+          },
+          whitelist: {
+            channelIds: getSelectedChannelIds('automod-whitelist-channels'),
+            roleIds: getSelectedRoleIds('automod-whitelist-roles'),
+            userIds: collectAutomodUserIds()
+          }
+        };
         break;
       case 'teamupdate':
         payload = {
