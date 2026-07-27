@@ -106,14 +106,35 @@ function formatGuildCreatedDate(guildId) {
 // API FUNCTIONS
 // ============================================================
 async function apiFetch(endpoint, options = {}) {
-  const res = await fetch(`${CONFIG.API_BASE}${endpoint}`, {
-    ...options,
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
-  });
+  let res;
+  try {
+    res = await fetch(`${CONFIG.API_BASE}${endpoint}`, {
+      ...options,
+      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
+    });
+  } catch (networkErr) {
+    // fetch() selbst wirft nur bei Netzwerkfehlern/Timeouts - z.B. wenn die
+    // Verbindung abbricht, bevor überhaupt eine Antwort kommt.
+    throw new Error('Keine Verbindung zum Server. Bitte Internetverbindung prüfen und erneut versuchen.');
+  }
   if (!res.ok) {
     if (res.status === 401) { window.location.href = '/'; return null; }
-    const error = await res.json().catch(() => ({ error: 'unknown_error' }));
-    throw new Error(error.error || `HTTP ${res.status}`);
+    // Bei Plattform-Fehlern (z.B. Timeout, zu große Anfrage) antwortet der
+    // Server manchmal mit HTML statt JSON - dann klar sagen woran es liegt,
+    // statt nur "unknown_error" anzuzeigen.
+    let error;
+    try {
+      error = await res.json();
+    } catch {
+      if (res.status === 504 || res.status === 502) {
+        throw new Error('Server hat zu lange gebraucht (Zeitüberschreitung). Bitte erneut versuchen.');
+      }
+      if (res.status === 413) {
+        throw new Error('Anfrage zu groß (z.B. Bild). Bitte kleineres Bild verwenden.');
+      }
+      throw new Error(`Serverfehler (HTTP ${res.status}). Bitte erneut versuchen.`);
+    }
+    throw new Error(error.message || error.error || `HTTP ${res.status}`);
   }
   return res.json();
 }
@@ -339,6 +360,16 @@ function toggleRoleChip(containerId, roleId, singleSelect) {
   } else {
     chip.classList.toggle('selected');
   }
+}
+
+function filterRoleChips(containerId, query) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const q = query.trim().toLowerCase();
+  el.querySelectorAll('.role-chip').forEach(chip => {
+    const name = chip.textContent.trim().toLowerCase();
+    chip.style.display = !q || name.includes(q) ? '' : 'none';
+  });
 }
 
 function getSelectedRoleIds(containerId) {
