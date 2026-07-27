@@ -62,8 +62,8 @@ async function connectToDatabase() {
   if (!cachedConnection.promise) {
     cachedConnection.promise = mongoose.connect(MONGODB_URI, {
       dbName: 'apex',
-      serverSelectionTimeoutMS: 15000,
-      socketTimeoutMS: 60000,
+      serverSelectionTimeoutMS: 8000,
+      socketTimeoutMS: 20000,
       tls: true,
       retryWrites: true
     }).then(m => m);
@@ -512,6 +512,14 @@ async function syncStatsChannelsNow(guildId, statsData) {
   return { ...statsData, channels };
 }
 
+function withTimeout(promise, ms, label) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`timeout:${label}`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 app.post('/api/guild/:guildId/config/:module', requireAuth, async (req, res) => {
   const { guildId, module } = req.params;
   if (!ALLOWED_MODULES.includes(module)) {
@@ -520,13 +528,20 @@ app.post('/api/guild/:guildId/config/:module', requireAuth, async (req, res) => 
   try {
     let moduleData = req.body;
     if (module === 'stats') {
-      moduleData = await syncStatsChannelsNow(guildId, moduleData);
+      moduleData = await withTimeout(syncStatsChannelsNow(guildId, moduleData), 8000, 'stats_sync');
     }
-    await saveModuleConfig(guildId, module, moduleData);
+    // Timeout hier bewusst UNTER dem Vercel Function-Limit halten: schlägt die
+    // DB-Verbindung fehl (z.B. kalter Start), antworten wir noch selbst mit
+    // JSON, statt dass die Plattform die Function abwürgt und eine HTML-
+    // Fehlerseite zurückgibt (die das Dashboard nicht parsen kann).
+    await withTimeout(saveModuleConfig(guildId, module, moduleData), 8000, 'db_save');
     res.json({ success: true, data: moduleData });
   } catch (err) {
     console.error('Fehler beim Speichern der Konfiguration:', err);
-    res.status(500).json({ error: 'server_error' });
+    if (String(err.message).startsWith('timeout:')) {
+      return res.status(504).json({ error: 'db_timeout', message: 'Datenbank hat nicht rechtzeitig geantwortet. Bitte erneut versuchen.' });
+    }
+    res.status(500).json({ error: 'server_error', message: err.message });
   }
 });
 
@@ -1226,6 +1241,33 @@ app.get('/api/guild/:guildId/bot/messages', requireAuth, requireGuildAdmin, asyn
     console.error('Fehler beim Abrufen der Nachrichten:', err);
     res.status(500).json({ error: 'Interner Serverfehler: ' + err.message });
   }
+});
+
+// ============================================================
+// GLOBAL ERROR HANDLER
+// ============================================================
+// Fängt alles ab, was in den Routen oben durchrutscht (z.B. kaputtes
+// JSON-Body, zu große Requests, unerwartete Exceptions) und antwortet
+// IMMER mit JSON. Ohne das hier antwortet Express/Vercel bei so einem
+// Fehler mit einer HTML-Fehlerseite -> das Dashboard kann die Antwort
+// nicht parsen und zeigt nur "Fehler: unknown_error" an, egal was
+// eigentlich schiefging.
+app.use((err, req, res, next) => {
+  console.error('❌ Unerwarteter Serverfehler:', err);
+  if (res.headersSent) return next(err);
+  const status = err.status || err.statusCode || 500;
+  if (err.type === 'entity.too.large' || err.status === 413) {
+    return res.status(413).json({ error: 'payload_too_large', message: 'Die gesendeten Daten sind zu groß (z.B. Bild).' });
+  }
+  if (err.type === 'entity.parse.failed') {
+    return res.status(400).json({ error: 'invalid_json', message: 'Ungültige Anfrage.' });
+  }
+  res.status(status).json({ error: 'server_error', message: err.message || 'Unbekannter Serverfehler' });
+});
+
+// 404 für unbekannte /api Routen -> auch als JSON statt HTML
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: 'not_found' });
 });
 
 // ============================================================
