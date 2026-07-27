@@ -581,6 +581,7 @@ async function loadAllModuleSettings(guildId) {
     applyStatsConfig(config.stats || {});
     applyLevelsConfig(config.levels || {});
     applyStatusEmbedConfig(config.statusembed || {});
+    applyApplicationsConfig(config.applications || {});
   } catch (err) { console.error('Fehler beim Laden der Konfiguration:', err); }
 }
 
@@ -915,6 +916,164 @@ async function sendReactionRolePanel(panelId) {
   }
 }
 
+function generateId() {
+  if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+  return `id-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function applyApplicationsConfig(cfg) {
+  const container = document.getElementById('applications-list');
+  if (container) container.innerHTML = '';
+  const forms = cfg.forms || [];
+  forms.forEach(form => addApplicationForm(form));
+}
+
+window.addApplicationForm = function(data = null) {
+  const container = document.getElementById('applications-list');
+  if (!container) return;
+  const panelId = `app-form-${++applicationFormCounter}`;
+  const wrapper = document.createElement('div');
+  wrapper.className = 'panel-card';
+  wrapper.id = panelId;
+  wrapper.dataset.formId = (data && data.id) || generateId();
+  wrapper.dataset.messageId = (data && data.messageId) || '';
+
+  const color = (data && data.color) || '#2b2d31';
+  wrapper.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:8px; flex-wrap:wrap;">
+      <h3 style="font-size:0.95rem; font-weight:700; margin:0;">📝 Bewerbung</h3>
+      <button type="button" class="option-remove" onclick="document.getElementById('${panelId}').remove()">✕ Entfernen</button>
+    </div>
+    <div class="form-group">
+      <div class="switch-row">
+        <label>Aktiv (Bewerbungen können abgeschickt werden)</label>
+        <label class="switch"><input type="checkbox" class="app-enabled" ${(!data || data.enabled !== false) ? 'checked' : ''}><span class="switch-slider"></span></label>
+      </div>
+    </div>
+    <div class="form-group"><label>Name (intern)</label><input type="text" class="app-name" placeholder="z.B. Team-Bewerbung" value="${data ? escapeHtml(data.name || '') : ''}"></div>
+    <div class="form-group"><label>Kanal für den Bewerben-Button</label><select class="app-panel-channel"></select></div>
+    <div class="form-group"><label>Titel der Panel-Nachricht</label><input type="text" class="app-title" placeholder="Team-Bewerbung" value="${data ? escapeHtml(data.title || '') : ''}"></div>
+    <div class="form-group"><label>Beschreibung der Panel-Nachricht</label><textarea class="app-description" rows="3" placeholder="Klicke auf den Button, um dich zu bewerben. Der Ablauf läuft über Direktnachrichten.">${data ? escapeHtml(data.description || '') : ''}</textarea></div>
+    <div class="form-group"><label>Button-Text</label><input type="text" class="app-button-label" maxlength="80" placeholder="Bewerben" value="${data ? escapeHtml(data.buttonLabel || '') : ''}"></div>
+    <div class="form-group">
+      <label>Farbe</label>
+      <div class="color-row">
+        <input type="color" class="app-color" value="${color}" oninput="this.nextElementSibling.value=this.value;">
+        <input type="text" class="app-color-hex" value="${color}" oninput="this.previousElementSibling.value=this.value;">
+      </div>
+    </div>
+    <div class="form-group"><label>Ergebnis-Kanal (fertige Bewerbungen)</label><select class="app-result-channel"></select></div>
+    <div class="form-group"><label>Rolle pingen (optional)</label><select class="app-role"><option value="">Keine Rolle</option></select></div>
+    <div class="form-group">
+      <label>Fragen</label>
+      <small style="display:block; margin-bottom:6px;">Diese Fragen werden dem Bewerber nacheinander per DM gestellt.</small>
+      <div class="app-questions-list"></div>
+      <button type="button" class="add-option-btn" onclick="addApplicationQuestion(this)">+ Frage hinzufügen</button>
+    </div>
+    <div class="form-action">
+      <button type="button" class="btn btn-secondary" onclick="sendApplicationPanel('${panelId}')">📤 Nachricht senden</button>
+      <span class="app-send-status" style="align-self:center; font-size:0.8rem; color:var(--text-muted);">${data && data.messageId ? '✓ Gesendet' : 'Noch nicht gesendet'}</span>
+    </div>
+  `;
+  container.appendChild(wrapper);
+
+  const textChannels = state.guildChannels.filter(c => c.type === 0);
+  const channelOptions = textChannels.length
+    ? textChannels.map(c => `<option value="${c.id}"># ${escapeHtml(c.name)}</option>`).join('')
+    : `<option value="">Keine Textkanäle gefunden</option>`;
+
+  const panelChannelSelect = wrapper.querySelector('.app-panel-channel');
+  panelChannelSelect.innerHTML = channelOptions;
+  if (data && data.panelChannelId) panelChannelSelect.value = data.panelChannelId;
+
+  const resultChannelSelect = wrapper.querySelector('.app-result-channel');
+  resultChannelSelect.innerHTML = channelOptions;
+  if (data && data.resultChannelId) resultChannelSelect.value = data.resultChannelId;
+
+  const roleSelect = wrapper.querySelector('.app-role');
+  if (state.guildRoles.length) {
+    roleSelect.innerHTML += state.guildRoles.map(r => `<option value="${r.id}">@${escapeHtml(r.name)}</option>`).join('');
+  }
+  if (data && data.pingRoleId) roleSelect.value = data.pingRoleId;
+
+  const addQuestionBtn = wrapper.querySelector('.add-option-btn');
+  const questions = (data && data.questions) || [];
+  if (questions.length === 0) {
+    addApplicationQuestion(addQuestionBtn);
+  } else {
+    questions.forEach(q => addApplicationQuestion(addQuestionBtn, q));
+  }
+};
+
+window.addApplicationQuestion = function(btnEl, value = '') {
+  const panelCard = btnEl.closest('.panel-card');
+  if (!panelCard) return;
+  const list = panelCard.querySelector('.app-questions-list');
+  const row = document.createElement('div');
+  row.className = 'option-row app-question-row';
+  row.innerHTML = `
+    <input type="text" class="app-question" placeholder="z.B. Warum möchtest du Teammitglied werden?" value="${escapeHtml(value || '')}" style="flex:1;">
+    <button type="button" class="option-remove" onclick="this.parentElement.remove()">✕</button>
+  `;
+  list.appendChild(row);
+};
+
+function collectApplicationForms() {
+  const forms = Array.from(document.querySelectorAll('#applications-list .panel-card'));
+  return forms.map(form => {
+    const questions = Array.from(form.querySelectorAll('.app-question'))
+      .map(input => input.value.trim())
+      .filter(q => q);
+    return {
+      id: form.dataset.formId,
+      enabled: form.querySelector('.app-enabled')?.checked ?? true,
+      name: form.querySelector('.app-name')?.value || '',
+      panelChannelId: form.querySelector('.app-panel-channel')?.value || '',
+      title: form.querySelector('.app-title')?.value || '',
+      description: form.querySelector('.app-description')?.value || '',
+      buttonLabel: form.querySelector('.app-button-label')?.value || '',
+      color: form.querySelector('.app-color-hex')?.value || '#2b2d31',
+      resultChannelId: form.querySelector('.app-result-channel')?.value || '',
+      pingRoleId: form.querySelector('.app-role')?.value || null,
+      questions,
+      messageId: form.dataset.messageId || null
+    };
+  });
+}
+
+async function sendApplicationPanel(panelId) {
+  if (!state.activeGuildId) return;
+  const panelEl = document.getElementById(panelId);
+  if (!panelEl) return;
+  const formId = panelEl.dataset.formId;
+
+  const questionCount = panelEl.querySelectorAll('.app-question-row .app-question').length;
+  if (questionCount === 0) {
+    showToast('Bitte füge mindestens eine Frage hinzu.', 'error');
+    return;
+  }
+  if (!panelEl.querySelector('.app-panel-channel')?.value) {
+    showToast('Bitte wähle einen Kanal für den Bewerben-Button aus.', 'error');
+    return;
+  }
+
+  try {
+    await saveModuleSettings('applications');
+    const data = await apiFetch(`/guild/${state.activeGuildId}/applications/send-panel`, {
+      method: 'POST',
+      body: JSON.stringify({ formId })
+    });
+    if (data?.messageId && panelEl) {
+      panelEl.dataset.messageId = data.messageId;
+      const statusEl = panelEl.querySelector('.app-send-status');
+      if (statusEl) statusEl.textContent = '✓ Gesendet';
+    }
+    showToast('Bewerbungs-Nachricht gesendet!', 'success');
+  } catch (err) {
+    showToast(`Fehler: ${err.message}`, 'error');
+  }
+}
+
 function applySimpleConfig(prefix, cfg) {
   setChecked(`${prefix}-enabled`, cfg.enabled ?? false);
   const channelId = cfg.channelId || cfg.logChannelId || '';
@@ -1107,6 +1266,9 @@ async function saveModuleSettings(moduleName) {
           color: document.getElementById('statusembed-color')?.value || '#2b2d31'
         };
         break;
+      case 'applications':
+        payload = { forms: collectApplicationForms() };
+        break;
       default:
         const enabledEl = document.getElementById(`${moduleName}-enabled`);
         const channelEl = document.getElementById(`${moduleName}-channel`) || document.getElementById(`${moduleName}-log-channel`);
@@ -1146,6 +1308,7 @@ let buttonCounter = 0;
 let optionCounter = 0;
 let rolenickCounter = 0;
 let reactionRolePanelCounter = 0;
+let applicationFormCounter = 0;
 
 function switchEditTab(tabName) {
   document.querySelectorAll('.edit-tab-btn').forEach(btn => btn.classList.remove('active'));
