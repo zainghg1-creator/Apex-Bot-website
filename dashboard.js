@@ -928,6 +928,9 @@ function applyApplicationsConfig(cfg) {
   forms.forEach(form => addApplicationForm(form));
 }
 
+// ============================================================
+// NEUE addApplicationForm (mit Annahme/Ablehnung)
+// ============================================================
 window.addApplicationForm = function(data = null) {
   const container = document.getElementById('applications-list');
   if (!container) return;
@@ -962,8 +965,13 @@ window.addApplicationForm = function(data = null) {
         <input type="text" class="app-color-hex" value="${color}" oninput="this.previousElementSibling.value=this.value;">
       </div>
     </div>
-    <div class="form-group"><label>Ergebnis-Kanal (fertige Bewerbungen)</label><select class="app-result-channel"></select></div>
+    <div class="form-group"><label>Ergebnis-Kanal (fertige Bewerbungen mit Buttons)</label><select class="app-result-channel"></select></div>
     <div class="form-group"><label>Rolle pingen (optional)</label><select class="app-role"><option value="">Keine Rolle</option></select></div>
+    <!-- Neue Felder für Annahme/Ablehnung -->
+    <div class="form-group"><label>Rolle bei Annahme</label><select class="app-accept-role"><option value="">Keine Rolle</option></select></div>
+    <div class="form-group"><label>Rolle bei Ablehnung (optional)</label><select class="app-reject-role"><option value="">Keine Rolle</option></select></div>
+    <div class="form-group"><label>Entscheider-Rollen (dürfen annehmen/ablehnen)</label><div class="chip-select app-review-roles"></div></div>
+    <!-- Ende neue Felder -->
     <div class="form-group">
       <label>Fragen</label>
       <small style="display:block; margin-bottom:6px;">Diese Fragen werden dem Bewerber nacheinander per DM gestellt.</small>
@@ -977,6 +985,7 @@ window.addApplicationForm = function(data = null) {
   `;
   container.appendChild(wrapper);
 
+  // Kanal-Selects befüllen
   const textChannels = state.guildChannels.filter(c => c.type === 0);
   const channelOptions = textChannels.length
     ? textChannels.map(c => `<option value="${c.id}"># ${escapeHtml(c.name)}</option>`).join('')
@@ -990,12 +999,37 @@ window.addApplicationForm = function(data = null) {
   resultChannelSelect.innerHTML = channelOptions;
   if (data && data.resultChannelId) resultChannelSelect.value = data.resultChannelId;
 
-  const roleSelect = wrapper.querySelector('.app-role');
-  if (state.guildRoles.length) {
-    roleSelect.innerHTML += state.guildRoles.map(r => `<option value="${r.id}">@${escapeHtml(r.name)}</option>`).join('');
+  // Rollen-Selects für Pingen, Annahme, Ablehnung
+  const roleSelects = wrapper.querySelectorAll('.app-role, .app-accept-role, .app-reject-role');
+  const roleOptions = state.guildRoles.length
+    ? state.guildRoles.map(r => `<option value="${r.id}">@${escapeHtml(r.name)}</option>`).join('')
+    : `<option value="">Keine Rollen</option>`;
+  roleSelects.forEach(sel => {
+    sel.innerHTML = `<option value="">Keine Rolle</option>` + roleOptions;
+  });
+  if (data && data.pingRoleId) {
+    const pingSel = wrapper.querySelector('.app-role');
+    if (pingSel) pingSel.value = data.pingRoleId;
   }
-  if (data && data.pingRoleId) roleSelect.value = data.pingRoleId;
+  if (data && data.acceptRoleId) {
+    const acceptSel = wrapper.querySelector('.app-accept-role');
+    if (acceptSel) acceptSel.value = data.acceptRoleId;
+  }
+  if (data && data.rejectRoleId) {
+    const rejectSel = wrapper.querySelector('.app-reject-role');
+    if (rejectSel) rejectSel.value = data.rejectRoleId;
+  }
 
+  // Entscheider-Rollen (Chips)
+  const reviewRolesContainer = wrapper.querySelector('.app-review-roles');
+  if (reviewRolesContainer) {
+    const reviewRoleIds = (data && data.reviewRoles) || [];
+    const chipId = `app-review-roles-${panelId}`;
+    reviewRolesContainer.id = chipId;
+    renderRoleChips(chipId, reviewRoleIds, false);
+  }
+
+  // Fragen hinzufügen
   const addQuestionBtn = wrapper.querySelector('.add-option-btn');
   const questions = (data && data.questions) || [];
   if (questions.length === 0) {
@@ -1004,6 +1038,38 @@ window.addApplicationForm = function(data = null) {
     questions.forEach(q => addApplicationQuestion(addQuestionBtn, q));
   }
 };
+
+// ============================================================
+// collectApplicationForms (angepasst)
+// ============================================================
+function collectApplicationForms() {
+  const forms = Array.from(document.querySelectorAll('#applications-list .panel-card'));
+  return forms.map(form => {
+    const questions = Array.from(form.querySelectorAll('.app-question'))
+      .map(input => input.value.trim())
+      .filter(q => q);
+    const acceptRoleId = form.querySelector('.app-accept-role')?.value || '';
+    const rejectRoleId = form.querySelector('.app-reject-role')?.value || '';
+    const reviewRoles = getSelectedRoleIds(form.querySelector('.app-review-roles')?.id);
+    return {
+      id: form.dataset.formId,
+      enabled: form.querySelector('.app-enabled')?.checked ?? true,
+      name: form.querySelector('.app-name')?.value || '',
+      panelChannelId: form.querySelector('.app-panel-channel')?.value || '',
+      title: form.querySelector('.app-title')?.value || '',
+      description: form.querySelector('.app-description')?.value || '',
+      buttonLabel: form.querySelector('.app-button-label')?.value || '',
+      color: form.querySelector('.app-color-hex')?.value || '#2b2d31',
+      resultChannelId: form.querySelector('.app-result-channel')?.value || '',
+      pingRoleId: form.querySelector('.app-role')?.value || null,
+      acceptRoleId: acceptRoleId,
+      rejectRoleId: rejectRoleId,
+      reviewRoles: reviewRoles,
+      questions,
+      messageId: form.dataset.messageId || null
+    };
+  });
+}
 
 window.addApplicationQuestion = function(btnEl, value = '') {
   const panelCard = btnEl.closest('.panel-card');
@@ -1017,29 +1083,6 @@ window.addApplicationQuestion = function(btnEl, value = '') {
   `;
   list.appendChild(row);
 };
-
-function collectApplicationForms() {
-  const forms = Array.from(document.querySelectorAll('#applications-list .panel-card'));
-  return forms.map(form => {
-    const questions = Array.from(form.querySelectorAll('.app-question'))
-      .map(input => input.value.trim())
-      .filter(q => q);
-    return {
-      id: form.dataset.formId,
-      enabled: form.querySelector('.app-enabled')?.checked ?? true,
-      name: form.querySelector('.app-name')?.value || '',
-      panelChannelId: form.querySelector('.app-panel-channel')?.value || '',
-      title: form.querySelector('.app-title')?.value || '',
-      description: form.querySelector('.app-description')?.value || '',
-      buttonLabel: form.querySelector('.app-button-label')?.value || '',
-      color: form.querySelector('.app-color-hex')?.value || '#2b2d31',
-      resultChannelId: form.querySelector('.app-result-channel')?.value || '',
-      pingRoleId: form.querySelector('.app-role')?.value || null,
-      questions,
-      messageId: form.dataset.messageId || null
-    };
-  });
-}
 
 async function sendApplicationPanel(panelId) {
   if (!state.activeGuildId) return;
@@ -2227,7 +2270,6 @@ function addBotButton(data = null) {
   const row = document.createElement('div');
   row.className = 'option-row';
   row.id = `bot-btn-${idx}`;
-  // Standardwerte, falls data übergeben wird
   const label = data?.label || '';
   const style = data?.style || '1';
   const actionType = data?.actionType || 'none';
@@ -2235,11 +2277,9 @@ function addBotButton(data = null) {
   const channelId = data?.channelId || '';
   const messageText = data?.messageText || '';
 
-  // Rollenauswahl
   let roleOptions = state.guildRoles.map(r => `<option value="${r.id}">@${escapeHtml(r.name)}</option>`).join('');
   if (!roleOptions) roleOptions = '<option value="">Keine Rollen</option>';
 
-  // Kanalauswahl
   let channelOptions = state.guildChannels.filter(c => c.type === 0).map(c => `<option value="${c.id}">#${escapeHtml(c.name)}</option>`).join('');
   if (!channelOptions) channelOptions = '<option value="">Keine Kanäle</option>';
 
@@ -2278,7 +2318,6 @@ function addBotButton(data = null) {
   `;
   container.appendChild(row);
 
-  // Event-Handler für Action-Änderung
   const actionSelect = row.querySelector('.bot-btn-action');
   const paramsDiv = row.querySelector('.bot-action-params');
   const roleDiv = row.querySelector('.bot-action-role');
@@ -2291,7 +2330,6 @@ function addBotButton(data = null) {
     msgDiv.style.display = val === 'message_send' ? 'flex' : 'none';
   });
 
-  // Werte aus data setzen
   if (data) {
     if (data.roleId) {
       const roleSelect = row.querySelector('.bot-action-role-select');
@@ -2318,15 +2356,7 @@ function collectBotButtons() {
     if (!label) return;
 
     const btn = { label, style };
-    // Für Link-Buttons brauchen wir eine URL, aber das Feld fehlt – wir verwenden die Custom-ID für alles außer Link.
-    // Wir setzen die Custom-ID später.
-    if (style === 5) {
-      // Link-Button: hier bräuchte man ein URL-Feld, aber wir lassen es erstmal weg.
-      // Wir könnten das action-Objekt für Links ignorieren.
-      return; // Überspringe Link-Buttons vorerst
-    }
-
-    // Action sammeln
+    if (style === 5) return;
     const action = {};
     if (actionType !== 'none') {
       action.type = actionType;
@@ -2358,7 +2388,6 @@ async function sendBotMessage() {
     return;
   }
 
-  // Buttons in Discord-Komponenten umwandeln
   let components = [];
   if (buttons.length > 0) {
     const row = {
@@ -2368,9 +2397,8 @@ async function sendBotMessage() {
           type: 2,
           label: btn.label,
           style: btn.style,
-          custom_id: `btn_${Date.now()}_${Math.random().toString(36).substr(2, 6)}` // wird später vom Server ersetzt
+          custom_id: `btn_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`
         };
-        // Wenn action vorhanden, fügen wir es als eigenes Feld hinzu (wird vom Server extrahiert)
         if (btn.action) {
           comp.action = btn.action;
         }
@@ -2489,8 +2517,6 @@ function editBotMessageById(messageId) {
   }
 
   document.getElementById('bot-buttons-list').innerHTML = '';
-  // Wir können keine Buttons aus der Liste extrahieren – lassen wir leer.
-
   showToast(`Bearbeite Nachricht ${messageId}`, 'success');
   document.querySelector('#mod-bot .panel-card:last-child').scrollIntoView({ behavior: 'smooth' });
 }
@@ -2507,7 +2533,6 @@ async function editBotMessage() {
   const embeds = collectBotEmbeds();
   const buttons = collectBotButtons();
 
-  // Buttons in Discord-Komponenten umwandeln (ohne Action, da wir sie nicht speichern)
   let components = [];
   if (buttons.length > 0) {
     const row = {
