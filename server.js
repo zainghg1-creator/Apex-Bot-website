@@ -29,7 +29,7 @@ console.log('REDIRECT_URI:', REDIRECT_URI);
 
 const DISCORD_API = 'https://discord.com/api/v10';
 const ADMINISTRATOR = 0x8n;
-const ALLOWED_MODULES = ['welcome', 'tickets', 'teamliste', 'automod', 'teamupdate', 'stats', 'levels', 'verification', 'antinuke', 'minigames', 'rolenicknames', 'reactionroles', 'custom_buttons', 'statusembed'];
+const ALLOWED_MODULES = ['welcome', 'tickets', 'teamliste', 'automod', 'teamupdate', 'stats', 'levels', 'verification', 'antinuke', 'minigames', 'rolenicknames', 'reactionroles', 'custom_buttons', 'statusembed', 'applications'];
 
 // ============================================================
 // EXPRESS APP
@@ -981,6 +981,91 @@ app.post('/api/guild/:guildId/reactionroles/send-panel', requireAuth, async (req
     res.json({ success: true, messageId: messageData.id });
   } catch (err) {
     console.error('❌ Fehler beim Senden der Reaction-Role Nachricht:', err);
+    res.status(500).json({ error: 'Interner Serverfehler: ' + err.message });
+  }
+});
+
+// ============================================================
+// 🆕 BEWERBUNGEN: Panel-Nachricht (mit Bewerben-Button) senden
+// ============================================================
+app.post('/api/guild/:guildId/applications/send-panel', requireAuth, async (req, res) => {
+  const { guildId } = req.params;
+  const { formId } = req.body;
+
+  if (!formId) {
+    return res.status(400).json({ error: 'formId ist erforderlich.' });
+  }
+
+  try {
+    const config = await getGuildConfig(guildId);
+    const applications = config.applications || {};
+    const forms = applications.forms || [];
+    const formIndex = forms.findIndex(f => f.id === formId);
+
+    if (formIndex === -1) {
+      return res.status(404).json({ error: 'Bewerbung nicht gefunden.' });
+    }
+
+    const form = forms[formIndex];
+    if (!form.panelChannelId) {
+      return res.status(400).json({ error: 'Kein Kanal für diese Bewerbung ausgewählt.' });
+    }
+
+    const questions = (form.questions || []).filter(q => q && q.trim());
+    if (questions.length === 0) {
+      return res.status(400).json({ error: 'Bitte füge mindestens eine Frage hinzu.' });
+    }
+
+    const botToken = process.env.BOT_TOKEN;
+    if (!botToken) {
+      return res.status(500).json({ error: 'BOT_TOKEN nicht konfiguriert.' });
+    }
+
+    let parsedColor = 0x2b2d31;
+    if (form.color) {
+      let hex = form.color.replace(/[^0-9a-fA-F]/g, '');
+      if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+      if (hex.length === 6) parsedColor = parseInt(hex, 16);
+    }
+
+    const embed = {
+      title: form.title || form.name || 'Bewerbung',
+      description: form.description || 'Klicke auf den Button, um dich zu bewerben. Der Ablauf läuft über Direktnachrichten.',
+      color: parsedColor
+    };
+
+    const components = [{
+      type: 1,
+      components: [{
+        type: 2,
+        style: 1,
+        label: (form.buttonLabel || 'Bewerben').slice(0, 80),
+        custom_id: `apply_start_${form.id}`
+      }]
+    }];
+
+    const messageRes = await fetch(`https://discord.com/api/v10/channels/${form.panelChannelId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bot ${botToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ embeds: [embed], components })
+    });
+    const messageData = await messageRes.json();
+
+    if (!messageRes.ok) {
+      console.error('❌ Discord API Fehler (Bewerbungen):', messageRes.status, messageData);
+      return res.status(messageRes.status).json({ error: `Discord Fehler: ${messageData.message || 'Unbekannt'}` });
+    }
+
+    forms[formIndex] = { ...form, messageId: messageData.id };
+    applications.forms = forms;
+    await saveModuleConfig(guildId, 'applications', applications);
+
+    res.json({ success: true, messageId: messageData.id });
+  } catch (err) {
+    console.error('❌ Fehler beim Senden der Bewerbungs-Nachricht:', err);
     res.status(500).json({ error: 'Interner Serverfehler: ' + err.message });
   }
 });
