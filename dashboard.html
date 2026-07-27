@@ -833,6 +833,18 @@
     .role-chip:hover { border-color: var(--border-active); color: var(--text-primary); background: rgba(255,255,255,0.06); }
     .role-chip.selected { background: var(--accent-purple); color: #fff; border-color: var(--accent-purple); box-shadow: 0 2px 10px rgba(109,94,248,0.30); }
     .chip-empty { color: var(--text-dim); font-size: 0.8rem; padding: 4px 0; }
+    .chip-select-scroll { max-height: 180px; overflow-y: auto; }
+    .chip-filter-input {
+      width: 100%;
+      background: var(--bg-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-size: 0.8rem;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+    .chip-filter-input:focus { outline: none; border-color: var(--border-active); }
 
     .command-list { display: flex; flex-direction: column; }
     .command-row { border-bottom: 1px solid var(--border-subtle); padding: 14px 0; }
@@ -2118,7 +2130,8 @@
 
           <div class="form-group">
             <label>Rolle pingen (optional)</label>
-            <div id="voice_support-pingrole" class="chip-select"></div>
+            <input type="text" class="chip-filter-input" placeholder="🔍 Rolle suchen…" oninput="filterRoleChips('voice_support-pingrole', this.value)">
+            <div id="voice_support-pingrole" class="chip-select chip-select-scroll"></div>
             <small>Wähle eine Rolle, die bei neuen Support-Anfragen gepingt wird.</small>
           </div>
 
