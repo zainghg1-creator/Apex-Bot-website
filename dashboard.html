@@ -1413,6 +1413,9 @@
           <button class="tab-btn" data-tab="bot" onclick="switchTab('bot'); closeOverlayMenu();">
             <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><circle cx="12" cy="12" r="3"/></svg></span> Bot Control
           </button>
+          <button class="tab-btn" data-tab="statusembed" onclick="switchTab('statusembed'); closeOverlayMenu();">
+            <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span> Status-Anzeige
+          </button>
         </div>
       </nav>
       <button class="btn btn-secondary back-btn" onclick="closeManagement(); closeOverlayMenu();">← Server wechseln</button>
@@ -2037,6 +2040,53 @@
         <div class="panel-card">
           <h3 style="font-size:1rem; font-weight:700; margin-bottom:6px;">📋 Bot-Nachrichten in diesem Kanal</h3>
           <div id="bot-messages-list"><span class="chip-empty">Wähle einen Kanal und lade die Nachrichten.</span></div>
+        </div>
+      </div>
+
+      <!-- ===== STATUS-ANZEIGE ===== -->
+      <div id="mod-statusembed" class="module-page hidden">
+        <h2>📡 Status-Anzeige</h2>
+        <p>Der Bot postet in einem festgelegten Zeitabstand automatisch eine Nachricht mit seinem aktuellen Status in einen Kanal deiner Wahl. Optional wird dabei eine Rolle gepingt.</p>
+
+        <div class="panel-card">
+          <div class="form-group">
+            <div class="switch-row">
+              <label>Automatische Status-Anzeige aktiv</label>
+              <label class="switch"><input type="checkbox" id="statusembed-enabled"><span class="switch-slider"></span></label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="statusembed-channel">Kanal</label>
+            <select id="statusembed-channel"></select>
+          </div>
+
+          <div class="form-group">
+            <label for="statusembed-interval">Intervall (Minuten)</label>
+            <input type="number" id="statusembed-interval" min="1" step="1" value="30">
+            <small>Alle wie viele Minuten die Status-Nachricht gesendet werden soll.</small>
+          </div>
+
+          <div class="form-group">
+            <label>Rolle pingen (optional)</label>
+            <div id="statusembed-role" class="chip-select"><span class="chip-empty">Lade Rollen...</span></div>
+            <small>Wähle eine Rolle aus, die bei jeder Status-Nachricht benachrichtigt wird. Erneutes Anklicken einer ausgewählten Rolle hebt die Auswahl wieder auf.</small>
+          </div>
+
+          <div class="form-group">
+            <label for="statusembed-title">Titel der Nachricht</label>
+            <input type="text" id="statusembed-title" maxlength="256" placeholder="Status">
+          </div>
+
+          <div class="form-group">
+            <label for="statusembed-color">Farbe</label>
+            <input type="color" id="statusembed-color" value="#2b2d31">
+          </div>
+
+          <div class="form-action">
+            <span id="statusembed-save-status" class="hidden status-success"></span>
+            <button class="btn btn-primary" onclick="handleSaveClick('statusembed')">Speichern</button>
+          </div>
         </div>
       </div>
 
