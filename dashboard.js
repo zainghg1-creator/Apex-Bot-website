@@ -233,6 +233,7 @@ async function openManagement(guildId, name, iconUrl) {
   await loadGuildDetails(guildId);
   await loadAllModuleSettings(guildId);
   renderBotChannelSelect();
+  renderVoiceSupportSelects(); // Voice Support
 }
 
 function closeManagement() {
@@ -291,6 +292,7 @@ async function loadRolesAndChannels(guildId) {
   DOM.overviewRoles.textContent = state.guildRoles.length;
   DOM.overviewChannels.textContent = state.guildChannels.length;
   renderAllSelects();
+  renderVoiceSupportSelects();
 }
 
 function renderAllSelects() {
@@ -395,6 +397,9 @@ function switchTab(tabName) {
   if (tabName === 'bot') {
     renderBotChannelSelect();
   }
+  if (tabName === 'voice_support') {
+    renderVoiceSupportSelects();
+  }
 }
 
 function switchSubtab(moduleName, subName) {
@@ -441,19 +446,16 @@ function compressImage(dataUrl, maxSizeKB = 300) {
       const canvas = document.createElement('canvas');
       let width = img.width;
       let height = img.height;
-      
       const maxDim = 800;
       if (width > maxDim || height > maxDim) {
         const ratio = Math.min(maxDim / width, maxDim / height);
         width = Math.round(width * ratio);
         height = Math.round(height * ratio);
       }
-      
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, width, height);
-      
       let quality = 0.9;
       let result = canvas.toDataURL('image/jpeg', quality);
       while (result.length > maxSizeKB * 1024 && quality > 0.1) {
@@ -473,19 +475,16 @@ function compressImage(dataUrl, maxSizeKB = 300) {
 async function handleImageUpload(input, prefix) {
   const file = input.files?.[0];
   if (!file) return;
-  
   if (!file.type.startsWith('image/')) {
     showToast('Bitte wähle ein Bild aus.', 'error');
     input.value = '';
     return;
   }
-  
   if (file.size > 5 * 1024 * 1024) {
     showToast('Bild ist zu groß (max. 5MB).', 'error');
     input.value = '';
     return;
   }
-  
   try {
     const reader = new FileReader();
     reader.onload = async (e) => {
@@ -518,7 +517,6 @@ function clearImage(prefix) {
 function setImage(prefix, url) {
   const preview = document.getElementById(`${prefix}-image-preview`);
   const input = document.getElementById(`${prefix}-image-input`);
-  
   if (preview) {
     if (url && (url.startsWith('data:image') || url.startsWith('http'))) {
       preview.src = url;
@@ -582,6 +580,7 @@ async function loadAllModuleSettings(guildId) {
     applyLevelsConfig(config.levels || {});
     applyStatusEmbedConfig(config.statusembed || {});
     applyApplicationsConfig(config.applications || {});
+    applyVoiceSupportConfig(config.voice_support || {});
   } catch (err) { console.error('Fehler beim Laden der Konfiguration:', err); }
 }
 
@@ -929,7 +928,7 @@ function applyApplicationsConfig(cfg) {
 }
 
 // ============================================================
-// NEUE addApplicationForm (mit Annahme/Ablehnung)
+// addApplicationForm (mit Annahme/Ablehnung)
 // ============================================================
 window.addApplicationForm = function(data = null) {
   const container = document.getElementById('applications-list');
@@ -967,11 +966,9 @@ window.addApplicationForm = function(data = null) {
     </div>
     <div class="form-group"><label>Ergebnis-Kanal (fertige Bewerbungen mit Buttons)</label><select class="app-result-channel"></select></div>
     <div class="form-group"><label>Rolle pingen (optional)</label><select class="app-role"><option value="">Keine Rolle</option></select></div>
-    <!-- Neue Felder für Annahme/Ablehnung -->
     <div class="form-group"><label>Rolle bei Annahme</label><select class="app-accept-role"><option value="">Keine Rolle</option></select></div>
     <div class="form-group"><label>Rolle bei Ablehnung (optional)</label><select class="app-reject-role"><option value="">Keine Rolle</option></select></div>
     <div class="form-group"><label>Entscheider-Rollen (dürfen annehmen/ablehnen)</label><div class="chip-select app-review-roles"></div></div>
-    <!-- Ende neue Felder -->
     <div class="form-group">
       <label>Fragen</label>
       <small style="display:block; margin-bottom:6px;">Diese Fragen werden dem Bewerber nacheinander per DM gestellt.</small>
@@ -985,7 +982,6 @@ window.addApplicationForm = function(data = null) {
   `;
   container.appendChild(wrapper);
 
-  // Kanal-Selects befüllen
   const textChannels = state.guildChannels.filter(c => c.type === 0);
   const channelOptions = textChannels.length
     ? textChannels.map(c => `<option value="${c.id}"># ${escapeHtml(c.name)}</option>`).join('')
@@ -999,7 +995,6 @@ window.addApplicationForm = function(data = null) {
   resultChannelSelect.innerHTML = channelOptions;
   if (data && data.resultChannelId) resultChannelSelect.value = data.resultChannelId;
 
-  // Rollen-Selects für Pingen, Annahme, Ablehnung
   const roleSelects = wrapper.querySelectorAll('.app-role, .app-accept-role, .app-reject-role');
   const roleOptions = state.guildRoles.length
     ? state.guildRoles.map(r => `<option value="${r.id}">@${escapeHtml(r.name)}</option>`).join('')
@@ -1020,7 +1015,6 @@ window.addApplicationForm = function(data = null) {
     if (rejectSel) rejectSel.value = data.rejectRoleId;
   }
 
-  // Entscheider-Rollen (Chips)
   const reviewRolesContainer = wrapper.querySelector('.app-review-roles');
   if (reviewRolesContainer) {
     const reviewRoleIds = (data && data.reviewRoles) || [];
@@ -1029,7 +1023,6 @@ window.addApplicationForm = function(data = null) {
     renderRoleChips(chipId, reviewRoleIds, false);
   }
 
-  // Fragen hinzufügen
   const addQuestionBtn = wrapper.querySelector('.add-option-btn');
   const questions = (data && data.questions) || [];
   if (questions.length === 0) {
@@ -1040,7 +1033,7 @@ window.addApplicationForm = function(data = null) {
 };
 
 // ============================================================
-// collectApplicationForms (angepasst)
+// collectApplicationForms
 // ============================================================
 function collectApplicationForms() {
   const forms = Array.from(document.querySelectorAll('#applications-list .panel-card'));
@@ -1311,6 +1304,21 @@ async function saveModuleSettings(moduleName) {
         break;
       case 'applications':
         payload = { forms: collectApplicationForms() };
+        break;
+      case 'voice_support':
+        payload = {
+          enabled: document.getElementById('voice_support-enabled').checked,
+          waitingRoomId: document.getElementById('voice_support-waitingroom')?.value || '',
+          notificationChannelId: document.getElementById('voice_support-notification')?.value || '',
+          pingRoleId: getSelectedRoleIds('voice_support-pingrole')[0] || null,
+          dutyOnRoleId: getSelectedRoleIds('voice_support-dutyon')[0] || null,
+          dutyOffRoleId: getSelectedRoleIds('voice_support-dutyoff')[0] || null,
+          dutyEmbedChannelId: document.getElementById('voice_support-dutyembed')?.value || '',
+          embedTitle: document.getElementById('voice_support-embed-title')?.value || '',
+          embedDescription: document.getElementById('voice_support-embed-desc')?.value || '',
+          embedColor: document.getElementById('voice_support-embed-color')?.value || '#5865f2',
+          embedImage: document.getElementById('voice_support-embed-image-input')?.dataset.value || ''
+        };
         break;
       default:
         const enabledEl = document.getElementById(`${moduleName}-enabled`);
@@ -2230,7 +2238,7 @@ function applyStatsConfig(cfg) {
 }
 
 // ============================================================
-// 🆕 BOT CONTROL FUNKTIONEN (mit Aktionen)
+// 🆕 BOT CONTROL FUNKTIONEN
 // ============================================================
 function renderBotChannelSelect() {
   const select = document.getElementById('bot-channel');
@@ -2571,6 +2579,144 @@ async function editBotMessage() {
   } catch (err) {
     showToast(`Fehler: ${err.message}`, 'error');
   }
+}
+
+// ============================================================
+// 🆕 VOICE SUPPORT
+// ============================================================
+function applyVoiceSupportConfig(cfg) {
+  setChecked('voice_support-enabled', cfg.enabled ?? false);
+  setSelectValue('voice_support-waitingroom', cfg.waitingRoomId || '');
+  setSelectValue('voice_support-notification', cfg.notificationChannelId || '');
+  setSelectValue('voice_support-dutyembed', cfg.dutyEmbedChannelId || '');
+  renderRoleChips('voice_support-pingrole', cfg.pingRoleId ? [cfg.pingRoleId] : [], true);
+  renderRoleChips('voice_support-dutyon', cfg.dutyOnRoleId ? [cfg.dutyOnRoleId] : [], true);
+  renderRoleChips('voice_support-dutyoff', cfg.dutyOffRoleId ? [cfg.dutyOffRoleId] : [], true);
+  // Embed-Felder
+  setValue('voice_support-embed-title', cfg.embedTitle || '🆕 Support-Anfrage');
+  setValue('voice_support-embed-desc', cfg.embedDescription || '{user} wartet im Support-Warteraum auf Hilfe.');
+  setColor('voice_support', cfg.embedColor || '#5865f2');
+  const imageInput = document.getElementById('voice_support-embed-image-input');
+  if (imageInput) {
+    imageInput.dataset.value = cfg.embedImage || '';
+  }
+  const previewImg = document.getElementById('voice_support-embed-image-preview');
+  if (previewImg) {
+    previewImg.src = cfg.embedImage || '';
+    previewImg.style.display = cfg.embedImage ? 'block' : 'none';
+  }
+  updateVoiceSupportEmbedPreview();
+}
+
+function updateVoiceSupportEmbedPreview() {
+  const preview = document.getElementById('voice_support-embed-preview');
+  if (!preview) return;
+  const title = document.getElementById('voice_support-embed-title')?.value || '';
+  const desc = document.getElementById('voice_support-embed-desc')?.value || '';
+  const color = document.getElementById('voice_support-embed-color')?.value || '#5865f2';
+  const imageInput = document.getElementById('voice_support-embed-image-input');
+  const image = imageInput?.dataset.value || '';
+  const titleEl = preview.querySelector('.embed-preview-title');
+  const descEl = preview.querySelector('.embed-preview-desc');
+  const imgEl = preview.querySelector('.embed-preview-image');
+  if (titleEl) {
+    titleEl.textContent = title;
+    titleEl.classList.toggle('hidden', !title);
+  }
+  if (descEl) descEl.textContent = desc;
+  preview.style.borderLeftColor = color;
+  if (imgEl) {
+    if (image) {
+      imgEl.src = image;
+      imgEl.classList.remove('hidden');
+    } else {
+      imgEl.classList.add('hidden');
+      imgEl.src = '';
+    }
+  }
+}
+
+async function sendDutyEmbed() {
+  if (!state.activeGuildId) { showToast('Kein Server ausgewählt.', 'error'); return; }
+  try {
+    const response = await apiFetch(`/guild/${state.activeGuildId}/send-duty-embed`, { method: 'POST' });
+    if (response?.success) {
+      showToast('Duty-Embed gesendet!', 'success');
+    } else {
+      showToast(response?.error || 'Fehler beim Senden.', 'error');
+    }
+  } catch (err) {
+    showToast(`Fehler: ${err.message}`, 'error');
+  }
+}
+
+function renderVoiceSupportSelects() {
+  const waitingRoomSelect = document.getElementById('voice_support-waitingroom');
+  const notificationSelect = document.getElementById('voice_support-notification');
+  const dutyEmbedSelect = document.getElementById('voice_support-dutyembed');
+  const voiceChannels = state.guildChannels.filter(c => c.type === 2);
+  const textChannels = state.guildChannels.filter(c => c.type === 0);
+  if (waitingRoomSelect) {
+    waitingRoomSelect.innerHTML = voiceChannels.length
+      ? voiceChannels.map(c => `<option value="${c.id}">🔊 ${escapeHtml(c.name)}</option>`).join('')
+      : '<option value="">Keine Sprachkanäle</option>';
+  }
+  if (notificationSelect) {
+    notificationSelect.innerHTML = textChannels.length
+      ? textChannels.map(c => `<option value="${c.id}"># ${escapeHtml(c.name)}</option>`).join('')
+      : '<option value="">Keine Textkanäle</option>';
+  }
+  if (dutyEmbedSelect) {
+    dutyEmbedSelect.innerHTML = textChannels.length
+      ? textChannels.map(c => `<option value="${c.id}"># ${escapeHtml(c.name)}</option>`).join('')
+      : '<option value="">Keine Textkanäle</option>';
+  }
+}
+
+async function handleVoiceSupportImageUpload(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')) {
+    showToast('Bitte wähle ein Bild aus.', 'error');
+    input.value = '';
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    showToast('Bild ist zu groß (max. 5MB).', 'error');
+    input.value = '';
+    return;
+  }
+  try {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const compressed = await compressImage(e.target.result, 300);
+        const previewImg = document.getElementById('voice_support-embed-image-preview');
+        if (previewImg) {
+          previewImg.src = compressed;
+          previewImg.style.display = 'block';
+        }
+        const inputField = document.getElementById('voice_support-embed-image-input');
+        if (inputField) inputField.dataset.value = compressed;
+        updateVoiceSupportEmbedPreview();
+        showToast('Bild hochgeladen ✅', 'success');
+      } catch (err) {
+        showToast('Fehler beim Komprimieren: ' + err.message, 'error');
+      }
+    };
+    reader.onerror = () => showToast('Fehler beim Lesen der Datei', 'error');
+    reader.readAsDataURL(file);
+  } catch (err) {
+    showToast('Fehler: ' + err.message, 'error');
+  }
+}
+
+function clearVoiceSupportImage() {
+  const input = document.getElementById('voice_support-embed-image-input');
+  if (input) { input.value = ''; input.dataset.value = ''; }
+  const previewImg = document.getElementById('voice_support-embed-image-preview');
+  if (previewImg) { previewImg.src = ''; previewImg.style.display = 'none'; }
+  updateVoiceSupportEmbedPreview();
 }
 
 // ============================================================
