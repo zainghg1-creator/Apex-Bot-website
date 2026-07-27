@@ -294,7 +294,7 @@ async function loadRolesAndChannels(guildId) {
 }
 
 function renderAllSelects() {
-  const selectIds = ['join-channel', 'leave-channel', 'teamliste-channel', 'automod-log-channel', 'teamupdate-channel', 'verification-channel', 'minigames-counting-channel', 'levels-channel'];
+  const selectIds = ['join-channel', 'leave-channel', 'teamliste-channel', 'automod-log-channel', 'teamupdate-channel', 'verification-channel', 'minigames-counting-channel', 'levels-channel', 'statusembed-channel'];
   selectIds.forEach(id => renderChannelSelect(id, 0));
   TEAMUPDATE_COMMANDS.forEach(cmd => renderChannelSelect(`cmd-${cmd}-channel`, 0));
 }
@@ -580,7 +580,18 @@ async function loadAllModuleSettings(guildId) {
     applyReactionRolesConfig(config.reactionroles || {});
     applyStatsConfig(config.stats || {});
     applyLevelsConfig(config.levels || {});
+    applyStatusEmbedConfig(config.statusembed || {});
   } catch (err) { console.error('Fehler beim Laden der Konfiguration:', err); }
+}
+
+function applyStatusEmbedConfig(cfg) {
+  setChecked('statusembed-enabled', cfg.enabled ?? false);
+  setSelectValue('statusembed-channel', cfg.channelId || '');
+  setValue('statusembed-interval', cfg.intervalMinutes ?? 30);
+  setValue('statusembed-title', cfg.title ?? '');
+  const colorEl = document.getElementById('statusembed-color');
+  if (colorEl) colorEl.value = cfg.color || '#2b2d31';
+  renderRoleChips('statusembed-role', cfg.roleId ? [cfg.roleId] : [], true);
 }
 
 function applyWelcomeConfig(cfg) {
@@ -1084,6 +1095,16 @@ async function saveModuleSettings(moduleName) {
             enabled: document.getElementById('levels-voice-enabled')?.checked ?? false,
             xpPerMinute: parseInt(document.getElementById('levels-voice-xp')?.value) || 10
           }
+        };
+        break;
+      case 'statusembed':
+        payload = {
+          enabled: document.getElementById('statusembed-enabled').checked,
+          channelId: document.getElementById('statusembed-channel')?.value || '',
+          intervalMinutes: Math.max(1, parseInt(document.getElementById('statusembed-interval')?.value) || 30),
+          roleId: getSelectedRoleIds('statusembed-role')[0] || null,
+          title: document.getElementById('statusembed-title')?.value || '',
+          color: document.getElementById('statusembed-color')?.value || '#2b2d31'
         };
         break;
       default:
