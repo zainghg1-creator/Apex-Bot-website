@@ -1417,6 +1417,14 @@
             <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span> Status-Anzeige
           </button>
         </div>
+
+        <!-- 🆕 BEWERBUNGEN -->
+        <div class="sidebar-group">
+          <div class="sidebar-group-label">Bewerbungen</div>
+          <button class="tab-btn" data-tab="applications" onclick="switchTab('applications'); closeOverlayMenu();">
+            <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="9" y1="11" x2="12" y2="11"/></svg></span> Bewerbungen
+          </button>
+        </div>
       </nav>
       <button class="btn btn-secondary back-btn" onclick="closeManagement(); closeOverlayMenu();">← Server wechseln</button>
     </div>
@@ -2087,6 +2095,20 @@
             <span id="statusembed-save-status" class="hidden status-success"></span>
             <button class="btn btn-primary" onclick="handleSaveClick('statusembed')">Speichern</button>
           </div>
+        </div>
+      </div>
+
+      <!-- ===== 🆕 BEWERBUNGEN ===== -->
+      <div id="mod-applications" class="module-page hidden">
+        <h2>📝 Bewerbungen</h2>
+        <p>Erstelle beliebig viele Bewerbungen (z.B. Team-Bewerbung, Moderator-Bewerbung). Für jede Bewerbung wird eine Nachricht mit einem "Bewerben"-Button in einem Kanal deiner Wahl gepostet. Klickt jemand darauf, läuft die Bewerbung komplett über Direktnachrichten (DMs) mit dem Bot ab – die Fragen werden dort nacheinander gestellt. Die fertige Bewerbung wird anschließend in einen Kanal deiner Wahl gepostet, wobei optional eine Rolle gepingt wird.</p>
+
+        <div id="applications-list"></div>
+        <button type="button" class="add-option-btn" onclick="addApplicationForm()">+ Bewerbung hinzufügen</button>
+
+        <div class="form-action" style="margin-top:16px;">
+          <span id="applications-save-status" class="hidden status-success"></span>
+          <button class="btn btn-primary" onclick="handleSaveClick('applications')">Alle Bewerbungen speichern</button>
         </div>
       </div>
 
