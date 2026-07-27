@@ -20,16 +20,15 @@ const {
   NODE_ENV = 'production'
 } = process.env;
 
-// ===== DEBUG =====
 console.log('🔍 Server startet...');
 console.log('CLIENT_ID:', CLIENT_ID ? '✅' : '❌');
 console.log('MONGODB_URI:', MONGODB_URI ? '✅' : '❌');
 console.log('REDIRECT_URI:', REDIRECT_URI);
-// =================
 
 const DISCORD_API = 'https://discord.com/api/v10';
 const ADMINISTRATOR = 0x8n;
-const ALLOWED_MODULES = ['welcome', 'tickets', 'teamliste', 'automod', 'teamupdate', 'stats', 'levels', 'verification', 'antinuke', 'minigames', 'rolenicknames', 'reactionroles', 'custom_buttons', 'statusembed', 'applications'];
+// ⬇️ NEU: 'voice_support' hinzugefügt
+const ALLOWED_MODULES = ['welcome', 'tickets', 'teamliste', 'automod', 'teamupdate', 'stats', 'levels', 'verification', 'antinuke', 'minigames', 'rolenicknames', 'reactionroles', 'custom_buttons', 'statusembed', 'applications', 'voice_support'];
 
 // ============================================================
 // EXPRESS APP
@@ -89,7 +88,7 @@ if (MONGODB_URI) {
 }
 
 // ============================================================
-// SCHEMA (nur wenn mongoose verfügbar)
+// SCHEMA
 // ============================================================
 let GuildConfig = null;
 let ButtonAction = null;
@@ -100,12 +99,11 @@ try {
   }, { timestamps: true });
   GuildConfig = mongoose.models.GuildConfig || mongoose.model('GuildConfig', guildConfigSchema);
 
-  // Tabelle für temporäre Button-Aktionen
   const buttonActionSchema = new mongoose.Schema({
     id: { type: String, required: true, unique: true, index: true },
     guildId: { type: String, required: true, index: true },
     action: { type: mongoose.Schema.Types.Mixed, required: true },
-    createdAt: { type: Date, default: Date.now, expires: 3600 } // TTL 1 Stunde
+    createdAt: { type: Date, default: Date.now, expires: 3600 }
   });
   ButtonAction = mongoose.models.ButtonAction || mongoose.model('ButtonAction', buttonActionSchema);
 } catch (e) {
@@ -156,7 +154,6 @@ app.get('/auth/discord/login', (req, res) => {
 app.get('/auth/discord/callback', async (req, res) => {
   const { code } = req.query;
   if (!code) return res.redirect('/?error=missing_code');
-  
   try {
     const tokenRes = await fetch(`${DISCORD_API}/oauth2/token`, {
       method: 'POST',
@@ -171,13 +168,11 @@ app.get('/auth/discord/callback', async (req, res) => {
     });
     if (!tokenRes.ok) throw new Error('Token exchange failed');
     const tokenData = await tokenRes.json();
-    
     const userRes = await fetch(`${DISCORD_API}/users/@me`, {
       headers: { Authorization: `Bearer ${tokenData.access_token}` }
     });
     if (!userRes.ok) throw new Error('User fetch failed');
     const user = await userRes.json();
-    
     req.session.accessToken = tokenData.access_token;
     req.session.user = {
       id: user.id,
@@ -330,7 +325,6 @@ async function countGuildBots(guildId) {
   let count = 0;
   let after = '0';
   const MAX_PAGES = 10;
-
   try {
     for (let page = 0; page < MAX_PAGES; page++) {
       const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members?limit=1000&after=${after}`, {
@@ -349,7 +343,6 @@ async function countGuildBots(guildId) {
     console.error('Fehler beim Zählen der Bots:', err);
     return null;
   }
-
   return count;
 }
 
@@ -363,12 +356,10 @@ app.get('/api/guild/:guildId', requireAuth, async (req, res) => {
     });
     if (!guildRes.ok) return res.status(guildRes.status).json({ error: 'guild_not_found' });
     const guildData = await guildRes.json();
-
     const [owner, botCount] = await Promise.all([
       fetchGuildOwner(guildData.owner_id),
       countGuildBots(req.params.guildId)
     ]);
-
     res.json({
       members: guildData.approximate_member_count ?? 0,
       boosts: guildData.premium_subscription_count ?? 0,
@@ -395,7 +386,7 @@ app.get('/api/guild/:guildId/config', requireAuth, async (req, res) => {
 });
 
 // ============================================================
-// STATISTIK-KANÄLE: SOFORT ERSTELLEN
+// STATISTIK-KANÄLE
 // ============================================================
 async function getGuildRolesCount(guildId) {
   try {
@@ -1091,20 +1082,14 @@ app.post('/api/guild/:guildId/bot/send', requireAuth, requireGuildAdmin, async (
     return res.status(403).json({ error: 'Bot ist nicht auf diesem Server' });
   }
 
-  // Button-Actions in der DB speichern und custom_ids ersetzen
   let processedComponents = components;
   if (components && Array.isArray(components) && components.length > 0) {
-    // Wir erwarten, dass components ein Array von Action-Row-Objekten ist, wie von Discord akzeptiert.
-    // Wir durchlaufen alle Buttons in allen Action-Rows.
     for (const row of components) {
       if (row.type === 1 && row.components) {
         for (const btn of row.components) {
           if (btn.type === 2 && btn.action) {
-            // Button hat eine Aktion
             const action = btn.action;
-            // Generiere eindeutige ID
             const id = crypto.randomBytes(8).toString('hex');
-            // Speichere Aktion in DB
             if (ButtonAction) {
               try {
                 await ButtonAction.create({
@@ -1122,12 +1107,9 @@ app.post('/api/guild/:guildId/bot/send', requireAuth, requireGuildAdmin, async (
                 return res.status(500).json({ error: 'Fehler beim Speichern der Aktion' });
               }
             } else {
-              // Fallback: Wenn keine DB, können wir keine Actions speichern
               return res.status(500).json({ error: 'Datenbank nicht verfügbar für Button-Actions' });
             }
-            // Ersetze custom_id durch act_<id>
             btn.custom_id = `act_${id}`;
-            // Entferne das action-Feld, da es nicht an Discord gesendet werden darf
             delete btn.action;
           }
         }
@@ -1135,7 +1117,6 @@ app.post('/api/guild/:guildId/bot/send', requireAuth, requireGuildAdmin, async (
     }
   }
 
-  // Payload für Discord erstellen
   const payload = {};
   if (content && content.trim()) payload.content = content;
   if (embeds && Array.isArray(embeds) && embeds.length > 0) payload.embeds = embeds;
@@ -1183,8 +1164,6 @@ app.post('/api/guild/:guildId/bot/edit', requireAuth, requireGuildAdmin, async (
     return res.status(403).json({ error: 'Bot ist nicht auf diesem Server' });
   }
 
-  // Für bearbeitete Nachrichten: Wir speichern keine neuen Actions, da die Buttons bereits existieren.
-  // Wir lassen die custom_ids unverändert.
   const payload = {};
   if (content !== undefined) payload.content = content;
   if (embeds && Array.isArray(embeds)) payload.embeds = embeds;
