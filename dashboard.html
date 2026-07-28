@@ -1693,6 +1693,7 @@
               <div class="command-roles hidden" id="cmd-roles-neuer_teamler">
                 <div class="form-group"><label>Erlaubte Rollen</label><div class="chip-select" id="cmdrole-neuer_teamler"><span class="chip-empty">Lade Rollen...</span></div></div>
                 <div class="form-group"><label for="cmd-neuer_teamler-channel">Kanal für die Nachricht</label><select id="cmd-neuer_teamler-channel"></select></div>
+                <div class="form-group"><label>Rollen, die IMMER hinzugefügt werden</label><small style="display:block; margin-bottom:6px;">Diese Rollen werden bei jeder Nutzung von /neuer_teamler zusätzlich automatisch vergeben.</small><div class="chip-select" id="cmdrole-neuer_teamler-auto"><span class="chip-empty">Lade Rollen...</span></div></div>
               </div>
             </div>
 
@@ -1735,6 +1736,7 @@
               <div class="command-roles hidden" id="cmd-roles-teamkick">
                 <div class="form-group"><label>Erlaubte Rollen</label><div class="chip-select" id="cmdrole-teamkick"><span class="chip-empty">Lade Rollen...</span></div></div>
                 <div class="form-group"><label for="cmd-teamkick-channel">Kanal für die Nachricht</label><select id="cmd-teamkick-channel"></select></div>
+                <div class="form-group"><label>Rollen, die IMMER entfernt werden</label><small style="display:block; margin-bottom:6px;">Diese Rollen werden bei jeder Nutzung von /teamkick zusätzlich automatisch entfernt.</small><div class="chip-select" id="cmdrole-teamkick-auto"><span class="chip-empty">Lade Rollen...</span></div></div>
               </div>
             </div>
 
@@ -1776,6 +1778,36 @@
             <div class="switch-row"><label>🔢 Zählen aktiv</label><label class="switch"><input type="checkbox" id="minigames-counting-enabled"><span class="switch-slider"></span></label></div>
           </div>
           <div class="form-group"><label for="minigames-counting-channel">Kanal für das Zählen-Spiel</label><select id="minigames-counting-channel"></select><small>Mitglieder zählen abwechselnd hoch (1, 2, 3, ...). Die gleiche Person darf nicht zweimal hintereinander zählen – bei einem Fehler beginnt der Zähler wieder bei 1.</small></div>
+          <div class="form-action"><button class="btn btn-primary" onclick="handleSaveClick('minigames')">Speichern</button></div>
+        </div>
+
+        <div class="panel-card">
+          <div class="form-group">
+            <div class="switch-row"><label>🏳️ Errate die Flagge aktiv</label><label class="switch"><input type="checkbox" id="minigames-flags-enabled"><span class="switch-slider"></span></label></div>
+          </div>
+          <div class="form-group"><label for="minigames-flags-channel">Kanal für das Flaggen-Spiel</label><select id="minigames-flags-channel"></select><small>Der Bot postet ein Embed mit einer Flagge. Mitglieder erraten das Land per Chat-Nachricht. Bei richtiger Antwort startet automatisch die nächste Runde.</small></div>
+          <div class="form-group">
+            <label>Buttons unter dem Embed</label>
+            <small style="display:block; margin-bottom:6px;">Lege fest, welche Hilfe-Buttons unter der Flagge angezeigt werden.</small>
+            <div class="switch-row"><label>⏭️ Überspringen</label><label class="switch"><input type="checkbox" id="minigames-flags-btn-skip" checked><span class="switch-slider"></span></label></div>
+            <div class="switch-row"><label>💡 Tipp</label><label class="switch"><input type="checkbox" id="minigames-flags-btn-hint" checked><span class="switch-slider"></span></label></div>
+            <div class="switch-row"><label>🔤 Erster Buchstabe</label><label class="switch"><input type="checkbox" id="minigames-flags-btn-letter" checked><span class="switch-slider"></span></label></div>
+          </div>
+          <div class="form-action"><button class="btn btn-primary" onclick="handleSaveClick('minigames')">Speichern</button></div>
+        </div>
+
+        <div class="panel-card">
+          <div class="form-group">
+            <div class="switch-row"><label>🧩 Emoji-Kombination erraten aktiv</label><label class="switch"><input type="checkbox" id="minigames-emoji-enabled"><span class="switch-slider"></span></label></div>
+          </div>
+          <div class="form-group"><label for="minigames-emoji-channel">Kanal für das Emoji-Spiel</label><select id="minigames-emoji-channel"></select><small>Der Bot postet ein Embed mit einer Emoji-Kombination (z. B. Film, Beruf, Redewendung). Mitglieder erraten den Begriff per Chat-Nachricht.</small></div>
+          <div class="form-group">
+            <label>Buttons unter dem Embed</label>
+            <small style="display:block; margin-bottom:6px;">Lege fest, welche Hilfe-Buttons unter der Emoji-Kombination angezeigt werden.</small>
+            <div class="switch-row"><label>⏭️ Überspringen</label><label class="switch"><input type="checkbox" id="minigames-emoji-btn-skip" checked><span class="switch-slider"></span></label></div>
+            <div class="switch-row"><label>💡 Tipp</label><label class="switch"><input type="checkbox" id="minigames-emoji-btn-hint" checked><span class="switch-slider"></span></label></div>
+            <div class="switch-row"><label>🔤 Erster Buchstabe</label><label class="switch"><input type="checkbox" id="minigames-emoji-btn-letter" checked><span class="switch-slider"></span></label></div>
+          </div>
           <div class="form-action"><button class="btn btn-primary" onclick="handleSaveClick('minigames')">Speichern</button></div>
         </div>
       </div>
