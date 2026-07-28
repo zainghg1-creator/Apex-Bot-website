@@ -43,6 +43,7 @@ let state = {
   activeGuildId: null,
   guildRoles: [],
   guildChannels: [],
+  guildDataGuildId: null,
   ticketConfigCache: null,
   ticketConfigCacheGuildId: null
 };
@@ -233,7 +234,7 @@ async function openManagement(guildId, name, iconUrl) {
   DOM.overviewOwnerAvatar.classList.add('hidden');
   DOM.overviewOwnerAvatar.src = '';
   DOM.overviewCreated.textContent = formatGuildCreatedDate(guildId);
-  if (state.guildRoles.length === 0 || state.guildChannels.length === 0) {
+  if (state.guildDataGuildId !== guildId || state.guildRoles.length === 0 || state.guildChannels.length === 0) {
     await loadRolesAndChannels(guildId);
   } else {
     renderAllSelects();
@@ -294,9 +295,11 @@ async function loadRolesAndChannels(guildId) {
     ]);
     state.guildRoles = roles || [];
     state.guildChannels = channels || [];
+    state.guildDataGuildId = guildId;
   } catch {
     state.guildRoles = [];
     state.guildChannels = [];
+    state.guildDataGuildId = null;
   }
   DOM.overviewRoles.textContent = state.guildRoles.length;
   DOM.overviewChannels.textContent = state.guildChannels.length;
