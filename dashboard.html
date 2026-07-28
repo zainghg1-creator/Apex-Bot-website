@@ -2439,11 +2439,12 @@
       setTimeout(() => toast.remove(), 3000);
     }
 
-    function handleSaveClick(module) {
+    async function handleSaveClick(module) {
       if (typeof saveModuleSettings === 'function') {
-        saveModuleSettings(module);
+        await saveModuleSettings(module);
+      } else {
+        showToast('Fehler: dashboard.js wurde nicht geladen', 'error');
       }
-      showToast('Gespeichert', 'success');
     }
 
     // Dummy-Funktionen (werden von dashboard.js überschrieben)
@@ -2451,7 +2452,9 @@
     function syncColorHex(prefix) {}
     function handleImageUpload(input, prefix) {}
     function clearImage(prefix) {}
-    function saveModuleSettings(module) {}
+    async function saveModuleSettings(module) {
+      showToast('Fehler: dashboard.js wurde nicht geladen - nichts gespeichert!', 'error');
+    }
   </script>
 
   <script src="/dashboard.js"></script>
