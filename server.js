@@ -27,7 +27,7 @@ console.log('REDIRECT_URI:', REDIRECT_URI);
 
 const DISCORD_API = 'https://discord.com/api/v10';
 const ADMINISTRATOR = 0x8n;
-const ALLOWED_MODULES = ['welcome', 'tickets', 'teamliste', 'automod', 'teamupdate', 'stats', 'levels', 'verification', 'antinuke', 'minigames', 'rolenicknames', 'reactionroles', 'custom_buttons', 'statusembed', 'applications', 'voice_support'];
+const ALLOWED_MODULES = ['welcome', 'tickets', 'teamliste', 'automod', 'teamupdate', 'stats', 'levels', 'verification', 'antinuke', 'minigames', 'rolenicknames', 'reactionroles', 'custom_buttons', 'statusembed', 'applications', 'voice_support', 'shiftsystem'];
 
 // ============================================================
 // EXPRESS APP
