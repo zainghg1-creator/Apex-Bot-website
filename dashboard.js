@@ -305,7 +305,7 @@ async function loadRolesAndChannels(guildId) {
 }
 
 function renderAllSelects() {
-  const selectIds = ['join-channel', 'leave-channel', 'teamliste-channel', 'automod-log-channel', 'teamupdate-channel', 'verification-channel', 'minigames-counting-channel', 'levels-channel', 'statusembed-channel'];
+  const selectIds = ['join-channel', 'leave-channel', 'teamliste-channel', 'automod-log-channel', 'teamupdate-channel', 'verification-channel', 'minigames-counting-channel', 'minigames-flags-channel', 'minigames-emoji-channel', 'levels-channel', 'statusembed-channel'];
   selectIds.forEach(id => renderChannelSelect(id, 0));
   TEAMUPDATE_COMMANDS.forEach(cmd => renderChannelSelect(`cmd-${cmd}-channel`, 0));
 }
@@ -693,6 +693,9 @@ function applyTeamupdateConfig(cfg) {
     setChecked(`cmd-enabled-${cmd}`, c.enabled ?? true);
     renderRoleChips(`cmdrole-${cmd}`, c.roles || []);
     setSelectValue(`cmd-${cmd}-channel`, c.channelId || '');
+    if (cmd === 'neuer_teamler' || cmd === 'teamkick') {
+      renderRoleChips(`cmdrole-${cmd}-auto`, c.autoRoles || []);
+    }
     if (cmd === 'teamwarn') {
       const stages = c.warnStages || [];
       renderRoleChips('cmdrole-teamwarn-stage1', stages[0] ? [stages[0]] : [], true);
@@ -707,6 +710,22 @@ function applyMinigamesConfig(cfg) {
   const c = cfg.counting || {};
   setChecked('minigames-counting-enabled', c.enabled ?? false);
   setSelectValue('minigames-counting-channel', c.channelId || '');
+
+  const f = cfg.flags || {};
+  setChecked('minigames-flags-enabled', f.enabled ?? false);
+  setSelectValue('minigames-flags-channel', f.channelId || '');
+  const fb = f.buttons || {};
+  setChecked('minigames-flags-btn-skip', fb.skip ?? true);
+  setChecked('minigames-flags-btn-hint', fb.hint ?? true);
+  setChecked('minigames-flags-btn-letter', fb.firstLetter ?? true);
+
+  const e = cfg.emoji || {};
+  setChecked('minigames-emoji-enabled', e.enabled ?? false);
+  setSelectValue('minigames-emoji-channel', e.channelId || '');
+  const eb = e.buttons || {};
+  setChecked('minigames-emoji-btn-skip', eb.skip ?? true);
+  setChecked('minigames-emoji-btn-hint', eb.hint ?? true);
+  setChecked('minigames-emoji-btn-letter', eb.firstLetter ?? true);
 }
 
 // ============================================================
@@ -1236,6 +1255,9 @@ async function saveModuleSettings(moduleName) {
               roles: getSelectedRoleIds(`cmdrole-${cmd}`),
               channelId: document.getElementById(`cmd-${cmd}-channel`)?.value || ''
             };
+            if (cmd === 'neuer_teamler' || cmd === 'teamkick') {
+              entry.autoRoles = getSelectedRoleIds(`cmdrole-${cmd}-auto`);
+            }
             if (cmd === 'teamwarn') {
               entry.warnStages = [
                 getSelectedRoleIds('cmdrole-teamwarn-stage1')[0] || null,
@@ -1267,6 +1289,24 @@ async function saveModuleSettings(moduleName) {
           counting: {
             enabled: document.getElementById('minigames-counting-enabled').checked,
             channelId: document.getElementById('minigames-counting-channel').value
+          },
+          flags: {
+            enabled: document.getElementById('minigames-flags-enabled').checked,
+            channelId: document.getElementById('minigames-flags-channel').value,
+            buttons: {
+              skip: document.getElementById('minigames-flags-btn-skip').checked,
+              hint: document.getElementById('minigames-flags-btn-hint').checked,
+              firstLetter: document.getElementById('minigames-flags-btn-letter').checked
+            }
+          },
+          emoji: {
+            enabled: document.getElementById('minigames-emoji-enabled').checked,
+            channelId: document.getElementById('minigames-emoji-channel').value,
+            buttons: {
+              skip: document.getElementById('minigames-emoji-btn-skip').checked,
+              hint: document.getElementById('minigames-emoji-btn-hint').checked,
+              firstLetter: document.getElementById('minigames-emoji-btn-letter').checked
+            }
           }
         };
         break;
