@@ -244,6 +244,7 @@ async function openManagement(guildId, name, iconUrl) {
   await loadAllModuleSettings(guildId);
   renderBotChannelSelect();
   renderVoiceSupportSelects(); // Voice Support
+  renderShiftSelects(); // Shift-System
 }
 
 function closeManagement() {
@@ -305,6 +306,7 @@ async function loadRolesAndChannels(guildId) {
   DOM.overviewChannels.textContent = state.guildChannels.length;
   renderAllSelects();
   renderVoiceSupportSelects();
+  renderShiftSelects();
 }
 
 function renderAllSelects() {
@@ -411,6 +413,9 @@ function switchTab(tabName) {
   }
   if (tabName === 'voice_support') {
     renderVoiceSupportSelects();
+  }
+  if (tabName === 'shiftsystem') {
+    renderShiftSelects();
   }
 }
 
@@ -593,7 +598,32 @@ async function loadAllModuleSettings(guildId) {
     applyStatusEmbedConfig(config.statusembed || {});
     applyApplicationsConfig(config.applications || {});
     applyVoiceSupportConfig(config.voice_support || {});
+    applyShiftConfig(config.shiftsystem || {});
   } catch (err) { console.error('Fehler beim Laden der Konfiguration:', err); }
+}
+
+// ============================================================
+// SHIFT SYSTEM
+// ============================================================
+function applyShiftConfig(cfg) {
+  setChecked('shiftsystem-enabled', cfg.enabled ?? false);
+  setSelectValue('shiftsystem-log-channel', cfg.logChannelId || '');
+  setSelectValue('shiftsystem-leaderboard-channel', cfg.leaderboardChannelId || '');
+  // Rolle(n), die Shifts ANDERER managen dürfen (start/pause/stop für andere + leaderboard)
+  renderRoleChips('shiftsystem-manage-others', cfg.managerRoleIds || []);
+  // Rolle(n), die den eigenen Shift managen dürfen (Mehrfachauswahl)
+  renderRoleChips('shiftsystem-manage-self', cfg.selfRoleIds || []);
+}
+
+function renderShiftSelects() {
+  const logSelect = document.getElementById('shiftsystem-log-channel');
+  const lbSelect = document.getElementById('shiftsystem-leaderboard-channel');
+  const textChannels = state.guildChannels.filter(c => c.type === 0);
+  const opts = textChannels.length
+    ? textChannels.map(c => `<option value="${c.id}"># ${escapeHtml(c.name)}</option>`).join('')
+    : '<option value="">Keine Textkanäle</option>';
+  if (logSelect) logSelect.innerHTML = opts;
+  if (lbSelect) lbSelect.innerHTML = opts;
 }
 
 function applyStatusEmbedConfig(cfg) {
@@ -1356,6 +1386,15 @@ async function saveModuleSettings(moduleName) {
         break;
       case 'applications':
         payload = { forms: collectApplicationForms() };
+        break;
+      case 'shiftsystem':
+        payload = {
+          enabled: document.getElementById('shiftsystem-enabled')?.checked ?? false,
+          logChannelId: document.getElementById('shiftsystem-log-channel')?.value || '',
+          leaderboardChannelId: document.getElementById('shiftsystem-leaderboard-channel')?.value || '',
+          managerRoleIds: getSelectedRoleIds('shiftsystem-manage-others'),
+          selfRoleIds: getSelectedRoleIds('shiftsystem-manage-self')
+        };
         break;
       case 'voice_support':
         payload = {
