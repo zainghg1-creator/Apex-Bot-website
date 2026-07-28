@@ -2577,6 +2577,13 @@
                                 <path d="M15 3l6 0" />
                             </svg></span> Rollen-Nicknames
                     </button>
+                    <button class="tab-btn" data-tab="shiftsystem"
+                        onclick="switchTab('shiftsystem'); closeOverlayMenu();">
+                        <span class="tab-icon"><svg viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="12 6 12 12 16 14" />
+                            </svg></span> Schicht-System
+                    </button>
                 </div>
 
                 <!-- Bot Control -->
@@ -3490,6 +3497,51 @@
                     <div class="form-action">
                         <span id="rolenicknames-save-status" class="hidden status-success"></span>
                         <button class="btn btn-primary" onclick="handleSaveClick('rolenicknames')">Speichern</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== SCHICHT-SYSTEM ===== -->
+            <div id="mod-shiftsystem" class="module-page hidden">
+                <h2>⏱️ Schicht-System</h2>
+                <p>Mitglieder können mit <code>/shift start</code>, <code>/shift pause</code> und
+                    <code>/shift stop</code> ihre Schicht erfassen. Lege hier fest, welche Rollen Schichten anderer
+                    verwalten dürfen (diese Rollen sehen auch die <code>/shift leaderboard</code>) und welche Rolle
+                    nur die eigene Schicht verwalten darf.</p>
+
+                <div class="panel-card">
+                    <div class="form-group">
+                        <div class="switch-row">
+                            <label>Schicht-System aktiv</label>
+                            <label class="switch"><input type="checkbox" id="shiftsystem-enabled"><span
+                                    class="switch-slider"></span></label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="shiftsystem-log-channel">Log-Kanal (optional)</label>
+                        <select id="shiftsystem-log-channel"></select>
+                    </div>
+                </div>
+
+                <div class="panel-card">
+                    <div class="form-group">
+                        <label>Rollen, die Schichten anderer verwalten dürfen</label>
+                        <small style="display:block; margin-bottom:6px;">Diese Rollen dürfen /shift start, pause und
+                            stop auch für andere Mitglieder benutzen und sehen die Schicht-Bestenliste
+                            (/shift leaderboard).</small>
+                        <div class="chip-select" id="shiftsystem-manage-others"><span class="chip-empty">Lade
+                                Rollen...</span></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Rolle, die nur die eigene Schicht verwalten darf</label>
+                        <small style="display:block; margin-bottom:6px;">Mitglieder mit dieser Rolle können nur ihre
+                            eigene Schicht starten, pausieren und beenden.</small>
+                        <div class="chip-select" id="shiftsystem-manage-self"><span class="chip-empty">Lade
+                                Rollen...</span></div>
+                    </div>
+                    <div class="form-action">
+                        <span id="shiftsystem-save-status" class="hidden status-success"></span>
+                        <button class="btn btn-primary" onclick="handleSaveClick('shiftsystem')">💾 Speichern</button>
                     </div>
                 </div>
             </div>
