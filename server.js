@@ -291,7 +291,7 @@ async function getBotGuildIds() {
         hasMore = false;
       } else {
         after = page[page.length - 1].id;
-        await new Promise(r => setTimeout(r, 100)); // Rate-Limit Schutz
+        await new Promise(r => setTimeout(r, 100));
       }
     }
   } catch (err) {
@@ -1037,7 +1037,7 @@ app.post('/api/guild/:guildId/reactionroles/send-panel', requireAuth, async (req
 });
 
 // ============================================================
-// 🆕 BEWERBUNGEN: Panel-Nachricht (mit Bewerben-Button) senden
+// BEWERBUNGEN: Panel-Nachricht (mit Bewerben-Button) senden
 // ============================================================
 app.post('/api/guild/:guildId/applications/send-panel', requireAuth, async (req, res) => {
   const { guildId } = req.params;
@@ -1195,7 +1195,7 @@ app.post('/api/guild/:guildId/send-duty-embed', requireAuth, async (req, res) =>
 });
 
 // ============================================================
-// 🆕 BOT CONTROL: Nachricht senden (mit Action-Buttons)
+// BOT CONTROL: Nachricht senden (mit Action-Buttons)
 // ============================================================
 app.post('/api/guild/:guildId/bot/send', requireAuth, requireGuildAdmin, async (req, res) => {
   const { guildId } = req.params;
@@ -1276,7 +1276,7 @@ app.post('/api/guild/:guildId/bot/send', requireAuth, requireGuildAdmin, async (
 });
 
 // ============================================================
-// 🆕 BOT CONTROL: Nachricht bearbeiten
+// BOT CONTROL: Nachricht bearbeiten
 // ============================================================
 app.post('/api/guild/:guildId/bot/edit', requireAuth, requireGuildAdmin, async (req, res) => {
   const { guildId } = req.params;
@@ -1322,7 +1322,7 @@ app.post('/api/guild/:guildId/bot/edit', requireAuth, requireGuildAdmin, async (
 });
 
 // ============================================================
-// 🆕 BOT CONTROL: Nachrichtenliste abrufen
+// BOT CONTROL: Nachrichtenliste abrufen
 // ============================================================
 app.get('/api/guild/:guildId/bot/messages', requireAuth, requireGuildAdmin, async (req, res) => {
   const { guildId } = req.params;
