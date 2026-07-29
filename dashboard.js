@@ -776,6 +776,7 @@ function applyLevelsConfig(cfg) {
   const voice = cfg.voice || {};
   setChecked('levels-voice-enabled', voice.enabled ?? false);
   setValue('levels-voice-xp', voice.xpPerMinute ?? 10);
+  renderRoleChips('levels-xp-give-role', cfg.xpGiveRoleId ? [cfg.xpGiveRoleId] : [], true);
 }
 
 function toggleCommandRoles(cmd) {
@@ -1371,7 +1372,8 @@ async function saveModuleSettings(moduleName) {
           voice: {
             enabled: document.getElementById('levels-voice-enabled')?.checked ?? false,
             xpPerMinute: parseInt(document.getElementById('levels-voice-xp')?.value) || 10
-          }
+          },
+          xpGiveRoleId: getSelectedRoleIds('levels-xp-give-role')[0] || null
         };
         break;
       case 'statusembed':
