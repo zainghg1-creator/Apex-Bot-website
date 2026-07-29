@@ -1085,6 +1085,81 @@ app.post('/api/guild/:guildId/applications/send-panel', requireAuth, async (req,
 });
 
 // ============================================================
+// VOICE SUPPORT: DIENSTSTATUS-EMBED SENDEN
+// ============================================================
+app.post('/api/guild/:guildId/send-duty-embed', requireAuth, async (req, res) => {
+  const { guildId } = req.params;
+
+  try {
+    const botToken = process.env.BOT_TOKEN;
+    if (!botToken) {
+      return res.status(500).json({ error: 'BOT_TOKEN nicht konfiguriert.' });
+    }
+
+    const config = await getGuildConfig(guildId);
+    const vsCfg = config.voice_support || {};
+
+    if (!vsCfg.enabled) {
+      return res.status(400).json({ error: 'Voice Support ist nicht aktiviert.' });
+    }
+    const channelId = vsCfg.dutyEmbedChannelId;
+    if (!channelId) {
+      return res.status(400).json({ error: 'Kein Kanal für die Duty-Nachricht konfiguriert.' });
+    }
+    const dutyOnRoleId = vsCfg.dutyOnRoleId;
+    const dutyOffRoleId = vsCfg.dutyOffRoleId;
+    if (!dutyOnRoleId || !dutyOffRoleId) {
+      return res.status(400).json({ error: 'Bitte konfiguriere sowohl On-Duty- als auch Off-Duty-Rolle.' });
+    }
+
+    const embed = {
+      title: '🔄 Dienststatus',
+      description: 'Wähle deinen Dienststatus aus:',
+      color: 0x5865f2,
+      timestamp: new Date().toISOString()
+    };
+
+    const components = [{
+      type: 1,
+      components: [
+        {
+          type: 2,
+          style: 3,
+          label: '🟢 On Duty',
+          custom_id: `vs_duty_on_${guildId}_${dutyOnRoleId}`
+        },
+        {
+          type: 2,
+          style: 4,
+          label: '🔴 Off Duty',
+          custom_id: `vs_duty_off_${guildId}_${dutyOffRoleId}`
+        }
+      ]
+    }];
+
+    const response = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bot ${botToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ embeds: [embed], components })
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      console.error('❌ Discord API Fehler (Duty-Embed):', response.status, data);
+      return res.status(response.status).json({ error: `Discord Fehler: ${data.message || 'Unbekannt'}` });
+    }
+
+    console.log('✅ Dienststatus-Embed gesendet!');
+    res.json({ success: true, message: 'Duty-Nachricht gesendet!', data });
+  } catch (err) {
+    console.error('❌ Fehler beim Senden des Dienststatus-Embeds:', err);
+    res.status(500).json({ error: 'Interner Serverfehler: ' + err.message });
+  }
+});
+
+// ============================================================
 // 🆕 BOT CONTROL: Nachricht senden (mit Action-Buttons)
 // ============================================================
 app.post('/api/guild/:guildId/bot/send', requireAuth, requireGuildAdmin, async (req, res) => {
