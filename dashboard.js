@@ -2838,7 +2838,9 @@ function clearVoiceSupportImage() {
 async function handleVoiceSupportSoundUpload(input) {
   const file = input.files?.[0];
   if (!file) return;
-  if (!file.type.startsWith('audio/')) {
+  const audioExtensions = /\.(mp3|wav|ogg|m4a|aac|flac|opus)$/i;
+  const looksLikeAudio = file.type.startsWith('audio/') || audioExtensions.test(file.name);
+  if (!looksLikeAudio) {
     showToast('Bitte wähle eine Audiodatei aus.', 'error');
     input.value = '';
     return;
