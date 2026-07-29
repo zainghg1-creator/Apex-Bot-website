@@ -1,5 +1,5 @@
-console.log('🔑 BOT_TOKEN vorhanden?', process.env.BOT_TOKEN ? '✅ Ja' : '❌ Nein');
 require('dotenv').config();
+
 const express = require('express');
 const cookieSession = require('cookie-session');
 const path = require('path');
@@ -16,11 +16,12 @@ const {
   REDIRECT_URI,
   SESSION_SECRET,
   MONGODB_URI,
-  PORT = 3000,
+  PORT = process.env.PORT || 3000,
   NODE_ENV = 'production'
 } = process.env;
 
 console.log('🔍 Server startet...');
+console.log('🔑 BOT_TOKEN vorhanden?', BOT_TOKEN ? '✅ Ja' : '❌ Nein');
 console.log('CLIENT_ID:', CLIENT_ID ? '✅' : '❌');
 console.log('MONGODB_URI:', MONGODB_URI ? '✅' : '❌');
 console.log('REDIRECT_URI:', REDIRECT_URI);
@@ -62,18 +63,12 @@ async function connectToDatabase() {
   if (!cachedConnection.promise) {
     cachedConnection.promise = mongoose.connect(MONGODB_URI, {
       dbName: 'apex',
-      // Kurz genug, damit ein echter Verbindungsfehler VOR Vercels eigenem
-      // Function-Timeout (10s im Hobby-Plan) als sauberes JSON zurückkommt,
-      // statt dass die Plattform die Function killt (-> HTML statt JSON -> "unknown_error" im Dashboard).
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 20000,
       connectTimeoutMS: 5000,
       tls: true,
       retryWrites: true
     }).then(m => m).catch(err => {
-      // Bei Fehlschlag die gecachte Promise verwerfen, sonst hängt jede
-      // weitere Anfrage an derselben fehlgeschlagenen Verbindung fest,
-      // bis der Serverless-Container neu startet.
       cachedConnection.promise = null;
       throw err;
     });
@@ -82,19 +77,24 @@ async function connectToDatabase() {
   return cachedConnection.conn;
 }
 
+// Verbindung initial starten (nicht blockierend)
+if (MONGODB_URI) {
+  connectToDatabase().catch(err => {
+    console.error('❌ MongoDB initial connection failed:', err.message);
+  });
+}
+
+// Middleware für DB-Checks (nur wenn URI vorhanden)
 if (MONGODB_URI) {
   app.use(async (req, res, next) => {
     try {
-      await connectToDatabase();
+      // Prüfen ob Verbindung noch lebt
+      if (mongoose.connection.readyState !== 1) {
+        await connectToDatabase();
+      }
       next();
     } catch (err) {
       console.error('MongoDB Fehler:', err.message);
-      // Wichtig: NICHT next() aufrufen und so tun als wäre alles ok.
-      // Ohne DB-Verbindung würden nachfolgende Mongoose-Queries (z.B. beim
-      // Speichern der Config) einfach "buffern" und auf eine Verbindung warten,
-      // bis Vercel die ganze Function killt -> HTML-Timeout-Seite statt JSON
-      // -> "unknown_error" im Dashboard. Stattdessen sofort ein klares
-      // JSON-Fehlerobjekt zurückgeben, das der Client anzeigen kann.
       if (res.headersSent) return;
       return res.status(503).json({ error: 'database_unavailable' });
     }
@@ -119,26 +119,38 @@ try {
     id: { type: String, required: true, unique: true, index: true },
     guildId: { type: String, required: true, index: true },
     action: { type: mongoose.Schema.Types.Mixed, required: true },
-    createdAt: { type: Date, default: Date.now, expires: 3600 }
+    createdAt: { type: Date, default: Date.now }
   });
+  // TTL-Index separat setzen
+  buttonActionSchema.index({ createdAt: 1 }, { expireAfterSeconds: 3600 });
   ButtonAction = mongoose.models.ButtonAction || mongoose.model('ButtonAction', buttonActionSchema);
 } catch (e) {
-  console.log('⚠️ Mongoose Schema nicht geladen');
+  console.log('⚠️ Mongoose Schema nicht geladen:', e.message);
 }
 
 async function getGuildConfig(guildId) {
   if (!GuildConfig) return {};
-  const doc = await GuildConfig.findOne({ guildId }).lean();
-  return doc?.data || {};
+  try {
+    const doc = await GuildConfig.findOne({ guildId }).lean();
+    return doc?.data || {};
+  } catch (err) {
+    console.error('Fehler beim Laden der Config:', err);
+    return {};
+  }
 }
 
 async function saveModuleConfig(guildId, moduleName, moduleData) {
   if (!GuildConfig) return;
-  await GuildConfig.findOneAndUpdate(
-    { guildId },
-    { $set: { [`data.${moduleName}`]: moduleData } },
-    { upsert: true, new: true }
-  );
+  try {
+    await GuildConfig.findOneAndUpdate(
+      { guildId },
+      { $set: { [`data.${moduleName}`]: moduleData } },
+      { upsert: true, new: true }
+    );
+  } catch (err) {
+    console.error('Fehler beim Speichern der Config:', err);
+    throw err;
+  }
 }
 
 // ============================================================
@@ -259,19 +271,28 @@ async function requireGuildAdmin(req, res, next) {
 let botGuildsCache = { ids: new Set(), fetchedAt: 0 };
 
 async function getBotGuildIds() {
+  if (!BOT_TOKEN) {
+    console.log('⚠️ Kein BOT_TOKEN - kann Bot-Guilds nicht abrufen');
+    return new Set();
+  }
   if (Date.now() - botGuildsCache.fetchedAt < 60000) return botGuildsCache.ids;
   const ids = new Set();
   let after = '0';
   try {
-    while (true) {
+    let hasMore = true;
+    while (hasMore) {
       const res = await fetch(`${DISCORD_API}/users/@me/guilds?limit=200&after=${after}`, {
         headers: { Authorization: `Bot ${BOT_TOKEN}` }
       });
       if (!res.ok) break;
       const page = await res.json();
       page.forEach(g => ids.add(g.id));
-      if (page.length < 200) break;
-      after = page[page.length - 1].id;
+      if (page.length < 200) {
+        hasMore = false;
+      } else {
+        after = page[page.length - 1].id;
+        await new Promise(r => setTimeout(r, 100)); // Rate-Limit Schutz
+      }
     }
   } catch (err) {
     console.error('Fehler beim Abrufen der Bot-Guilds:', err);
@@ -316,7 +337,7 @@ app.get('/api/guilds', requireAuth, async (req, res) => {
 // GUILD OWNER
 // ============================================================
 async function fetchGuildOwner(ownerId) {
-  if (!ownerId) return null;
+  if (!ownerId || !BOT_TOKEN) return null;
   try {
     const res = await fetch(`${DISCORD_API}/users/${ownerId}`, {
       headers: { Authorization: `Bot ${BOT_TOKEN}` }
@@ -338,6 +359,7 @@ async function fetchGuildOwner(ownerId) {
 // BOT-ANZAHL
 // ============================================================
 async function countGuildBots(guildId) {
+  if (!BOT_TOKEN) return null;
   let count = 0;
   let after = '0';
   const MAX_PAGES = 10;
@@ -354,6 +376,7 @@ async function countGuildBots(guildId) {
       count += members.filter(m => m.user?.bot).length;
       if (members.length < 1000) break;
       after = members[members.length - 1].user.id;
+      await new Promise(r => setTimeout(r, 100));
     }
   } catch (err) {
     console.error('Fehler beim Zählen der Bots:', err);
@@ -366,6 +389,9 @@ async function countGuildBots(guildId) {
 // API: GUILD DETAILS
 // ============================================================
 app.get('/api/guild/:guildId', requireAuth, async (req, res) => {
+  if (!BOT_TOKEN) {
+    return res.status(503).json({ error: 'bot_not_configured' });
+  }
   try {
     const guildRes = await fetch(`${DISCORD_API}/guilds/${req.params.guildId}?with_counts=true`, {
       headers: { Authorization: `Bot ${BOT_TOKEN}` }
@@ -405,6 +431,7 @@ app.get('/api/guild/:guildId/config', requireAuth, async (req, res) => {
 // STATISTIK-KANÄLE
 // ============================================================
 async function getGuildRolesCount(guildId) {
+  if (!BOT_TOKEN) return 0;
   try {
     const res = await fetch(`${DISCORD_API}/guilds/${guildId}/roles`, {
       headers: { Authorization: `Bot ${BOT_TOKEN}` }
@@ -419,6 +446,7 @@ async function getGuildRolesCount(guildId) {
 }
 
 async function getGuildBoostsCount(guildId) {
+  if (!BOT_TOKEN) return 0;
   try {
     const res = await fetch(`${DISCORD_API}/guilds/${guildId}?with_counts=true`, {
       headers: { Authorization: `Bot ${BOT_TOKEN}` }
@@ -433,6 +461,7 @@ async function getGuildBoostsCount(guildId) {
 }
 
 async function getMemberAndBotCounts(guildId) {
+  if (!BOT_TOKEN) return { members: 0, bots: 0 };
   const botCount = (await countGuildBots(guildId)) ?? 0;
   let approxTotal = 0;
   try {
@@ -450,6 +479,7 @@ async function getMemberAndBotCounts(guildId) {
 }
 
 async function countGuildMembersWithRole(guildId, roleId) {
+  if (!BOT_TOKEN || !roleId) return 0;
   let count = 0;
   let after = '0';
   const MAX_PAGES = 10;
@@ -463,6 +493,7 @@ async function countGuildMembersWithRole(guildId, roleId) {
       count += members.filter(m => (m.roles || []).includes(roleId)).length;
       if (members.length < 1000) break;
       after = members[members.length - 1].user.id;
+      await new Promise(r => setTimeout(r, 100));
     }
   } catch (err) {
     console.error('Fehler beim Zählen der Rollen-Mitglieder:', err);
@@ -541,6 +572,9 @@ app.post('/api/guild/:guildId/config/:module', requireAuth, async (req, res) => 
     }
     if (module === 'voice_support' && moduleData?.joinSoundData) {
       const commaIndex = moduleData.joinSoundData.indexOf(',');
+      if (commaIndex === -1) {
+        return res.status(400).json({ error: 'invalid_sound_data' });
+      }
       const base64Length = moduleData.joinSoundData.length - (commaIndex + 1);
       if (base64Length > 6000000) {
         return res.status(413).json({ error: 'sound_too_large' });
@@ -558,6 +592,9 @@ app.post('/api/guild/:guildId/config/:module', requireAuth, async (req, res) => 
 // API: ROLES & CHANNELS
 // ============================================================
 app.get('/api/guild/:guildId/roles', requireAuth, async (req, res) => {
+  if (!BOT_TOKEN) {
+    return res.status(503).json({ error: 'bot_not_configured' });
+  }
   try {
     const rolesRes = await fetch(`${DISCORD_API}/guilds/${req.params.guildId}/roles`, {
       headers: { Authorization: `Bot ${BOT_TOKEN}` }
@@ -575,6 +612,9 @@ app.get('/api/guild/:guildId/roles', requireAuth, async (req, res) => {
 });
 
 app.get('/api/guild/:guildId/channels', requireAuth, async (req, res) => {
+  if (!BOT_TOKEN) {
+    return res.status(503).json({ error: 'bot_not_configured' });
+  }
   try {
     const channelsRes = await fetch(`${DISCORD_API}/guilds/${req.params.guildId}/channels`, {
       headers: { Authorization: `Bot ${BOT_TOKEN}` }
@@ -632,6 +672,10 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
 
   if (panelIndex === undefined || panelIndex === null || !channelId) {
     return res.status(400).json({ error: 'panelIndex und channelId sind erforderlich.' });
+  }
+
+  if (!BOT_TOKEN) {
+    return res.status(503).json({ error: 'bot_not_configured' });
   }
 
   try {
@@ -702,12 +746,6 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
       }]
     }];
 
-    const botToken = process.env.BOT_TOKEN;
-    if (!botToken) {
-      console.error('❌ BOT_TOKEN fehlt in .env!');
-      return res.status(500).json({ error: 'BOT_TOKEN nicht konfiguriert.' });
-    }
-
     const payload = {
       embeds: [embed],
       components: components
@@ -717,14 +755,14 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
     if (files.length > 0) {
       const formData = new FormData();
       formData.append('payload_json', JSON.stringify(payload));
-      files.forEach(f => {
-        formData.append('files[0]', new Blob([f.data]), f.name);
+      files.forEach((f, index) => {
+        formData.append(`files[${index}]`, new Blob([f.data]), f.name);
       });
 
       response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bot ${botToken}`
+          'Authorization': `Bot ${BOT_TOKEN}`
         },
         body: formData
       });
@@ -732,7 +770,7 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
       response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bot ${botToken}`,
+          'Authorization': `Bot ${BOT_TOKEN}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload)
@@ -784,12 +822,11 @@ app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req,
     return res.status(400).json({ error: 'channelId, method und roleId sind erforderlich.' });
   }
 
-  try {
-    const botToken = process.env.BOT_TOKEN;
-    if (!botToken) {
-      return res.status(500).json({ error: 'BOT_TOKEN nicht konfiguriert.' });
-    }
+  if (!BOT_TOKEN) {
+    return res.status(503).json({ error: 'bot_not_configured' });
+  }
 
+  try {
     let parsedColor = 0x5865f2;
     if (color) {
       let hex = color.replace(/[^0-9a-fA-F]/g, '');
@@ -862,14 +899,14 @@ app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req,
     if (files.length > 0) {
       const formData = new FormData();
       formData.append('payload_json', JSON.stringify(payload));
-      files.forEach(f => {
-        formData.append('files[0]', new Blob([f.data]), f.name);
+      files.forEach((f, index) => {
+        formData.append(`files[${index}]`, new Blob([f.data]), f.name);
       });
 
       response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bot ${botToken}`
+          'Authorization': `Bot ${BOT_TOKEN}`
         },
         body: formData
       });
@@ -877,7 +914,7 @@ app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req,
       response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bot ${botToken}`,
+          'Authorization': `Bot ${BOT_TOKEN}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload)
@@ -902,11 +939,12 @@ app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req,
 // REACTION ROLES: NACHRICHT SENDEN
 // ============================================================
 function formatEmojiForApi(raw) {
+  if (!raw) return '';
   const customMatch = raw.match(/^<a?:(\w+):(\d+)>$/);
   if (customMatch) {
     return `${customMatch[1]}:${customMatch[2]}`;
   }
-  return raw;
+  return raw.trim();
 }
 
 app.post('/api/guild/:guildId/reactionroles/send-panel', requireAuth, async (req, res) => {
@@ -915,6 +953,10 @@ app.post('/api/guild/:guildId/reactionroles/send-panel', requireAuth, async (req
 
   if (panelIndex === undefined || panelIndex === null) {
     return res.status(400).json({ error: 'panelIndex ist erforderlich.' });
+  }
+
+  if (!BOT_TOKEN) {
+    return res.status(503).json({ error: 'bot_not_configured' });
   }
 
   try {
@@ -936,11 +978,6 @@ app.post('/api/guild/:guildId/reactionroles/send-panel', requireAuth, async (req
       return res.status(400).json({ error: 'Diese Nachricht hat keine Emoji-Rollen-Zuordnungen.' });
     }
 
-    const botToken = process.env.BOT_TOKEN;
-    if (!botToken) {
-      return res.status(500).json({ error: 'BOT_TOKEN nicht konfiguriert.' });
-    }
-
     let parsedColor = 0xffffff;
     if (panel.color) {
       let hex = panel.color.replace(/[^0-9a-fA-F]/g, '');
@@ -960,7 +997,7 @@ app.post('/api/guild/:guildId/reactionroles/send-panel', requireAuth, async (req
     const messageRes = await fetch(`https://discord.com/api/v10/channels/${panel.channelId}/messages`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bot ${botToken}`,
+        'Authorization': `Bot ${BOT_TOKEN}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ embeds: [embed] })
@@ -977,7 +1014,7 @@ app.post('/api/guild/:guildId/reactionroles/send-panel', requireAuth, async (req
       try {
         const reactionRes = await fetch(
           `https://discord.com/api/v10/channels/${panel.channelId}/messages/${messageData.id}/reactions/${encodedEmoji}/@me`,
-          { method: 'PUT', headers: { 'Authorization': `Bot ${botToken}` } }
+          { method: 'PUT', headers: { 'Authorization': `Bot ${BOT_TOKEN}` } }
         );
         if (!reactionRes.ok) {
           console.warn('⚠️ Reaktion konnte nicht hinzugefügt werden:', mapping.emoji, reactionRes.status);
@@ -1010,6 +1047,10 @@ app.post('/api/guild/:guildId/applications/send-panel', requireAuth, async (req,
     return res.status(400).json({ error: 'formId ist erforderlich.' });
   }
 
+  if (!BOT_TOKEN) {
+    return res.status(503).json({ error: 'bot_not_configured' });
+  }
+
   try {
     const config = await getGuildConfig(guildId);
     const applications = config.applications || {};
@@ -1028,11 +1069,6 @@ app.post('/api/guild/:guildId/applications/send-panel', requireAuth, async (req,
     const questions = (form.questions || []).filter(q => q && q.trim());
     if (questions.length === 0) {
       return res.status(400).json({ error: 'Bitte füge mindestens eine Frage hinzu.' });
-    }
-
-    const botToken = process.env.BOT_TOKEN;
-    if (!botToken) {
-      return res.status(500).json({ error: 'BOT_TOKEN nicht konfiguriert.' });
     }
 
     let parsedColor = 0x2b2d31;
@@ -1061,7 +1097,7 @@ app.post('/api/guild/:guildId/applications/send-panel', requireAuth, async (req,
     const messageRes = await fetch(`https://discord.com/api/v10/channels/${form.panelChannelId}/messages`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bot ${botToken}`,
+        'Authorization': `Bot ${BOT_TOKEN}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ embeds: [embed], components })
@@ -1090,12 +1126,11 @@ app.post('/api/guild/:guildId/applications/send-panel', requireAuth, async (req,
 app.post('/api/guild/:guildId/send-duty-embed', requireAuth, async (req, res) => {
   const { guildId } = req.params;
 
-  try {
-    const botToken = process.env.BOT_TOKEN;
-    if (!botToken) {
-      return res.status(500).json({ error: 'BOT_TOKEN nicht konfiguriert.' });
-    }
+  if (!BOT_TOKEN) {
+    return res.status(503).json({ error: 'bot_not_configured' });
+  }
 
+  try {
     const config = await getGuildConfig(guildId);
     const vsCfg = config.voice_support || {};
 
@@ -1140,7 +1175,7 @@ app.post('/api/guild/:guildId/send-duty-embed', requireAuth, async (req, res) =>
     const response = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bot ${botToken}`,
+        'Authorization': `Bot ${BOT_TOKEN}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ embeds: [embed], components })
@@ -1170,9 +1205,8 @@ app.post('/api/guild/:guildId/bot/send', requireAuth, requireGuildAdmin, async (
     return res.status(400).json({ error: 'channelId ist erforderlich' });
   }
 
-  const botToken = process.env.BOT_TOKEN;
-  if (!botToken) {
-    return res.status(500).json({ error: 'BOT_TOKEN nicht konfiguriert' });
+  if (!BOT_TOKEN) {
+    return res.status(503).json({ error: 'bot_not_configured' });
   }
 
   const botGuilds = await getBotGuildIds();
@@ -1224,7 +1258,7 @@ app.post('/api/guild/:guildId/bot/send', requireAuth, requireGuildAdmin, async (
     const response = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bot ${botToken}`,
+        'Authorization': `Bot ${BOT_TOKEN}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(payload)
@@ -1252,9 +1286,8 @@ app.post('/api/guild/:guildId/bot/edit', requireAuth, requireGuildAdmin, async (
     return res.status(400).json({ error: 'channelId und messageId sind erforderlich' });
   }
 
-  const botToken = process.env.BOT_TOKEN;
-  if (!botToken) {
-    return res.status(500).json({ error: 'BOT_TOKEN nicht konfiguriert' });
+  if (!BOT_TOKEN) {
+    return res.status(503).json({ error: 'bot_not_configured' });
   }
 
   const botGuilds = await getBotGuildIds();
@@ -1271,7 +1304,7 @@ app.post('/api/guild/:guildId/bot/edit', requireAuth, requireGuildAdmin, async (
     const response = await fetch(`${DISCORD_API}/channels/${channelId}/messages/${messageId}`, {
       method: 'PATCH',
       headers: {
-        'Authorization': `Bot ${botToken}`,
+        'Authorization': `Bot ${BOT_TOKEN}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(payload)
@@ -1299,9 +1332,8 @@ app.get('/api/guild/:guildId/bot/messages', requireAuth, requireGuildAdmin, asyn
     return res.status(400).json({ error: 'channelId ist erforderlich' });
   }
 
-  const botToken = process.env.BOT_TOKEN;
-  if (!botToken) {
-    return res.status(500).json({ error: 'BOT_TOKEN nicht konfiguriert' });
+  if (!BOT_TOKEN) {
+    return res.status(503).json({ error: 'bot_not_configured' });
   }
 
   const botGuilds = await getBotGuildIds();
@@ -1311,14 +1343,29 @@ app.get('/api/guild/:guildId/bot/messages', requireAuth, requireGuildAdmin, asyn
 
   try {
     const response = await fetch(`${DISCORD_API}/channels/${channelId}/messages?limit=${Math.min(parseInt(limit) || 20, 50)}`, {
-      headers: { 'Authorization': `Bot ${botToken}` }
+      headers: { 'Authorization': `Bot ${BOT_TOKEN}` }
     });
     if (!response.ok) {
       const errData = await response.json();
       return res.status(response.status).json({ error: `Discord Fehler: ${errData.message || 'Unbekannt'}` });
     }
     const messages = await response.json();
-    const botId = process.env.CLIENT_ID || (await fetch(`${DISCORD_API}/users/@me`, { headers: { 'Authorization': `Bot ${botToken}` } }).then(r => r.json()).then(u => u.id));
+    
+    // Bot-ID abrufen
+    let botId = process.env.CLIENT_ID;
+    if (!botId) {
+      try {
+        const botRes = await fetch(`${DISCORD_API}/users/@me`, { 
+          headers: { 'Authorization': `Bot ${BOT_TOKEN}` } 
+        });
+        const botData = await botRes.json();
+        botId = botData.id;
+      } catch (err) {
+        console.error('Fehler beim Abrufen der Bot-ID:', err);
+        return res.status(500).json({ error: 'bot_id_fetch_failed' });
+      }
+    }
+    
     const filtered = messages.filter(m => m.author.id === botId);
     res.json(filtered);
   } catch (err) {
