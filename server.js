@@ -63,9 +63,10 @@ async function connectToDatabase() {
   if (!cachedConnection.promise) {
     cachedConnection.promise = mongoose.connect(MONGODB_URI, {
       dbName: 'apex',
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000,
       socketTimeoutMS: 20000,
-      connectTimeoutMS: 5000,
+      connectTimeoutMS: 10000,
+      bufferCommands: false,
       tls: true,
       retryWrites: true
     }).then(m => m).catch(err => {
@@ -111,6 +112,7 @@ try {
 async function getGuildConfig(guildId) {
   if (!GuildConfig) return {};
   try {
+    await connectToDatabase();
     const doc = await GuildConfig.findOne({ guildId }).lean();
     return doc?.data || {};
   } catch (err) {
@@ -122,6 +124,7 @@ async function getGuildConfig(guildId) {
 async function saveModuleConfig(guildId, moduleName, moduleData) {
   if (!GuildConfig) return;
   try {
+    await connectToDatabase();
     await GuildConfig.findOneAndUpdate(
       { guildId },
       { $set: { [`data.${moduleName}`]: moduleData } },
@@ -1204,6 +1207,7 @@ app.post('/api/guild/:guildId/bot/send', requireAuth, requireGuildAdmin, async (
             const id = crypto.randomBytes(8).toString('hex');
             if (ButtonAction) {
               try {
+                await connectToDatabase();
                 await ButtonAction.create({
                   id,
                   guildId,
