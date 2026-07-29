@@ -539,6 +539,13 @@ app.post('/api/guild/:guildId/config/:module', requireAuth, async (req, res) => 
     if (module === 'stats') {
       moduleData = await syncStatsChannelsNow(guildId, moduleData);
     }
+    if (module === 'voice_support' && moduleData?.joinSoundData) {
+      const commaIndex = moduleData.joinSoundData.indexOf(',');
+      const base64Length = moduleData.joinSoundData.length - (commaIndex + 1);
+      if (base64Length > 6000000) {
+        return res.status(413).json({ error: 'sound_too_large' });
+      }
+    }
     await saveModuleConfig(guildId, module, moduleData);
     res.json({ success: true, data: moduleData });
   } catch (err) {
