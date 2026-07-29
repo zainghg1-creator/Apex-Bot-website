@@ -7,7 +7,7 @@ const mongoose = require('mongoose');
 const crypto = require('crypto');
 
 // ============================================================
-// VARIABLEN
+// VARIABLEN - ALLE RICHTIG VON VERCEL
 // ============================================================
 const {
   CLIENT_ID,
@@ -15,7 +15,7 @@ const {
   BOT_TOKEN,
   REDIRECT_URI,
   SESSION_SECRET,
-  MONGODB_URI,
+  MONGODB_URI,  // ✅ RICHTIG - NICHT mongonetwo!
   PORT = process.env.PORT || 3000,
   NODE_ENV = 'production'
 } = process.env;
@@ -49,7 +49,7 @@ app.use(cookieSession({
 }));
 
 // ============================================================
-// MONGODB (NUR WENN URI VORHANDEN)
+// MONGODB VERBINDUNG
 // ============================================================
 let cachedConnection = global._apexMongooseConnection || { conn: null, promise: null };
 global._apexMongooseConnection = cachedConnection;
@@ -77,30 +77,11 @@ async function connectToDatabase() {
   return cachedConnection.conn;
 }
 
-// Verbindung initial starten (nicht blockierend)
+// Verbindung initial starten
 if (MONGODB_URI) {
   connectToDatabase().catch(err => {
     console.error('❌ MongoDB initial connection failed:', err.message);
   });
-}
-
-// Middleware für DB-Checks (nur wenn URI vorhanden)
-if (MONGODB_URI) {
-  app.use(async (req, res, next) => {
-    try {
-      // Prüfen ob Verbindung noch lebt
-      if (mongoose.connection.readyState !== 1) {
-        await connectToDatabase();
-      }
-      next();
-    } catch (err) {
-      console.error('MongoDB Fehler:', err.message);
-      if (res.headersSent) return;
-      return res.status(503).json({ error: 'database_unavailable' });
-    }
-  });
-} else {
-  console.log('⚠️ MongoDB deaktiviert (keine URI)');
 }
 
 // ============================================================
@@ -121,7 +102,6 @@ try {
     action: { type: mongoose.Schema.Types.Mixed, required: true },
     createdAt: { type: Date, default: Date.now }
   });
-  // TTL-Index separat setzen
   buttonActionSchema.index({ createdAt: 1 }, { expireAfterSeconds: 3600 });
   ButtonAction = mongoose.models.ButtonAction || mongoose.model('ButtonAction', buttonActionSchema);
 } catch (e) {
