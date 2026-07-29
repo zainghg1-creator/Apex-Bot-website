@@ -111,6 +111,7 @@ const FRIENDLY_ERRORS = {
   server_error: 'Serverfehler – bitte erneut versuchen.',
   unknown_module: 'Unbekanntes Modul.',
   discord_api_error: 'Discord konnte nicht erreicht werden.',
+  sound_too_large: 'Die Sounddatei ist zu groß (max. 4MB).',
   unknown_error: 'Zeitüberschreitung beim Server – bitte erneut versuchen.'
 };
 
@@ -1410,7 +1411,10 @@ async function saveModuleSettings(moduleName) {
           embedTitle: document.getElementById('voice_support-embed-title')?.value || '',
           embedDescription: document.getElementById('voice_support-embed-desc')?.value || '',
           embedColor: document.getElementById('voice_support-embed-color')?.value || '#5865f2',
-          embedImage: document.getElementById('voice_support-embed-image-input')?.dataset.value || ''
+          embedImage: document.getElementById('voice_support-embed-image-input')?.dataset.value || '',
+          joinSoundEnabled: document.getElementById('voice_support-joinsound-enabled')?.checked ?? false,
+          joinSoundData: document.getElementById('voice_support-joinsound-input')?.dataset.value || '',
+          joinSoundName: document.getElementById('voice_support-joinsound-input')?.dataset.filename || ''
         };
         break;
       default:
@@ -2699,6 +2703,25 @@ function applyVoiceSupportConfig(cfg) {
     previewImg.style.display = cfg.embedImage ? 'block' : 'none';
   }
   updateVoiceSupportEmbedPreview();
+  // Beitritts-Sound
+  setChecked('voice_support-joinsound-enabled', cfg.joinSoundEnabled ?? false);
+  const soundInput = document.getElementById('voice_support-joinsound-input');
+  if (soundInput) {
+    soundInput.dataset.value = cfg.joinSoundData || '';
+    soundInput.dataset.filename = cfg.joinSoundName || '';
+  }
+  const soundInfo = document.getElementById('voice_support-joinsound-info');
+  const soundPreview = document.getElementById('voice_support-joinsound-preview');
+  const soundFilename = document.getElementById('voice_support-joinsound-filename');
+  if (cfg.joinSoundData) {
+    if (soundInfo) soundInfo.classList.remove('hidden');
+    if (soundPreview) soundPreview.src = cfg.joinSoundData;
+    if (soundFilename) soundFilename.textContent = cfg.joinSoundName || 'Hochgeladene Datei';
+  } else {
+    if (soundInfo) soundInfo.classList.add('hidden');
+    if (soundPreview) soundPreview.src = '';
+    if (soundFilename) soundFilename.textContent = '';
+  }
 }
 
 function updateVoiceSupportEmbedPreview() {
@@ -2810,6 +2833,51 @@ function clearVoiceSupportImage() {
   const previewImg = document.getElementById('voice_support-embed-image-preview');
   if (previewImg) { previewImg.src = ''; previewImg.style.display = 'none'; }
   updateVoiceSupportEmbedPreview();
+}
+
+async function handleVoiceSupportSoundUpload(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  if (!file.type.startsWith('audio/')) {
+    showToast('Bitte wähle eine Audiodatei aus.', 'error');
+    input.value = '';
+    return;
+  }
+  if (file.size > 4 * 1024 * 1024) {
+    showToast('Datei ist zu groß (max. 4MB).', 'error');
+    input.value = '';
+    return;
+  }
+  try {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      input.dataset.value = dataUrl;
+      input.dataset.filename = file.name;
+      const soundInfo = document.getElementById('voice_support-joinsound-info');
+      const soundPreview = document.getElementById('voice_support-joinsound-preview');
+      const soundFilename = document.getElementById('voice_support-joinsound-filename');
+      if (soundInfo) soundInfo.classList.remove('hidden');
+      if (soundPreview) soundPreview.src = dataUrl;
+      if (soundFilename) soundFilename.textContent = file.name;
+      showToast('Sound hochgeladen ✅', 'success');
+    };
+    reader.onerror = () => showToast('Fehler beim Lesen der Datei', 'error');
+    reader.readAsDataURL(file);
+  } catch (err) {
+    showToast('Fehler: ' + err.message, 'error');
+  }
+}
+
+function clearVoiceSupportSound() {
+  const input = document.getElementById('voice_support-joinsound-input');
+  if (input) { input.value = ''; input.dataset.value = ''; input.dataset.filename = ''; }
+  const soundInfo = document.getElementById('voice_support-joinsound-info');
+  const soundPreview = document.getElementById('voice_support-joinsound-preview');
+  const soundFilename = document.getElementById('voice_support-joinsound-filename');
+  if (soundInfo) soundInfo.classList.add('hidden');
+  if (soundPreview) soundPreview.src = '';
+  if (soundFilename) soundFilename.textContent = '';
 }
 
 // ============================================================
