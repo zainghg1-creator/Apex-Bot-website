@@ -68,7 +68,10 @@ async function connectToDatabase() {
       connectTimeoutMS: 10000,
       bufferCommands: false,
       tls: true,
-      retryWrites: true
+      retryWrites: true,
+      retryReads: true,
+      family: 4,
+      maxPoolSize: 5
     }).then(m => m).catch(err => {
       cachedConnection.promise = null;
       throw err;
@@ -116,8 +119,15 @@ async function getGuildConfig(guildId) {
     const doc = await GuildConfig.findOne({ guildId }).lean();
     return doc?.data || {};
   } catch (err) {
-    console.error('Fehler beim Laden der Config:', err);
-    return {};
+    console.error('Fehler beim Laden der Config (Versuch 1):', err.message);
+    // Ein Retry hilft, falls ein einzelner Replica-Set-Knoten kurzzeitig nicht erreichbar ist
+    try {
+      const doc = await GuildConfig.findOne({ guildId }).lean();
+      return doc?.data || {};
+    } catch (err2) {
+      console.error('Fehler beim Laden der Config (Versuch 2):', err2.message);
+      return {};
+    }
   }
 }
 
