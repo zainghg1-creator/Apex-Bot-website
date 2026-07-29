@@ -3698,6 +3698,35 @@
                     </div>
 
                     <div class="form-group">
+                        <div class="switch-row">
+                            <label>🔊 Sound abspielen, wenn jemand den Warteraum betritt</label>
+                            <label class="switch"><input type="checkbox" id="voice_support-joinsound-enabled"><span
+                                    class="switch-slider"></span></label>
+                        </div>
+                        <small>Der Bot joint automatisch in den Warteraum-Kanal und spielt die hochgeladene
+                            Audiodatei ab, sobald ein Mitglied beitritt. Danach verlässt der Bot den Kanal
+                            wieder.</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Sounddatei</label>
+                        <div class="upload-btn-wrap">
+                            <label class="btn btn-secondary" for="voice_support-joinsound-input">📤 Datei
+                                hochladen</label>
+                            <input type="file" id="voice_support-joinsound-input" accept="audio/*"
+                                onchange="handleVoiceSupportSoundUpload(this)">
+                        </div>
+                        <div id="voice_support-joinsound-info" class="hidden" style="margin-top:8px;">
+                            <span id="voice_support-joinsound-filename"
+                                style="font-size:0.85rem; color:var(--text-muted);"></span>
+                            <audio id="voice_support-joinsound-preview" controls
+                                style="display:block; width:100%; margin-top:6px;"></audio>
+                            <button class="btn btn-secondary" style="margin-top:6px;"
+                                onclick="clearVoiceSupportSound()">Entfernen</button>
+                        </div>
+                        <small>Erlaubt sind gängige Audioformate (MP3, WAV, OGG), max. 4MB.</small>
+                    </div>
+
+                    <div class="form-group">
                         <label for="voice_support-notification">Benachrichtigungskanal</label>
                         <select id="voice_support-notification"></select>
                         <small>Hier werden die Support-Anfragen mit Buttons gepostet.</small>
