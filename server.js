@@ -63,15 +63,16 @@ async function connectToDatabase() {
   if (!cachedConnection.promise) {
     cachedConnection.promise = mongoose.connect(MONGODB_URI, {
       dbName: 'apex',
-      serverSelectionTimeoutMS: 10000,
-      socketTimeoutMS: 20000,
-      connectTimeoutMS: 10000,
+      serverSelectionTimeoutMS: 15000,
+      socketTimeoutMS: 30000,
+      connectTimeoutMS: 15000,
       bufferCommands: false,
       tls: true,
       retryWrites: true,
       retryReads: true,
       family: 4,
-      maxPoolSize: 5
+      maxPoolSize: 5,
+      readPreference: 'secondaryPreferred'
     }).then(m => m).catch(err => {
       cachedConnection.promise = null;
       throw err;
