@@ -279,6 +279,42 @@ invites_cache = {}
 BOT_START_TIME = time.time()
 
 # ============================================================
+# PREMIUM-PRÜFUNG (für ausgewählte Module)
+# ============================================================
+PREMIUM_GUILD_ID = 1525533723574140980
+PREMIUM_ROLE_ID = 1529085177555587103
+
+async def check_premium(interaction: discord.Interaction) -> bool:
+    """
+    Prüft, ob der Nutzer auf dem Premium‑Server die Premium‑Rolle besitzt.
+    Gibt True zurück, wenn die Prüfung bestanden ist (entweder nicht auf dem
+    Premium‑Server oder Rolle vorhanden). Bei Fehlschlag wird eine Fehlermeldung
+    gesendet und False zurückgegeben.
+    """
+    if interaction.guild_id != PREMIUM_GUILD_ID:
+        return True  # auf anderen Servern keine Prüfung
+
+    member = interaction.user
+    if not isinstance(member, discord.Member):
+        member = interaction.guild.get_member(interaction.user.id)
+        if not member:
+            return True  # Sicherheitsfall
+
+    role = interaction.guild.get_role(PREMIUM_ROLE_ID)
+    if not role:
+        return True  # Rolle existiert nicht – Prüfung überspringen
+
+    if role in member.roles:
+        return True
+
+    # Prüfung fehlgeschlagen
+    await interaction.response.send_message(
+        "für dieses Modul brauchst du Premium",
+        ephemeral=True
+    )
+    return False
+
+# ============================================================
 # VOICE-SUPPORT-VORAUSSETZUNGEN PRÜFEN
 # ============================================================
 _ffmpeg_path = shutil.which("ffmpeg")
@@ -1975,6 +2011,8 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
 @bot.tree.command(name="send-duty-embed", description="Sendet die Duty-Toggle-Nachricht in den konfigurierten Kanal.")
 @app_commands.default_permissions(administrator=True)
 async def send_duty_embed(interaction: discord.Interaction):
+    if not await check_premium(interaction):
+        return
     await interaction.response.defer(ephemeral=True)
     config = await get_config(interaction.guild.id)
     vs_cfg = config.get("voice_support", {})
@@ -3829,6 +3867,8 @@ async def teamwarn(
 
 @bot.tree.command(name="reload-ticket-panel", description="Sendet das Ticket-Panel neu in den konfigurierten Kanal.")
 async def reload_ticket_panel(interaction: discord.Interaction):
+    if not await check_premium(interaction):
+        return
     await interaction.response.defer(ephemeral=True)
     await send_ticket_panel(interaction.guild)
     await interaction.followup.send("✅ Ticket-Panel wurde neu geladen!")
@@ -3836,6 +3876,8 @@ async def reload_ticket_panel(interaction: discord.Interaction):
 @bot.tree.command(name="reload-config", description="Erzwingt, dass der Bot die Server-Konfiguration sofort neu aus der Datenbank lädt.")
 @app_commands.checks.has_permissions(administrator=True)
 async def reload_config(interaction: discord.Interaction):
+    if not await check_premium(interaction):
+        return
     await interaction.response.defer(ephemeral=True)
     invalidate_config_cache(interaction.guild.id)
     await interaction.followup.send(
@@ -4070,6 +4112,8 @@ async def dashboard(interaction: discord.Interaction):
 
 @bot.tree.command(name="serverlist", description="Zeigt alle Server an (nur für Zain).")
 async def serverlist(interaction: discord.Interaction):
+    if not await check_premium(interaction):
+        return
     if interaction.user.id != 1086731728468578477:
         await interaction.response.send_message("❌ Nur Zain darf diesen Command benutzen.", ephemeral=True)
         return
@@ -4125,6 +4169,8 @@ async def serverlist(interaction: discord.Interaction):
 
 @bot.tree.command(name="update-stats", description="Aktualisiert sofort alle Statistik-Kanäle auf diesem Server.")
 async def update_stats(interaction: discord.Interaction):
+    if not await check_premium(interaction):
+        return
     await interaction.response.defer(ephemeral=True)
     try:
         await update_stats_channels(interaction.guild)
@@ -4764,6 +4810,8 @@ async def shift_type_autocomplete(interaction: discord.Interaction, current: str
 @app_commands.describe(user="Für wen die Schicht gestartet werden soll (nur Manager)", schichtart="Welche Schichtart (falls konfiguriert)")
 @app_commands.autocomplete(schichtart=shift_type_autocomplete)
 async def shift_start(interaction: discord.Interaction, user: discord.Member = None, schichtart: str = None):
+    if not await check_premium(interaction):
+        return
     await interaction.response.defer()
     guild = interaction.guild
     target = user or interaction.user
@@ -4802,6 +4850,8 @@ async def shift_start(interaction: discord.Interaction, user: discord.Member = N
 @bot.tree.command(name="shift_pause", description="Pausiere deine aktive Schicht.")
 @app_commands.describe(user="Für wen die Schicht pausiert werden soll (nur Manager)")
 async def shift_pause(interaction: discord.Interaction, user: discord.Member = None):
+    if not await check_premium(interaction):
+        return
     await interaction.response.defer()
     guild = interaction.guild
     target = user or interaction.user
@@ -4833,6 +4883,8 @@ async def shift_pause(interaction: discord.Interaction, user: discord.Member = N
 @bot.tree.command(name="shift_stop", description="Beende deine aktive Schicht.")
 @app_commands.describe(user="Für wen die Schicht beendet werden soll (nur Manager)")
 async def shift_stop(interaction: discord.Interaction, user: discord.Member = None):
+    if not await check_premium(interaction):
+        return
     await interaction.response.defer()
     guild = interaction.guild
     target = user or interaction.user
@@ -4866,6 +4918,8 @@ async def shift_stop(interaction: discord.Interaction, user: discord.Member = No
 @bot.tree.command(name="shift_status", description="Zeige den aktuellen Schichtstatus.")
 @app_commands.describe(user="Nutzer, dessen Status angezeigt werden soll (optional)")
 async def shift_status(interaction: discord.Interaction, user: discord.Member = None):
+    if not await check_premium(interaction):
+        return
     await interaction.response.defer(ephemeral=True)
     guild = interaction.guild
     target = user or interaction.user
@@ -4906,6 +4960,8 @@ async def shift_status(interaction: discord.Interaction, user: discord.Member = 
 
 @bot.tree.command(name="shift_leaderboard", description="Zeige die Bestenliste der Schichtzeiten.")
 async def shift_leaderboard(interaction: discord.Interaction):
+    if not await check_premium(interaction):
+        return
     await interaction.response.defer(ephemeral=True)
     guild = interaction.guild
     config = await get_shift_config(guild.id)
@@ -4949,6 +5005,8 @@ class AbmeldeView(discord.ui.View):
 
     @discord.ui.button(label="Abmeldung erstellen", style=discord.ButtonStyle.primary, custom_id="abm_create")
     async def abm_create(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await check_premium(interaction):
+            return
         cfg = await get_abmeldesystem_config(interaction.guild_id)
         if not cfg.get("enabled", False):
             await interaction.response.send_message("❌ Das Abmelde-System ist nicht aktiviert.", ephemeral=True)
@@ -4960,6 +5018,8 @@ class AbmeldeView(discord.ui.View):
 
     @discord.ui.button(label="Anmelden", style=discord.ButtonStyle.success, custom_id="abm_return")
     async def abm_return(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await check_premium(interaction):
+            return
         await interaction.response.defer(ephemeral=True)
         guild = interaction.guild
         cfg = await get_abmeldesystem_config(guild.id)
