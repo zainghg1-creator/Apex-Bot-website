@@ -86,6 +86,7 @@ if MONGODB_URI:
         shifts_collection = db["shifts"]
         shift_stats_collection = db["shift_stats"]
         quiz_stats_collection = db["quiz_stats"]
+        logouts_collection = db["logouts"]
         logger.info("✅ MongoDB erfolgreich verbunden")
     except Exception as e:
         logger.error(f"❌ MongoDB Verbindungsfehler: {e}")
@@ -102,6 +103,7 @@ if MONGODB_URI:
         shifts_collection = None
         shift_stats_collection = None
         quiz_stats_collection = None
+        logouts_collection = None
 else:
     logger.warning("⚠️ Keine MONGODB_URI gefunden – laufe ohne DB")
     db = None
@@ -117,6 +119,7 @@ else:
     shifts_collection = None
     shift_stats_collection = None
     quiz_stats_collection = None
+    logouts_collection = None
 
 # ============================================================
 # GENERISCHER IN-MEMORY-CACHE (RAM) MIT AUTOMATISCHEM ABLAUF (TTL)
@@ -1710,6 +1713,11 @@ async def on_ready():
     _bot_ready_once = True
 
     bot.loop.create_task(status_loop())
+
+    try:
+        bot.add_view(AbmeldeView())
+    except Exception as e:
+        logger.error(f"[ABMELDESYSTEM] Fehler beim Registrieren der persistenten View: {e}")
 
     for guild in bot.guilds:
         try:
@@ -4397,6 +4405,136 @@ async def shift_leaderboard(interaction: discord.Interaction):
         description.append(f"{medal} <@{user_id}> – **{time_str}**")
     embed.description = "\n".join(description)
     await interaction.followup.send(embed=embed)
+
+# ============================================================
+# ABMELDE-SYSTEM (Team & Support)
+# ============================================================
+async def get_abmeldesystem_config(guild_id):
+    config = await get_config(guild_id)
+    return config.get("abmeldesystem", {})
+
+class AbmeldeView(discord.ui.View):
+    """Persistente View mit den 2 Buttons 'Abmeldung erstellen' und 'Anmelden'."""
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="Abmeldung erstellen", style=discord.ButtonStyle.primary, custom_id="abm_create")
+    async def abm_create(self, interaction: discord.Interaction, button: discord.ui.Button):
+        cfg = await get_abmeldesystem_config(interaction.guild_id)
+        if not cfg.get("enabled", False):
+            await interaction.response.send_message("❌ Das Abmelde-System ist nicht aktiviert.", ephemeral=True)
+            return
+        if not cfg.get("abgemeldeteRoleId"):
+            await interaction.response.send_message("❌ Es ist keine 'Abgemeldet'-Rolle konfiguriert. Bitte im Dashboard einrichten.", ephemeral=True)
+            return
+        await interaction.response.send_modal(AbmeldeModal())
+
+    @discord.ui.button(label="Anmelden", style=discord.ButtonStyle.success, custom_id="abm_return")
+    async def abm_return(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer(ephemeral=True)
+        guild = interaction.guild
+        cfg = await get_abmeldesystem_config(guild.id)
+        if not cfg.get("enabled", False):
+            await interaction.followup.send("❌ Das Abmelde-System ist nicht aktiviert.", ephemeral=True)
+            return
+        member = guild.get_member(interaction.user.id) or interaction.user
+        role_id = cfg.get("abgemeldeteRoleId")
+        role = guild.get_role(int(role_id)) if role_id else None
+        had_role = bool(role and role in getattr(member, "roles", []))
+        if role and had_role:
+            try:
+                await member.remove_roles(role, reason="Anmeldung über Abmelde-System")
+            except discord.Forbidden:
+                await interaction.followup.send("⚠️ Rolle konnte nicht entfernt werden (fehlende Berechtigung), du wurdest dennoch angemeldet.", ephemeral=True)
+
+        active_doc = None
+        if logouts_collection is not None:
+            try:
+                active_doc = await db_call(
+                    logouts_collection.find_one_and_update,
+                    {"guildId": str(guild.id), "userId": str(interaction.user.id), "active": True},
+                    {"$set": {"active": False, "returnedAt": datetime.now(timezone.utc)}},
+                    return_document=ReturnDocument.AFTER
+                )
+            except Exception as e:
+                logger.error(f"[ABMELDESYSTEM] Fehler beim Beenden der Abmeldung: {e}")
+
+        if not had_role and not active_doc:
+            await interaction.followup.send("ℹ️ Du warst nicht als abgemeldet eingetragen.", ephemeral=True)
+            return
+
+        await interaction.followup.send("✅ Du bist jetzt wieder angemeldet.", ephemeral=True)
+        await send_abmeldesystem_log(guild, cfg, interaction.user, active_doc, event="return")
+
+class AbmeldeModal(discord.ui.Modal, title="Abmeldung erstellen"):
+    von = discord.ui.TextInput(label="Von", placeholder="z.B. 30.07.2026", required=True, max_length=100)
+    bis = discord.ui.TextInput(label="Bis", placeholder="z.B. 15.08.2026", required=True, max_length=100)
+    grund = discord.ui.TextInput(label="Grund", style=discord.TextStyle.paragraph, placeholder="Warum meldest du dich ab?", required=True, max_length=500)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        guild = interaction.guild
+        cfg = await get_abmeldesystem_config(guild.id)
+        if not cfg.get("enabled", False):
+            await interaction.followup.send("❌ Das Abmelde-System ist nicht aktiviert.", ephemeral=True)
+            return
+        role_id = cfg.get("abgemeldeteRoleId")
+        role = guild.get_role(int(role_id)) if role_id else None
+        member = guild.get_member(interaction.user.id) or interaction.user
+
+        if role:
+            try:
+                await member.add_roles(role, reason="Abmeldung erstellt")
+            except discord.Forbidden:
+                await interaction.followup.send("⚠️ Die 'Abgemeldet'-Rolle konnte nicht vergeben werden (fehlende Berechtigung). Die Abmeldung wurde trotzdem gespeichert.", ephemeral=True)
+
+        doc = {
+            "_id": f"abm_{guild.id}_{interaction.user.id}_{int(datetime.now(timezone.utc).timestamp())}",
+            "guildId": str(guild.id),
+            "userId": str(interaction.user.id),
+            "von": str(self.von.value).strip(),
+            "bis": str(self.bis.value).strip(),
+            "grund": str(self.grund.value).strip(),
+            "createdAt": datetime.now(timezone.utc),
+            "active": True
+        }
+        if logouts_collection is not None:
+            try:
+                await db_call(logouts_collection.insert_one, doc)
+            except Exception as e:
+                logger.error(f"[ABMELDESYSTEM] Fehler beim Speichern der Abmeldung: {e}")
+
+        await interaction.followup.send("✅ Deine Abmeldung wurde erstellt.", ephemeral=True)
+        await send_abmeldesystem_log(guild, cfg, interaction.user, doc, event="create")
+
+async def send_abmeldesystem_log(guild: discord.Guild, cfg: dict, user: discord.abc.User, doc: dict, event: str):
+    """Sendet ein Log-Embed in den konfigurierten Kanal, sobald sich jemand ab- oder anmeldet."""
+    log_channel_id = cfg.get("logChannelId")
+    if not log_channel_id:
+        return
+    channel = guild.get_channel(int(log_channel_id))
+    if not channel:
+        return
+    try:
+        if event == "create":
+            embed = discord.Embed(title="📋 Neue Abmeldung", color=0xE67E22, timestamp=datetime.now(timezone.utc))
+            embed.add_field(name="User", value=user.mention, inline=False)
+            embed.add_field(name="Von", value=doc.get("von", "-"), inline=True)
+            embed.add_field(name="Bis", value=doc.get("bis", "-"), inline=True)
+            embed.add_field(name="Grund", value=doc.get("grund", "-"), inline=False)
+            embed.set_footer(text="Status: 🔴 Abgemeldet")
+        else:
+            embed = discord.Embed(title="📋 Anmeldung", color=0x2ECC71, timestamp=datetime.now(timezone.utc))
+            embed.add_field(name="User", value=user.mention, inline=False)
+            if doc:
+                embed.add_field(name="War abgemeldet", value=f"{doc.get('von', '-')} – {doc.get('bis', '-')}", inline=False)
+                embed.add_field(name="Grund war", value=doc.get("grund", "-"), inline=False)
+            embed.set_footer(text="Status: 🟢 Wieder angemeldet")
+        await channel.send(embed=embed)
+    except discord.Forbidden:
+        logger.warning(f"[ABMELDESYSTEM] Keine Berechtigung, im Log-Kanal von {guild.name} zu schreiben.")
+    except Exception as e:
+        logger.error(f"[ABMELDESYSTEM] Fehler beim Senden des Log-Embeds: {e}")
 
 # ============================================================
 # GLOBALER FEHLER-HANDLER
