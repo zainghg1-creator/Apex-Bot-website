@@ -279,39 +279,64 @@ invites_cache = {}
 BOT_START_TIME = time.time()
 
 # ============================================================
-# PREMIUM-PRÜFUNG (für ausgewählte Module)
+# PREMIUM-PRÜFUNG (NEUE LOGIK: Server-Premium)
 # ============================================================
 PREMIUM_GUILD_ID = 1525533723574140980
 PREMIUM_ROLE_ID = 1529085177555587103
 
+# Caches für Premium-Prüfung
+_premium_role_cache = TTLCache(ttl=300, name="premium_roles")
+_premium_guild_cache = TTLCache(ttl=300, name="premium_guilds")
+
+async def get_premium_role_members() -> set:
+    """Gibt ein Set von User-IDs zurück, die auf dem Premium-Server die Premium-Rolle haben."""
+    cached = _premium_role_cache.get("members")
+    if cached is not None:
+        return cached
+    premium_guild = bot.get_guild(PREMIUM_GUILD_ID)
+    if not premium_guild:
+        return set()
+    role = premium_guild.get_role(PREMIUM_ROLE_ID)
+    if not role:
+        return set()
+    # Alle Mitglieder mit dieser Rolle (dank Members-Intent)
+    user_ids = {m.id for m in role.members}
+    _premium_role_cache.set("members", user_ids)
+    return user_ids
+
 async def check_premium(interaction: discord.Interaction) -> bool:
     """
-    Prüft, ob der Nutzer auf dem Premium‑Server die Premium‑Rolle besitzt.
-    Gibt True zurück, wenn die Prüfung bestanden ist (entweder nicht auf dem
-    Premium‑Server oder Rolle vorhanden). Bei Fehlschlag wird eine Fehlermeldung
-    gesendet und False zurückgegeben.
+    Prüft, ob der aktuelle Server Premium-freigeschaltet hat.
+    - Auf dem Premium-Server selbst ist immer Premium.
+    - Auf anderen Servern wird geprüft, ob mindestens ein Administrator
+      auf diesem Server die Premium-Rolle auf dem Premium-Server besitzt.
     """
-    if interaction.guild_id != PREMIUM_GUILD_ID:
-        return True  # auf anderen Servern keine Prüfung
-
-    member = interaction.user
-    if not isinstance(member, discord.Member):
-        member = interaction.guild.get_member(interaction.user.id)
-        if not member:
-            return True  # Sicherheitsfall
-
-    role = interaction.guild.get_role(PREMIUM_ROLE_ID)
-    if not role:
-        return True  # Rolle existiert nicht – Prüfung überspringen
-
-    if role in member.roles:
+    guild_id = interaction.guild_id
+    if guild_id == PREMIUM_GUILD_ID:
         return True
 
-    # Prüfung fehlgeschlagen
-    await interaction.response.send_message(
-        "für dieses Modul brauchst du Premium",
-        ephemeral=True
-    )
+    # Cache für diese Guild prüfen
+    cached = _premium_guild_cache.get(guild_id)
+    if cached is not None:
+        return cached
+
+    guild = interaction.guild
+    if not guild:
+        _premium_guild_cache.set(guild_id, False)
+        return False
+
+    premium_members = await get_premium_role_members()
+    if not premium_members:
+        _premium_guild_cache.set(guild_id, False)
+        return False
+
+    # Alle Mitglieder der Guild durchgehen – nur Administratoren prüfen
+    for member in guild.members:
+        if member.guild_permissions.administrator and member.id in premium_members:
+            _premium_guild_cache.set(guild_id, True)
+            return True
+
+    _premium_guild_cache.set(guild_id, False)
     return False
 
 # ============================================================
