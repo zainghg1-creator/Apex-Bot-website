@@ -547,39 +547,57 @@ async def build_teamliste_embed(guild: discord.Guild) -> discord.Embed:
     embed.timestamp = datetime.now(BERLIN_TZ)
     return embed
 
+# Pro Guild ein Lock, damit parallele Aufrufe (z.B. mehrere Rollenänderungen
+# kurz hintereinander über on_member_update) sich nicht gegenseitig
+# überholen. Ohne Lock könnten zwei gleichzeitige Aufrufe beide "keine
+# bestehende Nachricht gefunden" lesen und dadurch beide eine neue
+# Teamliste-Nachricht senden -> Spam im Kanal.
+_teamliste_locks: dict = {}
+
+def _get_teamliste_lock(guild_id: str) -> asyncio.Lock:
+    lock = _teamliste_locks.get(guild_id)
+    if lock is None:
+        lock = asyncio.Lock()
+        _teamliste_locks[guild_id] = lock
+    return lock
+
 async def update_teamliste(guild: discord.Guild):
-    config = await get_config(guild.id)
-    team_cfg = config.get("teamliste", {})
-    if not team_cfg.get("channelId"):
-        return
-    channel = guild.get_channel(int(team_cfg["channelId"]))
-    if not channel:
-        return
-    embed = await build_teamliste_embed(guild)
     guild_id = str(guild.id)
-
-    # Bekannte Message-ID der Teamliste separat gespeichert (nicht Teil von
-    # data.teamliste, damit ein Speichern im Dashboard sie nicht überschreibt).
-    doc = await db_call(guild_configs.find_one, {"guildId": guild_id})
-    meta = (doc or {}).get("teamlisteMeta", {}) or {}
-    message_id = meta.get("messageId")
-    channel_id = meta.get("channelId")
-
-    if message_id and channel_id == str(channel.id):
-        try:
-            message = await channel.fetch_message(int(message_id))
-            await message.edit(embed=embed)
+    async with _get_teamliste_lock(guild_id):
+        config = await get_config(guild.id)
+        team_cfg = config.get("teamliste", {})
+        if not team_cfg.get("channelId"):
             return
-        except (discord.NotFound, discord.Forbidden, discord.HTTPException):
-            pass  # Nachricht existiert nicht mehr -> unten neu senden
+        channel = guild.get_channel(int(team_cfg["channelId"]))
+        if not channel:
+            return
+        embed = await build_teamliste_embed(guild)
 
-    sent = await channel.send(embed=embed)
-    await db_call(
-        guild_configs.update_one,
-        {"guildId": guild_id},
-        {"$set": {"teamlisteMeta": {"messageId": str(sent.id), "channelId": str(channel.id)}}},
-        upsert=True,
-    )
+        # Bekannte Message-ID der Teamliste separat gespeichert (nicht Teil von
+        # data.teamliste, damit ein Speichern im Dashboard sie nicht überschreibt).
+        # Wird bei jedem Aufruf frisch aus der DB gelesen (nicht gecacht), damit
+        # ein vorheriger Aufruf innerhalb desselben Locks garantiert gesehen
+        # wird, bevor eine neue Nachricht gesendet wird.
+        doc = await db_call(guild_configs.find_one, {"guildId": guild_id})
+        meta = (doc or {}).get("teamlisteMeta", {}) or {}
+        message_id = meta.get("messageId")
+        channel_id = meta.get("channelId")
+
+        if message_id and channel_id == str(channel.id):
+            try:
+                message = await channel.fetch_message(int(message_id))
+                await message.edit(embed=embed)
+                return
+            except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                pass  # Nachricht existiert nicht mehr -> unten neu senden
+
+        sent = await channel.send(embed=embed)
+        await db_call(
+            guild_configs.update_one,
+            {"guildId": guild_id},
+            {"$set": {"teamlisteMeta": {"messageId": str(sent.id), "channelId": str(channel.id)}}},
+            upsert=True,
+        )
 
 # ============================================================
 # TICKET SYSTEM
