@@ -686,6 +686,10 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
       return res.status(404).json({ error: 'Panel-Daten ungültig.' });
     }
 
+    if (panel.enabled === false) {
+      return res.status(400).json({ error: 'Dieses Panel ist deaktiviert. Aktiviere es zuerst im Dashboard.' });
+    }
+
     const linkedOptions = panel.options || [];
     if (linkedOptions.length === 0) {
       return res.status(400).json({
