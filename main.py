@@ -87,6 +87,7 @@ if MONGODB_URI:
         shift_stats_collection = db["shift_stats"]
         quiz_stats_collection = db["quiz_stats"]
         logouts_collection = db["logouts"]
+        tickets_collection = db["tickets"]
         logger.info("✅ MongoDB erfolgreich verbunden")
     except Exception as e:
         logger.error(f"❌ MongoDB Verbindungsfehler: {e}")
@@ -104,6 +105,7 @@ if MONGODB_URI:
         shift_stats_collection = None
         quiz_stats_collection = None
         logouts_collection = None
+        tickets_collection = None
 else:
     logger.warning("⚠️ Keine MONGODB_URI gefunden – laufe ohne DB")
     db = None
@@ -120,6 +122,7 @@ else:
     shift_stats_collection = None
     quiz_stats_collection = None
     logouts_collection = None
+    tickets_collection = None
 
 # ============================================================
 # GENERISCHER IN-MEMORY-CACHE (RAM) MIT AUTOMATISCHEM ABLAUF (TTL)
@@ -763,8 +766,13 @@ class TicketDropdown(discord.ui.Select):
                 timestamp=datetime.now(BERLIN_TZ)
             )
             ping_message = f"{user.mention} hat ein Ticket eröffnet!"
-            if team_roles:
-                role_mentions = " ".join([f"<@&{role_id}>" for role_id in team_roles])
+            # Bei der Ping-Nachricht haben die für dieses Panel/diese Kategorie im
+            # Dashboard ausgewählten Support-Rollen Vorrang vor der allgemeinen
+            # Teamliste. Nur wenn für dieses Panel keine Support-Rollen konfiguriert
+            # sind, wird auf die Teamliste zurückgefallen.
+            ping_role_ids = support_role_ids or team_roles
+            if ping_role_ids:
+                role_mentions = " ".join([f"<@&{role_id}>" for role_id in ping_role_ids])
                 ping_message += f"\n{role_mentions}"
             view = TicketCloseView(
                 ticket_channel, user, save_transcripts, log_channel_id,
@@ -773,7 +781,27 @@ class TicketDropdown(discord.ui.Select):
                 support_role_ids=support_role_ids, team_role_ids=team_roles
             )
             await ticket_channel.send(ping_message)
-            await ticket_channel.send(embed=embed, view=view)
+            ticket_message = await ticket_channel.send(embed=embed, view=view)
+            if tickets_collection is not None:
+                try:
+                    await db_call(tickets_collection.update_one, {"_id": str(ticket_channel.id)}, {"$set": {
+                        "guildId": str(guild.id),
+                        "channelId": str(ticket_channel.id),
+                        "messageId": str(ticket_message.id),
+                        "creatorId": str(user.id),
+                        "saveTranscripts": save_transcripts,
+                        "logChannelId": log_channel_id,
+                        "claimEnabled": claim_enabled,
+                        "buttonsCfg": buttons_cfg,
+                        "saveImages": save_images,
+                        "privateTranscripts": private_transcripts,
+                        "supportRoleIds": list(support_role_ids or []),
+                        "teamRoleIds": list(team_roles or []),
+                        "claimedBy": None,
+                        "isThread": thread_mode in ("thread", "private")
+                    }}, upsert=True)
+                except Exception as e:
+                    logger.error(f"[TICKET] Konnte Ticket-Metadaten nicht speichern: {e}")
             if log_channel_id:
                 log_channel = guild.get_channel(int(log_channel_id))
                 if log_channel:
@@ -861,6 +889,11 @@ class TicketCloseView(discord.ui.View):
             await interaction.followup.send(f"ℹ️ Dieses Ticket wurde bereits von <@{self.claimed_by}> beansprucht.", ephemeral=True)
             return
         self.claimed_by = interaction.user.id
+        if tickets_collection is not None:
+            try:
+                await db_call(tickets_collection.update_one, {"_id": str(self.channel.id)}, {"$set": {"claimedBy": str(interaction.user.id)}})
+            except Exception as e:
+                logger.error(f"[TICKET] Konnte Claim-Status nicht speichern: {e}")
         if self.claim_button:
             self.claim_button.disabled = True
             self.claim_button.label = f"Beansprucht von {interaction.user.display_name}"
@@ -914,6 +947,11 @@ class TicketCloseView(discord.ui.View):
                 except Exception as e:
                     logger.error(f"[TICKET] Fehler beim Log-Senden: {e}")
             channel_name = self.channel.name
+            if tickets_collection is not None:
+                try:
+                    await db_call(tickets_collection.delete_one, {"_id": str(self.channel.id)})
+                except Exception as e:
+                    logger.error(f"[TICKET] Konnte Ticket-Metadaten nicht löschen: {e}")
             await self.channel.delete(reason=f"Ticket geschlossen von {interaction.user.name}")
             await interaction.followup.send(
                 f"✅ Ticket `{channel_name}` wurde geschlossen!" +
@@ -940,6 +978,44 @@ class TicketCloseView(discord.ui.View):
             await interaction.followup.send("❌ Ich kann dir keine DM senden! Bitte aktiviere deine DMs.", ephemeral=True)
         except Exception as e:
             await interaction.followup.send(f"❌ Fehler: {e}", ephemeral=True)
+
+async def rebuild_ticket_view(doc: dict) -> "TicketCloseView | None":
+    """Baut die Schließen/Beanspruchen/Transkript-View für ein bereits offenes Ticket
+    aus den in der DB gespeicherten Metadaten neu auf, damit die Buttons auch nach
+    einem Bot-Neustart weiter funktionieren (statt 'Interaktion fehlgeschlagen')."""
+    guild = bot.get_guild(int(doc["guildId"]))
+    if not guild:
+        return None
+    channel = guild.get_channel(int(doc["channelId"])) or guild.get_thread(int(doc["channelId"]))
+    if not channel:
+        return None
+    creator_id = doc.get("creatorId")
+    creator = guild.get_member(int(creator_id)) if creator_id else None
+    if not creator:
+        try:
+            creator = await bot.fetch_user(int(creator_id)) if creator_id else None
+        except Exception:
+            creator = None
+    if not creator:
+        return None
+    view = TicketCloseView(
+        channel, creator,
+        save_transcripts=doc.get("saveTranscripts", False),
+        log_channel_id=doc.get("logChannelId"),
+        claim_enabled=doc.get("claimEnabled", False),
+        buttons_cfg=doc.get("buttonsCfg", []),
+        save_images=doc.get("saveImages", False),
+        private_transcripts=doc.get("privateTranscripts", False),
+        support_role_ids=doc.get("supportRoleIds", []),
+        team_role_ids=doc.get("teamRoleIds", [])
+    )
+    claimed_by = doc.get("claimedBy")
+    if claimed_by and view.claim_button:
+        view.claimed_by = int(claimed_by)
+        view.claim_button.disabled = True
+        member = guild.get_member(int(claimed_by))
+        view.claim_button.label = f"Beansprucht von {member.display_name}" if member else "Bereits beansprucht"
+    return view
 
 class TicketView(discord.ui.View):
     def __init__(self, guild_id: str, panel_index: int, options_data: list):
@@ -1370,7 +1446,7 @@ class GiveawayButton(discord.ui.Button):
         if str(user.id) in participants:
             await interaction.followup.send("❌ Du nimmst bereits teil!", ephemeral=True)
             return
-        await db_call(giveaways_collection.update_one, {"_id": self.giveaway_id}, {"$push": {"participants": str(user.id)}})
+        await db_call(giveaways_collection.update_one, {"_id": self.giveaway_id}, {"$addToSet": {"participants": str(user.id)}})
         updated_giveaway = await db_call(giveaways_collection.find_one, {"_id": self.giveaway_id})
         embed = create_giveaway_embed(updated_giveaway)
         view = GiveawayView(self.giveaway_id, len(updated_giveaway.get("participants", [])))
@@ -1412,20 +1488,30 @@ async def end_giveaway(giveaway_id: str):
                 await channel.send(embed=embed)
         await db_call(giveaways_collection.update_one, {"_id": giveaway_id}, {"$set": {"ended": True}})
         return
-    winner_id = random.choice(participants)
-    winner = await bot.fetch_user(int(winner_id))
+    winner_count = max(1, int(giveaway.get("winner_count", 1) or 1))
+    winner_count = min(winner_count, len(participants))
+    winner_ids = random.sample(participants, winner_count)
+    winners = []
+    for wid in winner_ids:
+        try:
+            winners.append(await bot.fetch_user(int(wid)))
+        except Exception as e:
+            logger.error(f"[GIVEAWAY] Konnte Gewinner {wid} nicht laden: {e}")
     winner_role_id = giveaway.get("winner_role_id")
     if winner_role_id:
         guild = bot.get_guild(int(giveaway["guild_id"]))
         if guild:
-            member = guild.get_member(int(winner_id))
             role = guild.get_role(int(winner_role_id))
-            if member and role:
-                try:
-                    await member.add_roles(role)
-                except Exception as e:
-                    logger.error(f"[GIVEAWAY] Fehler beim Vergeben der Rolle: {e}")
-    embed = discord.Embed(title="🎉 Giveaway beendet", description=f"**{giveaway['prize']}**\n\n🏆 **Gewinner:** {winner.mention}\n🎁 Herzlichen Glückwunsch!", color=0xffffff, timestamp=datetime.now(BERLIN_TZ))
+            if role:
+                for wid in winner_ids:
+                    member = guild.get_member(int(wid))
+                    if member:
+                        try:
+                            await member.add_roles(role)
+                        except Exception as e:
+                            logger.error(f"[GIVEAWAY] Fehler beim Vergeben der Rolle: {e}")
+    winners_str = "\n".join(f"🏆 {w.mention}" for w in winners) if winners else "❌ Keine Gewinner ermittelt."
+    embed = discord.Embed(title="🎉 Giveaway beendet", description=f"**{giveaway['prize']}**\n\n**Gewinner ({len(winners)}):**\n{winners_str}\n🎁 Herzlichen Glückwunsch!", color=0xffffff, timestamp=datetime.now(BERLIN_TZ))
     if channel and message_id:
         try:
             message = await channel.fetch_message(int(message_id))
@@ -1434,7 +1520,7 @@ async def end_giveaway(giveaway_id: str):
             await channel.send(embed=embed)
     elif channel:
         await channel.send(embed=embed)
-    await db_call(giveaways_collection.update_one, {"_id": giveaway_id}, {"$set": {"ended": True, "winner_id": str(winner_id)}})
+    await db_call(giveaways_collection.update_one, {"_id": giveaway_id}, {"$set": {"ended": True, "winner_ids": [str(w) for w in winner_ids]}})
 
 # ============================================================
 # STATUS-SCHLEIFE
@@ -1947,6 +2033,22 @@ async def on_ready():
         logger.info(f"✅ {len(synced)} Slash Commands synchronisiert!")
     except Exception as e:
         logger.error(f"Fehler beim Synchronisieren der Commands: {e}")
+
+    if tickets_collection is not None:
+        try:
+            open_tickets = await db_call(lambda: list(tickets_collection.find({})))
+            for doc in open_tickets:
+                try:
+                    view = await rebuild_ticket_view(doc)
+                    if view is None:
+                        # Kanal/Ersteller existiert nicht mehr -> verwaisten DB-Eintrag aufräumen
+                        await db_call(tickets_collection.delete_one, {"_id": doc["_id"]})
+                        continue
+                    bot.add_view(view, message_id=int(doc["messageId"])) if doc.get("messageId") else bot.add_view(view)
+                except Exception as e:
+                    logger.error(f"[TICKET] Konnte Ticket-View für {doc.get('_id')} nicht wiederherstellen: {e}")
+        except Exception as e:
+            logger.error(f"[TICKET] Fehler beim Wiederherstellen offener Ticket-Views: {e}")
 
     if giveaways_collection is not None:
         try:
@@ -3808,6 +3910,12 @@ async def giveaway(
         return
     if seconds <= 0:
         await interaction.followup.send("❌ Dauer muss > 0 sein.")
+        return
+    if gewinner < 1:
+        await interaction.followup.send("❌ Es muss mindestens 1 Gewinner geben.")
+        return
+    if max_teilnehmer > 0 and gewinner > max_teilnehmer:
+        await interaction.followup.send("❌ Die Anzahl der Gewinner darf nicht größer als die maximale Teilnehmerzahl sein.")
         return
     end_time = datetime.now(BERLIN_TZ) + timedelta(seconds=seconds)
     giveaway_id = str(random.randint(100000, 999999)) + str(int(datetime.now(BERLIN_TZ).timestamp()))[-6:]
