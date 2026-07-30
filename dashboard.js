@@ -246,6 +246,7 @@ async function openManagement(guildId, name, iconUrl) {
   renderBotChannelSelect();
   renderVoiceSupportSelects(); // Voice Support
   renderShiftSelects(); // Shift-System
+  renderAbmeldeSelects(); // Abmelde-System
 }
 
 function closeManagement() {
@@ -308,6 +309,7 @@ async function loadRolesAndChannels(guildId) {
   renderAllSelects();
   renderVoiceSupportSelects();
   renderShiftSelects();
+  renderAbmeldeSelects();
 }
 
 function renderAllSelects() {
@@ -417,6 +419,9 @@ function switchTab(tabName) {
   }
   if (tabName === 'shiftsystem') {
     renderShiftSelects();
+  }
+  if (tabName === 'abmeldesystem') {
+    renderAbmeldeSelects();
   }
 }
 
@@ -600,7 +605,43 @@ async function loadAllModuleSettings(guildId) {
     applyApplicationsConfig(config.applications || {});
     applyVoiceSupportConfig(config.voice_support || {});
     applyShiftConfig(config.shiftsystem || {});
+    applyAbmeldeConfig(config.abmeldesystem || {});
   } catch (err) { console.error('Fehler beim Laden der Konfiguration:', err); }
+}
+
+// ============================================================
+// ABMELDE-SYSTEM
+// ============================================================
+function applyAbmeldeConfig(cfg) {
+  setChecked('abmeldesystem-enabled', cfg.enabled ?? false);
+  setSelectValue('abmeldesystem-panel-channel', cfg.panelChannelId || '');
+  setSelectValue('abmeldesystem-log-channel', cfg.logChannelId || '');
+  renderRoleChips('abmeldesystem-role', cfg.abgemeldeteRoleId ? [cfg.abgemeldeteRoleId] : [], true);
+}
+
+function renderAbmeldeSelects() {
+  const panelSelect = document.getElementById('abmeldesystem-panel-channel');
+  const logSelect = document.getElementById('abmeldesystem-log-channel');
+  const textChannels = state.guildChannels.filter(c => c.type === 0);
+  const opts = textChannels.length
+    ? textChannels.map(c => `<option value="${c.id}"># ${escapeHtml(c.name)}</option>`).join('')
+    : '<option value="">Keine Textkanäle</option>';
+  if (panelSelect) { const v = panelSelect.value; panelSelect.innerHTML = opts; if (v) panelSelect.value = v; }
+  if (logSelect) { const v = logSelect.value; logSelect.innerHTML = opts; if (v) logSelect.value = v; }
+}
+
+async function sendAbmeldeEmbed() {
+  if (!state.activeGuildId) { showToast('Kein Server ausgewählt.', 'error'); return; }
+  try {
+    const response = await apiFetch(`/guild/${state.activeGuildId}/send-abmelde-embed`, { method: 'POST' });
+    if (response?.success) {
+      showToast('Abmelde-Panel gesendet!', 'success');
+    } else {
+      showToast(response?.error || 'Fehler beim Senden.', 'error');
+    }
+  } catch (err) {
+    showToast(`Fehler: ${err.message}`, 'error');
+  }
 }
 
 // ============================================================
@@ -1397,6 +1438,14 @@ async function saveModuleSettings(moduleName) {
           leaderboardChannelId: document.getElementById('shiftsystem-leaderboard-channel')?.value || '',
           managerRoleIds: getSelectedRoleIds('shiftsystem-manage-others'),
           selfRoleIds: getSelectedRoleIds('shiftsystem-manage-self')
+        };
+        break;
+      case 'abmeldesystem':
+        payload = {
+          enabled: document.getElementById('abmeldesystem-enabled')?.checked ?? false,
+          panelChannelId: document.getElementById('abmeldesystem-panel-channel')?.value || '',
+          logChannelId: document.getElementById('abmeldesystem-log-channel')?.value || '',
+          abgemeldeteRoleId: getSelectedRoleIds('abmeldesystem-role')[0] || null
         };
         break;
       case 'voice_support':
