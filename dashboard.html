@@ -2889,11 +2889,15 @@
                 </div>
             </div>
 
-            <!-- ===== TEAMLISTE ===== -->
+            <!-- ===== TEAMLISTE (MIT TITEL-FELD) ===== -->
             <div id="mod-teamliste" class="module-page hidden">
                 <h2>👥 Teamliste</h2>
                 <p>Generiert automatisch eine immer aktuelle Übersicht deines Teams in einem Kanal.</p>
                 <div class="panel-card">
+                    <div class="form-group">
+                        <label for="teamliste-title">Embed‑Titel</label>
+                        <input type="text" id="teamliste-title" placeholder="🌟 Teamliste">
+                    </div>
                     <div class="form-group"><label for="teamliste-channel">Kanal für die Teamliste</label><select
                             id="teamliste-channel"></select></div>
                     <div class="form-group"><label>Team-Rollen</label>
@@ -2905,7 +2909,7 @@
                 </div>
             </div>
 
-            <!-- ===== AUTOMOD ===== -->
+            <!-- ===== AUTOMOD (MIT TITEL-FELD) ===== -->
             <div id="mod-automod" class="module-page hidden">
                 <h2>🛡️ Automod</h2>
                 <p>Schütze deinen Server automatisch vor Spam und unerwünschten Links.</p>
@@ -2918,6 +2922,10 @@
                     <div class="form-group"><label for="automod-log-channel">Log-Kanal</label><select
                             id="automod-log-channel"></select><small>Hier werden gelöschte Nachrichten und ausgeführte
                             Aktionen protokolliert.</small></div>
+                    <div class="form-group">
+                        <label for="automod-title">Log‑Embed‑Titel</label>
+                        <input type="text" id="automod-title" placeholder="🛡️ Automod">
+                    </div>
                 </div>
 
                 <div class="panel-card">
@@ -3184,7 +3192,7 @@
                 </div>
             </div>
 
-            <!-- ===== MINIGAMES ===== -->
+            <!-- ===== MINIGAMES (MIT TITEL-FELDERN) ===== -->
             <div id="mod-minigames" class="module-page hidden">
                 <h2>🎮 Minigames</h2>
                 <p>Aktiviere kleine Spiele, die eure Mitglieder in einem Kanal spielen können.</p>
@@ -3214,6 +3222,10 @@
                             Embed mit einer Flagge. Mitglieder erraten das Land per Chat-Nachricht. Bei richtiger
                             Antwort startet automatisch die nächste Runde.</small></div>
                     <div class="form-group">
+                        <label for="minigames-flags-title">Embed‑Titel</label>
+                        <input type="text" id="minigames-flags-title" placeholder="🏳️ Errate die Flagge!">
+                    </div>
+                    <div class="form-group">
                         <label>Buttons unter dem Embed</label>
                         <small style="display:block; margin-bottom:6px;">Lege fest, welche Hilfe-Buttons unter der
                             Flagge angezeigt werden.</small>
@@ -3241,6 +3253,10 @@
                             Emoji-Spiel</label><select id="minigames-emoji-channel"></select><small>Der Bot postet ein
                             Embed mit einer Emoji-Kombination (z. B. Film, Beruf, Redewendung). Mitglieder erraten den
                             Begriff per Chat-Nachricht.</small></div>
+                    <div class="form-group">
+                        <label for="minigames-emoji-title">Embed‑Titel</label>
+                        <input type="text" id="minigames-emoji-title" placeholder="🧩 Errate die Emoji‑Kombination!">
+                    </div>
                     <div class="form-group">
                         <label>Buttons unter dem Embed</label>
                         <small style="display:block; margin-bottom:6px;">Lege fest, welche Hilfe-Buttons unter der
@@ -3521,7 +3537,7 @@
                 </div>
             </div>
 
-            <!-- ===== SCHICHT-SYSTEM ===== -->
+            <!-- ===== SCHICHT-SYSTEM (MIT TITEL-FELD) ===== -->
             <div id="mod-shiftsystem" class="module-page hidden">
                 <h2>⏱️ Schicht-System</h2>
                 <p>Mitglieder können mit <code>/shift start</code>, <code>/shift pause</code> und
@@ -3540,6 +3556,10 @@
                     <div class="form-group">
                         <label for="shiftsystem-log-channel">Log-Kanal (optional)</label>
                         <select id="shiftsystem-log-channel"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="shiftsystem-title">Log‑Embed‑Titel</label>
+                        <input type="text" id="shiftsystem-title" placeholder="🕒 Schicht">
                     </div>
                 </div>
 
@@ -3581,7 +3601,7 @@
                 </div>
             </div>
 
-            <!-- ===== ABMELDE-SYSTEM ===== -->
+            <!-- ===== ABMELDE-SYSTEM (MIT TITEL-FELD) ===== -->
             <div id="mod-abmeldesystem" class="module-page hidden">
                 <h2>📤 Abmelde-System</h2>
                 <p>Teammitglieder können sich über einen Button im gewählten Kanal abmelden (Zeitraum + Grund per
@@ -3607,6 +3627,10 @@
                         <select id="abmeldesystem-log-channel"></select>
                         <small style="display:block; margin-top:6px;">Hier sieht das Team, wer sich von wann bis wann
                             und aus welchem Grund abgemeldet hat.</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="abmeldesystem-title">Log‑Embed‑Titel</label>
+                        <input type="text" id="abmeldesystem-title" placeholder="📋 Abmeldung">
                     </div>
                     <div class="form-group">
                         <label>Rolle für abgemeldete Mitglieder</label>
