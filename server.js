@@ -15,8 +15,8 @@ const {
   BOT_TOKEN,
   REDIRECT_URI,
   SESSION_SECRET,
-  MONGODB_URI,  // ✅ RICHTIG - NICHT mongonetwo!
-  PORT = process.env.PORT || 3000,
+  MONGODB_URI,
+  PORT = 3000,
   NODE_ENV = 'production'
 } = process.env;
 
@@ -382,7 +382,7 @@ async function countGuildBots(guildId) {
 // ============================================================
 // API: GUILD DETAILS
 // ============================================================
-app.get('/api/guild/:guildId', requireAuth, async (req, res) => {
+app.get('/api/guild/:guildId', requireAuth, requireGuildAdmin, async (req, res) => {
   if (!BOT_TOKEN) {
     return res.status(503).json({ error: 'bot_not_configured' });
   }
@@ -411,7 +411,7 @@ app.get('/api/guild/:guildId', requireAuth, async (req, res) => {
 // ============================================================
 // API: CONFIG
 // ============================================================
-app.get('/api/guild/:guildId/config', requireAuth, async (req, res) => {
+app.get('/api/guild/:guildId/config', requireAuth, requireGuildAdmin, async (req, res) => {
   try {
     const config = await getGuildConfig(req.params.guildId);
     res.json(config);
@@ -554,7 +554,7 @@ async function syncStatsChannelsNow(guildId, statsData) {
   return { ...statsData, channels };
 }
 
-app.post('/api/guild/:guildId/config/:module', requireAuth, async (req, res) => {
+app.post('/api/guild/:guildId/config/:module', requireAuth, requireGuildAdmin, async (req, res) => {
   const { guildId, module } = req.params;
   if (!ALLOWED_MODULES.includes(module)) {
     return res.status(400).json({ error: 'unknown_module' });
@@ -585,7 +585,7 @@ app.post('/api/guild/:guildId/config/:module', requireAuth, async (req, res) => 
 // ============================================================
 // API: ROLES & CHANNELS
 // ============================================================
-app.get('/api/guild/:guildId/roles', requireAuth, async (req, res) => {
+app.get('/api/guild/:guildId/roles', requireAuth, requireGuildAdmin, async (req, res) => {
   if (!BOT_TOKEN) {
     return res.status(503).json({ error: 'bot_not_configured' });
   }
@@ -605,7 +605,7 @@ app.get('/api/guild/:guildId/roles', requireAuth, async (req, res) => {
   }
 });
 
-app.get('/api/guild/:guildId/channels', requireAuth, async (req, res) => {
+app.get('/api/guild/:guildId/channels', requireAuth, requireGuildAdmin, async (req, res) => {
   if (!BOT_TOKEN) {
     return res.status(503).json({ error: 'bot_not_configured' });
   }
@@ -642,6 +642,43 @@ app.get('/api/test', (req, res) => {
 // ============================================================
 // HELPER: Bild als Base64 erkennen
 // ============================================================
+// ============================================================
+// HELPER: Hex-Farbe -> Discord-Farbwert (dezimal)
+// ============================================================
+function parseHexColor(input, fallback) {
+  if (!input) return fallback;
+  let hex = input.replace(/[^0-9a-fA-F]/g, '');
+  if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+  if (hex.length !== 6) return fallback;
+  return parseInt(hex, 16);
+}
+
+// ============================================================
+// HELPER: Discord-Nachricht senden (mit optionalen Datei-Anhängen)
+// ============================================================
+async function sendDiscordMessage(channelId, payload, files = []) {
+  if (files.length > 0) {
+    const formData = new FormData();
+    formData.append('payload_json', JSON.stringify(payload));
+    files.forEach((f, index) => {
+      formData.append(`files[${index}]`, new Blob([f.data]), f.name);
+    });
+    return fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bot ${BOT_TOKEN}` },
+      body: formData
+    });
+  }
+  return fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bot ${BOT_TOKEN}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+}
+
 function isBase64Image(str) {
   return str && str.startsWith('data:image');
 }
@@ -658,7 +695,7 @@ function stripBase64Header(base64) {
 // ============================================================
 // TICKET-PANEL SENDEN
 // ============================================================
-app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res) => {
+app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, requireGuildAdmin, async (req, res) => {
   const { guildId } = req.params;
   const { panelIndex, channelId } = req.body;
 
@@ -749,32 +786,7 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
       components: components
     };
 
-    let response;
-    if (files.length > 0) {
-      const formData = new FormData();
-      formData.append('payload_json', JSON.stringify(payload));
-      files.forEach((f, index) => {
-        formData.append(`files[${index}]`, new Blob([f.data]), f.name);
-      });
-
-      response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bot ${BOT_TOKEN}`
-        },
-        body: formData
-      });
-    } else {
-      response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bot ${BOT_TOKEN}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-    }
-
+    const response = await sendDiscordMessage(channelId, payload, files);
     const responseData = await response.json();
 
     if (!response.ok) {
@@ -801,7 +813,7 @@ app.post('/api/guild/:guildId/tickets/send-panel', requireAuth, async (req, res)
 // ============================================================
 // VERIFICATION PANEL SENDEN
 // ============================================================
-app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req, res) => {
+app.post('/api/guild/:guildId/verification/send-panel', requireAuth, requireGuildAdmin, async (req, res) => {
   const { guildId } = req.params;
   const { 
     channelId, 
@@ -814,8 +826,6 @@ app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req,
     buttonLabel
   } = req.body;
 
-  console.log('📤 Empfangene Farbdaten:', { color, raw: req.body });
-
   if (!channelId || !method || !roleId) {
     return res.status(400).json({ error: 'channelId, method und roleId sind erforderlich.' });
   }
@@ -825,19 +835,7 @@ app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req,
   }
 
   try {
-    let parsedColor = 0x5865f2;
-    if (color) {
-      let hex = color.replace(/[^0-9a-fA-F]/g, '');
-      if (hex.length === 3) {
-        hex = hex.split('').map(c => c + c).join('');
-      }
-      if (hex.length === 6) {
-        parsedColor = parseInt(hex, 16);
-        console.log('✅ Geparste Farbe (dezimal):', parsedColor, '| Hex:', '#' + hex);
-      } else {
-        console.warn('⚠️ Ungültige Farbe – Länge:', hex.length, 'Verwende Standard (Discord-Blau)');
-      }
-    }
+    const parsedColor = parseHexColor(color, 0x5865f2);
 
     const embed = {
       title: title || '🔐 Verifizierung',
@@ -893,32 +891,7 @@ app.post('/api/guild/:guildId/verification/send-panel', requireAuth, async (req,
       components: components
     };
 
-    let response;
-    if (files.length > 0) {
-      const formData = new FormData();
-      formData.append('payload_json', JSON.stringify(payload));
-      files.forEach((f, index) => {
-        formData.append(`files[${index}]`, new Blob([f.data]), f.name);
-      });
-
-      response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bot ${BOT_TOKEN}`
-        },
-        body: formData
-      });
-    } else {
-      response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bot ${BOT_TOKEN}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-    }
-
+    const response = await sendDiscordMessage(channelId, payload, files);
     const data = await response.json();
     if (!response.ok) {
       console.error('❌ Discord API Fehler:', response.status, data);
@@ -945,7 +918,7 @@ function formatEmojiForApi(raw) {
   return raw.trim();
 }
 
-app.post('/api/guild/:guildId/reactionroles/send-panel', requireAuth, async (req, res) => {
+app.post('/api/guild/:guildId/reactionroles/send-panel', requireAuth, requireGuildAdmin, async (req, res) => {
   const { guildId } = req.params;
   const { panelIndex } = req.body;
 
@@ -976,12 +949,7 @@ app.post('/api/guild/:guildId/reactionroles/send-panel', requireAuth, async (req
       return res.status(400).json({ error: 'Diese Nachricht hat keine Emoji-Rollen-Zuordnungen.' });
     }
 
-    let parsedColor = 0xffffff;
-    if (panel.color) {
-      let hex = panel.color.replace(/[^0-9a-fA-F]/g, '');
-      if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
-      if (hex.length === 6) parsedColor = parseInt(hex, 16);
-    }
+    const parsedColor = parseHexColor(panel.color, 0xffffff);
 
     const embed = {
       title: panel.title || '🎭 Reaction Roles',
@@ -1037,7 +1005,7 @@ app.post('/api/guild/:guildId/reactionroles/send-panel', requireAuth, async (req
 // ============================================================
 // BEWERBUNGEN: Panel-Nachricht (mit Bewerben-Button) senden
 // ============================================================
-app.post('/api/guild/:guildId/applications/send-panel', requireAuth, async (req, res) => {
+app.post('/api/guild/:guildId/applications/send-panel', requireAuth, requireGuildAdmin, async (req, res) => {
   const { guildId } = req.params;
   const { formId } = req.body;
 
@@ -1069,12 +1037,7 @@ app.post('/api/guild/:guildId/applications/send-panel', requireAuth, async (req,
       return res.status(400).json({ error: 'Bitte füge mindestens eine Frage hinzu.' });
     }
 
-    let parsedColor = 0x2b2d31;
-    if (form.color) {
-      let hex = form.color.replace(/[^0-9a-fA-F]/g, '');
-      if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
-      if (hex.length === 6) parsedColor = parseInt(hex, 16);
-    }
+    const parsedColor = parseHexColor(form.color, 0x2b2d31);
 
     const embed = {
       title: form.title || form.name || 'Bewerbung',
@@ -1121,7 +1084,7 @@ app.post('/api/guild/:guildId/applications/send-panel', requireAuth, async (req,
 // ============================================================
 // VOICE SUPPORT: DIENSTSTATUS-EMBED SENDEN
 // ============================================================
-app.post('/api/guild/:guildId/send-duty-embed', requireAuth, async (req, res) => {
+app.post('/api/guild/:guildId/send-duty-embed', requireAuth, requireGuildAdmin, async (req, res) => {
   const { guildId } = req.params;
 
   if (!BOT_TOKEN) {
@@ -1192,7 +1155,7 @@ app.post('/api/guild/:guildId/send-duty-embed', requireAuth, async (req, res) =>
   }
 });
 
-app.post('/api/guild/:guildId/send-abmelde-embed', requireAuth, async (req, res) => {
+app.post('/api/guild/:guildId/send-abmelde-embed', requireAuth, requireGuildAdmin, async (req, res) => {
   const { guildId } = req.params;
 
   if (!BOT_TOKEN) {
@@ -1420,7 +1383,7 @@ app.get('/api/guild/:guildId/bot/messages', requireAuth, requireGuildAdmin, asyn
     const messages = await response.json();
     
     // Bot-ID abrufen
-    let botId = process.env.CLIENT_ID;
+    let botId = CLIENT_ID;
     if (!botId) {
       try {
         const botRes = await fetch(`${DISCORD_API}/users/@me`, { 
