@@ -45,7 +45,8 @@ let state = {
   guildChannels: [],
   guildDataGuildId: null,
   ticketConfigCache: null,
-  ticketConfigCacheGuildId: null
+  ticketConfigCacheGuildId: null,
+  shiftTypesDraft: []
 };
 
 const TEAMUPDATE_COMMANDS = ['neuer_teamler', 'uprank', 'downrank', 'teamkick', 'teamwarn'];
@@ -655,6 +656,13 @@ function applyShiftConfig(cfg) {
   renderRoleChips('shiftsystem-manage-others', cfg.managerRoleIds || []);
   // Rolle(n), die den eigenen Shift managen dürfen (Mehrfachauswahl)
   renderRoleChips('shiftsystem-manage-self', cfg.selfRoleIds || []);
+  // Schichtarten (z.B. Polizei, Feuerwehr, ...) inkl. Rollen, die sie starten dürfen
+  state.shiftTypesDraft = Array.isArray(cfg.shiftTypes) ? cfg.shiftTypes.map(t => ({
+    id: t.id || genShiftTypeId(),
+    name: t.name || '',
+    roleIds: t.roleIds || []
+  })) : [];
+  renderShiftTypesList();
 }
 
 function renderShiftSelects() {
@@ -666,6 +674,66 @@ function renderShiftSelects() {
     : '<option value="">Keine Textkanäle</option>';
   if (logSelect) logSelect.innerHTML = opts;
   if (lbSelect) lbSelect.innerHTML = opts;
+  renderShiftTypesList();
+}
+
+// ------------------------------------------------------------
+// SCHICHTARTEN (mehrere Shift-Typen mit eigener Rollen-Berechtigung)
+// ------------------------------------------------------------
+function genShiftTypeId() {
+  return `type_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function addShiftType() {
+  state.shiftTypesDraft.push({ id: genShiftTypeId(), name: '', roleIds: [] });
+  renderShiftTypesList();
+}
+
+function removeShiftType(typeId) {
+  state.shiftTypesDraft = state.shiftTypesDraft.filter(t => t.id !== typeId);
+  renderShiftTypesList();
+}
+
+function updateShiftTypeName(typeId, value) {
+  const entry = state.shiftTypesDraft.find(t => t.id === typeId);
+  if (entry) entry.name = value;
+}
+
+function renderShiftTypesList() {
+  const container = document.getElementById('shiftsystem-types-list');
+  if (!container) return;
+  if (state.shiftTypesDraft.length === 0) {
+    container.innerHTML = `<p class="chip-empty" style="margin:0 0 12px;">Noch keine Schichtarten angelegt. Ohne eigene Schichtarten funktioniert /shift wie bisher (eine allgemeine Schicht).</p>`;
+    return;
+  }
+  container.innerHTML = state.shiftTypesDraft.map(t => `
+    <div class="panel-card shift-type-entry" data-type-id="${t.id}" style="margin-bottom:12px;">
+      <div class="form-group">
+        <label>Name der Schichtart</label>
+        <input type="text" class="shift-type-name" placeholder="z. B. Polizei" value="${escapeHtml(t.name)}"
+          oninput="updateShiftTypeName('${t.id}', this.value)">
+      </div>
+      <div class="form-group">
+        <label>Rollen, die diese Schichtart starten dürfen</label>
+        <small style="display:block; margin-bottom:6px;">Leer lassen = jeder mit einer allgemeinen Schicht-Berechtigung (oben) darf diese Schichtart starten.</small>
+        <div class="chip-select" id="shift-type-roles-${t.id}"><span class="chip-empty">Lade Rollen...</span></div>
+      </div>
+      <div class="form-action">
+        <button class="btn btn-danger" onclick="removeShiftType('${t.id}')">🗑️ Schichtart entfernen</button>
+      </div>
+    </div>
+  `).join('');
+  state.shiftTypesDraft.forEach(t => renderRoleChips(`shift-type-roles-${t.id}`, t.roleIds || []));
+}
+
+function collectShiftTypesFromDraft() {
+  // Rollen-Auswahl aus dem DOM zurück in den Draft übernehmen, dann validieren
+  state.shiftTypesDraft.forEach(t => {
+    t.roleIds = getSelectedRoleIds(`shift-type-roles-${t.id}`);
+  });
+  return state.shiftTypesDraft
+    .filter(t => t.name && t.name.trim().length > 0)
+    .map(t => ({ id: t.id, name: t.name.trim(), roleIds: t.roleIds }));
 }
 
 function applyStatusEmbedConfig(cfg) {
@@ -1437,7 +1505,8 @@ async function saveModuleSettings(moduleName) {
           logChannelId: document.getElementById('shiftsystem-log-channel')?.value || '',
           leaderboardChannelId: document.getElementById('shiftsystem-leaderboard-channel')?.value || '',
           managerRoleIds: getSelectedRoleIds('shiftsystem-manage-others'),
-          selfRoleIds: getSelectedRoleIds('shiftsystem-manage-self')
+          selfRoleIds: getSelectedRoleIds('shiftsystem-manage-self'),
+          shiftTypes: collectShiftTypesFromDraft()
         };
         break;
       case 'abmeldesystem':
@@ -1603,14 +1672,19 @@ window.addButtonRow = function(data = null) {
   row.className = 'tpe-btn-card';
   row.id = rowId;
 
-  const label = data ? (data.label || '') : 'Ticket öffnen';
-  const emoji = data ? (data.emoji || '') : '🎫';
-  const color = data ? (data.color || '#5865f2') : '#5865f2';
-  const action = data ? (data.action || '') : 'open';
+  const label = data ? (data.label || '') : 'Ticket schließen';
+  const emoji = data ? (data.emoji || '') : '🔒';
+  const color = data ? (data.color || '#ef4444') : '#ef4444';
+  const action = data ? (data.action || 'close') : 'close';
 
   const swatchesHtml = TPE_SWATCHES.map(sw => `
     <div class="tpe-swatch ${sw.hex.toLowerCase() === color.toLowerCase() ? 'selected' : ''}" data-hex="${sw.hex}" style="background:${sw.hex}; color:${sw.hex};" onclick="tpeSelectSwatch('${rowId}', '${sw.hex}')"></div>
   `).join('');
+
+  const actionOptions = [
+    { value: 'close', label: '🔒 Ticket schließen' },
+    { value: 'transcript', label: '📄 Transkript speichern' }
+  ].map(o => `<option value="${o.value}" ${o.value === action ? 'selected' : ''}>${o.label}</option>`).join('');
 
   row.innerHTML = `
     <div class="tpe-btn-card-head">
@@ -1624,11 +1698,12 @@ window.addButtonRow = function(data = null) {
       </div>
       <div class="form-group">
         <label>Label</label>
-        <input type="text" class="btn-label" placeholder="z.B. Claim" value="${escapeHtml(label)}" oninput="tpeUpdateButtonPreview('${rowId}')">
+        <input type="text" class="btn-label" placeholder="z.B. Ticket schließen" value="${escapeHtml(label)}" oninput="tpeUpdateButtonPreview('${rowId}')">
       </div>
       <div class="form-group">
         <label>Aktion</label>
-        <input type="text" class="btn-action" placeholder="z.B. open, close, claim" value="${escapeHtml(action)}">
+        <select class="btn-action">${actionOptions}</select>
+        <small>Der Button "Transkript speichern" erscheint nur, wenn "Transkripte speichern" (Fortgeschritten-Tab) aktiv ist.</small>
       </div>
     </div>
     <input type="color" class="btn-color hidden" value="${color}" style="display:none;">
@@ -1644,12 +1719,12 @@ window.addButtonRow = function(data = null) {
 };
 
 function collectButtons() {
-  const rows = document.querySelectorAll('#edit-button-list .button-row');
+  const rows = document.querySelectorAll('#edit-button-list .tpe-btn-card');
   return Array.from(rows).map(row => ({
     label: row.querySelector('.btn-label')?.value || '',
-    emoji: row.querySelector('.btn-emoji')?.value || '🎫',
-    color: row.querySelector('.btn-color')?.value || '#ffffff',
-    action: row.querySelector('.btn-action')?.value || ''
+    emoji: row.querySelector('.btn-emoji')?.value || '',
+    color: row.querySelector('.btn-color')?.value || '#5865f2',
+    action: row.querySelector('.btn-action')?.value || 'close'
   }));
 }
 
@@ -1805,18 +1880,21 @@ async function renderTicketOverview() {
       </div>
     `;
 
+    const sendablePanels = panels.map((p, i) => ({ p, i })).filter(({ p }) => p.enabled !== false);
     const toolbarHtml = `
       <div class="ticket-toolbar">
         <label>Panel:</label>
         <select id="send-panel-select">
-          ${panels.map((opt, i) => `<option value="${i}">${escapeHtml(opt.panelName || opt.label || 'Unbenannt')}</option>`).join('')}
+          ${sendablePanels.length
+            ? sendablePanels.map(({ p, i }) => `<option value="${i}">${escapeHtml(p.panelName || p.label || 'Unbenannt')}</option>`).join('')
+            : `<option value="">Keine aktiven Panels</option>`}
         </select>
         <label>Kanal:</label>
         <select id="send-channel-select">
           ${state.guildChannels.filter(c => c.type === 0).map(c => `<option value="${c.id}"># ${escapeHtml(c.name)}</option>`).join('')}
           ${state.guildChannels.filter(c => c.type === 0).length === 0 ? '<option value="">Keine Textkanäle</option>' : ''}
         </select>
-        <button class="btn btn-primary" onclick="sendPanelToChannel(document.getElementById('send-channel-select').value, parseInt(document.getElementById('send-panel-select').value))">
+        <button class="btn btn-primary" ${sendablePanels.length ? '' : 'disabled'} onclick="sendPanelToChannel(document.getElementById('send-channel-select').value, parseInt(document.getElementById('send-panel-select').value))">
           📤 Abschicken
         </button>
       </div>
@@ -1950,7 +2028,7 @@ async function showEditView(index) {
           <select id="tpe-send-channel" class="tpe-channel-select">
             ${textChannelsForHeader.length ? textChannelsForHeader.map(c => `<option value="${c.id}">#${escapeHtml(c.name)}</option>`).join('') : `<option value="">Keine Textkanäle</option>`}
           </select>
-          <button class="btn btn-primary" onclick="sendPanelToChannel(document.getElementById('tpe-send-channel').value, editingIndex)">📤 Panel senden</button>
+          <button class="btn btn-primary" ${data.enabled === false ? 'disabled title="Panel ist deaktiviert – zuerst oben aktivieren."' : ''} onclick="sendPanelToChannel(document.getElementById('tpe-send-channel').value, editingIndex)">📤 Panel senden</button>
         </div>
       </div>
 
@@ -2079,7 +2157,7 @@ async function showEditView(index) {
 
         <div class="tpe-card">
           <div class="tpe-card-title">🔘 Buttons</div>
-          <div class="tpe-card-sub" style="margin-bottom:14px;">Konfiguriere Emoji, Label, Farbe und Aktion jedes Buttons.</div>
+          <div class="tpe-card-sub" style="margin-bottom:14px;">Passe Emoji, Label und Farbe der Buttons an, die im Ticket-Kanal erscheinen (Schließen / Transkript). Das Claim-Feature wird separat im Tab "Fortgeschritten" aktiviert.</div>
           <div id="edit-button-list"></div>
           <button type="button" class="add-option-btn" onclick="window.addButtonRow()">+ Button hinzufügen</button>
         </div>
@@ -2136,10 +2214,11 @@ async function showEditView(index) {
           <div class="tpe-card-title">🧵 Thread-Modus</div>
           <div class="form-group">
             <select id="edit-thread-mode">
-              <option value="none" ${data.threadMode === 'none' ? 'selected' : ''}>Keine</option>
-              <option value="thread" ${data.threadMode === 'thread' ? 'selected' : ''}>Öffentlich</option>
-              <option value="private" ${data.threadMode === 'private' ? 'selected' : ''}>Privat</option>
+              <option value="none" ${data.threadMode === 'none' ? 'selected' : ''}>Keine (eigener Kanal)</option>
+              <option value="thread" ${data.threadMode === 'thread' ? 'selected' : ''}>Öffentlicher Thread</option>
+              <option value="private" ${data.threadMode === 'private' ? 'selected' : ''}>Privater Thread</option>
             </select>
+            <small>Bei "Thread" wird das Ticket als Thread im Panel-Kanal erstellt statt als eigener Kanal/Kategorie. Bei "Privat" werden nur Ersteller, Team- und Support-Rollen hinzugefügt.</small>
           </div>
         </div>
 
@@ -2154,10 +2233,12 @@ async function showEditView(index) {
               <label style="font-size:0.85rem;">Bilder in Transkripten</label>
               <label class="switch"><input type="checkbox" id="edit-save-images" ${data.saveImages ? 'checked' : ''}><span class="switch-slider"></span></label>
             </div>
+            <small style="display:block;margin:-4px 0 8px;">Wenn aktiv, werden Bild-/Anhang-Links im Transkript aufgeführt statt anonymisiert.</small>
             <div class="switch-row">
               <label style="font-size:0.85rem;">Private Transkripte</label>
               <label class="switch"><input type="checkbox" id="edit-private-transcripts" ${data.privateTranscripts ? 'checked' : ''}><span class="switch-slider"></span></label>
             </div>
+            <small style="display:block;margin-top:-4px;">Wenn aktiv, wird das Transkript nur per DM verschickt statt zusätzlich in den Log-Kanal zu posten.</small>
           </div>
         </div>
 
@@ -2229,10 +2310,18 @@ async function showEditView(index) {
     document.getElementById('edit-overflow-group').style.display = this.checked ? '' : 'none';
   });
 
+  document.getElementById('edit-panel-enabled')?.addEventListener('change', function() {
+    const btn = document.querySelector('.tpe-header-actions .btn-primary');
+    if (btn) {
+      btn.disabled = !this.checked;
+      btn.title = this.checked ? '' : 'Panel ist deaktiviert – zuerst oben aktivieren.';
+    }
+  });
+
   if (data.buttons && data.buttons.length) {
     data.buttons.forEach(btn => window.addButtonRow(btn));
   } else {
-    window.addButtonRow({ label: 'Ticket öffnen', emoji: '🎫', color: '#5865f2', action: 'open' });
+    window.addButtonRow({ label: 'Ticket schließen', emoji: '🔒', color: '#ef4444', action: 'close' });
   }
 
   if (data.options && data.options.length) {
