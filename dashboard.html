@@ -3559,6 +3559,21 @@
                         <div class="chip-select" id="shiftsystem-manage-self"><span class="chip-empty">Lade
                                 Rollen...</span></div>
                     </div>
+                </div>
+
+                <div class="panel-card">
+                    <h3 style="margin-top:0;">Schichtarten</h3>
+                    <p>Lege verschiedene Schichtarten an (z. B. Polizei, Feuerwehr, Rettungsdienst) und wähle pro
+                        Schichtart, welche Rolle(n) sie starten dürfen. Beim <code>/shift start</code> kann dann die
+                        passende Schichtart ausgewählt werden. Bleibt eine Schichtart ohne Rollen, darf sie jeder mit
+                        allgemeiner Schicht-Berechtigung starten.</p>
+                    <div id="shiftsystem-types-list"></div>
+                    <div class="form-action">
+                        <button class="btn btn-secondary" onclick="addShiftType()">➕ Schichtart hinzufügen</button>
+                    </div>
+                </div>
+
+                <div class="panel-card">
                     <div class="form-action">
                         <span id="shiftsystem-save-status" class="hidden status-success"></span>
                         <button class="btn btn-primary" onclick="handleSaveClick('shiftsystem')">💾 Speichern</button>
