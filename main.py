@@ -443,13 +443,30 @@ class TranscriptManager:
     def __init__(self, bot):
         self.bot = bot
 
-    async def create_transcript(self, channel: discord.TextChannel) -> str:
+    async def create_transcript(self, channel: discord.TextChannel, save_images: bool = False) -> str:
         messages = []
         async for message in channel.history(limit=1000, oldest_first=True):
             timestamp = message.created_at.strftime("%Y-%m-%d %H:%M:%S")
             author = f"{message.author.name}#{message.author.discriminator}"
-            content = message.content or "[Embed/Anhang]"
-            messages.append(f"[{timestamp}] {author}: {content}")
+            content = message.content or ""
+            attachment_parts = []
+            if message.attachments or message.embeds:
+                if save_images:
+                    for att in message.attachments:
+                        attachment_parts.append(f"[Anhang: {att.url}]")
+                    for emb in message.embeds:
+                        img_url = (emb.image.url if emb.image else None) or (emb.thumbnail.url if emb.thumbnail else None)
+                        if img_url:
+                            attachment_parts.append(f"[Bild: {img_url}]")
+                        elif emb.url:
+                            attachment_parts.append(f"[Embed: {emb.url}]")
+                else:
+                    if message.attachments:
+                        attachment_parts.append("[Anhang]")
+                    if message.embeds:
+                        attachment_parts.append("[Embed]")
+            line_content = " ".join(filter(None, [content] + attachment_parts)) or "[Leere Nachricht]"
+            messages.append(f"[{timestamp}] {author}: {line_content}")
         os.makedirs("transcripts", exist_ok=True)
         filename = f"transcripts/{channel.name}_{datetime.now(BERLIN_TZ).strftime('%Y-%m-%d_%H-%M-%S')}.txt"
         with open(filename, "w", encoding="utf-8") as f:
@@ -544,6 +561,43 @@ async def update_teamliste(guild: discord.Guild):
 # ============================================================
 # TICKET SYSTEM
 # ============================================================
+def _category_has_room(category) -> bool:
+    return category is None or len(category.channels) < 50
+
+async def resolve_ticket_category(guild: discord.Guild, category_id: str, overflow_enabled: bool, overflow_categories: list):
+    """Ermittelt die zu verwendende Kategorie. Weicht bei voller Hauptkategorie auf Überlauf-Kategorien aus.
+    Rückgabe: (category_or_None, status) mit status in {"ok", "missing", "full"}."""
+    category = None
+    if category_id and category_id != "no_category":
+        category = guild.get_channel(int(category_id))
+        if not category:
+            return None, "missing"
+    if category and not _category_has_room(category):
+        if overflow_enabled:
+            for overflow_id in (overflow_categories or []):
+                overflow_cat = guild.get_channel(int(overflow_id))
+                if overflow_cat and _category_has_room(overflow_cat):
+                    return overflow_cat, "ok"
+        return category, "full"
+    return category, "ok"
+
+def _button_style_from_hex(hex_color: str) -> discord.ButtonStyle:
+    mapping = {
+        "#5865f2": discord.ButtonStyle.primary,
+        "#6d7079": discord.ButtonStyle.secondary,
+        "#23a55a": discord.ButtonStyle.success,
+        "#ef4444": discord.ButtonStyle.danger,
+    }
+    return mapping.get((hex_color or "").lower(), discord.ButtonStyle.secondary)
+
+def _safe_button(label: str, emoji: str, style: discord.ButtonStyle, custom_id: str) -> discord.ui.Button:
+    """Erstellt einen Button, ignoriert ein ungültiges Emoji statt abzustürzen."""
+    try:
+        return discord.ui.Button(label=label, emoji=emoji or None, style=style, custom_id=custom_id)
+    except Exception as e:
+        logger.warning(f"[TICKET] Ungültiges Button-Emoji '{emoji}': {e}")
+        return discord.ui.Button(label=label, style=style, custom_id=custom_id)
+
 class TicketDropdown(discord.ui.Select):
     def __init__(self, guild_id: str, panel_index: int, options_data: list):
         self.guild_id = guild_id
@@ -583,6 +637,13 @@ class TicketDropdown(discord.ui.Select):
             team_roles = config.get("teamliste", {}).get("roles", [])
             log_channel_id = panel.get("logChannelId")
             save_transcripts = panel.get("saveTranscripts", False)
+            save_images = panel.get("saveImages", False)
+            private_transcripts = panel.get("privateTranscripts", False)
+            claim_enabled = panel.get("claimEnabled", False)
+            buttons_cfg = panel.get("buttons", []) or []
+            thread_mode = panel.get("threadMode", "none")
+            overflow_enabled = panel.get("overflowEnabled", False)
+            overflow_categories = panel.get("overflowCategories", [])
             member_role_ids = {str(r.id) for r in user.roles}
             denied_roles = set(panel.get("deniedRoles", []) or [])
             allowed_roles = set(panel.get("allowedRoles", []) or [])
@@ -598,7 +659,11 @@ class TicketDropdown(discord.ui.Select):
                 if c.name.startswith(f"ticket-{user.name.lower()}-")
                 and c.permissions_for(user).view_channel
             ]
-            if len(existing_tickets) >= max_tickets:
+            existing_threads = [
+                t for t in guild.threads
+                if t.name.startswith(f"ticket-{user.name.lower()}-") and not t.archived
+            ]
+            if len(existing_tickets) + len(existing_threads) >= max_tickets:
                 await interaction.followup.send(f"❌ Du hast bereits die maximale Anzahl offener Tickets erreicht ({max_tickets}).", ephemeral=True)
                 return
             if not guild.me.guild_permissions.manage_channels:
@@ -611,28 +676,66 @@ class TicketDropdown(discord.ui.Select):
             option_support_roles = (selected_option or {}).get("supportRoles", []) or []
             fallback_support_roles = panel.get("supportRoles", []) or []
             support_role_ids = option_support_roles or fallback_support_roles
-            overwrites = {
-                guild.default_role: discord.PermissionOverwrite(read_messages=False),
-                user: discord.PermissionOverwrite(read_messages=True, send_messages=True, attach_files=True, embed_links=True),
-                guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True, manage_channels=True, manage_roles=True)
-            }
-            for role_id in set(team_roles) | set(support_role_ids):
-                role = guild.get_role(int(role_id))
-                if role:
-                    overwrites[role] = discord.PermissionOverwrite(read_messages=True, send_messages=True)
-            category = None
-            if category_id != "no_category":
-                category = guild.get_channel(int(category_id))
-                if not category:
-                    await interaction.followup.send(f"❌ Die ausgewählte Kategorie existiert nicht mehr!", ephemeral=True)
-                    return
             channel_name = f"ticket-{user.name.lower()}-{random.randint(100,999)}"
-            ticket_channel = await guild.create_text_channel(
-                channel_name,
-                category=category,
-                overwrites=overwrites,
-                reason=f"Ticket erstellt von {user.name}"
-            )
+
+            if thread_mode in ("thread", "private"):
+                parent_channel_id = panel.get("panelChannelId")
+                parent_channel = guild.get_channel(int(parent_channel_id)) if parent_channel_id else None
+                if not isinstance(parent_channel, discord.TextChannel):
+                    await interaction.followup.send("❌ Für den Thread-Modus muss ein gültiger Panel-Kanal konfiguriert sein.", ephemeral=True)
+                    return
+                thread_type = discord.ChannelType.private_thread if thread_mode == "private" else discord.ChannelType.public_thread
+                try:
+                    ticket_channel = await parent_channel.create_thread(
+                        name=channel_name,
+                        type=thread_type,
+                        reason=f"Ticket erstellt von {user.name}"
+                    )
+                except discord.Forbidden:
+                    await interaction.followup.send("❌ Der Bot hat keine Berechtigung, Threads zu erstellen.", ephemeral=True)
+                    return
+                try:
+                    await ticket_channel.add_user(user)
+                except Exception:
+                    pass
+                if thread_mode == "private":
+                    added = 0
+                    for role_id in set(team_roles) | set(support_role_ids):
+                        role = guild.get_role(int(role_id))
+                        if not role:
+                            continue
+                        for member in role.members:
+                            if added >= 90:
+                                break
+                            try:
+                                await ticket_channel.add_user(member)
+                                added += 1
+                            except Exception:
+                                pass
+            else:
+                overwrites = {
+                    guild.default_role: discord.PermissionOverwrite(read_messages=False),
+                    user: discord.PermissionOverwrite(read_messages=True, send_messages=True, attach_files=True, embed_links=True),
+                    guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True, manage_channels=True, manage_roles=True)
+                }
+                for role_id in set(team_roles) | set(support_role_ids):
+                    role = guild.get_role(int(role_id))
+                    if role:
+                        overwrites[role] = discord.PermissionOverwrite(read_messages=True, send_messages=True)
+                category, cat_status = await resolve_ticket_category(guild, category_id, overflow_enabled, overflow_categories)
+                if cat_status == "missing":
+                    await interaction.followup.send("❌ Die ausgewählte Kategorie existiert nicht mehr!", ephemeral=True)
+                    return
+                if cat_status == "full":
+                    await interaction.followup.send("❌ Diese Kategorie ist voll (max. 50 Kanäle) und es ist keine freie Überlauf-Kategorie konfiguriert.", ephemeral=True)
+                    return
+                ticket_channel = await guild.create_text_channel(
+                    channel_name,
+                    category=category,
+                    overwrites=overwrites,
+                    reason=f"Ticket erstellt von {user.name}"
+                )
+
             embed = discord.Embed(
                 title="🎫 Ticket geöffnet",
                 description=creation_msg.replace("{user}", user.mention),
@@ -643,7 +746,12 @@ class TicketDropdown(discord.ui.Select):
             if team_roles:
                 role_mentions = " ".join([f"<@&{role_id}>" for role_id in team_roles])
                 ping_message += f"\n{role_mentions}"
-            view = TicketCloseView(ticket_channel, user, save_transcripts, log_channel_id)
+            view = TicketCloseView(
+                ticket_channel, user, save_transcripts, log_channel_id,
+                claim_enabled=claim_enabled, buttons_cfg=buttons_cfg,
+                save_images=save_images, private_transcripts=private_transcripts,
+                support_role_ids=support_role_ids, team_role_ids=team_roles
+            )
             await ticket_channel.send(ping_message)
             await ticket_channel.send(embed=embed, view=view)
             if log_channel_id:
@@ -669,28 +777,83 @@ class TicketDropdown(discord.ui.Select):
             logger.error(f"[TICKET] Fehler: {e}")
 
 class TicketCloseView(discord.ui.View):
-    def __init__(self, channel: discord.TextChannel, creator: discord.User, save_transcripts: bool = False, log_channel_id: int = None):
+    def __init__(self, channel, creator: discord.User, save_transcripts: bool = False, log_channel_id: int = None,
+                 claim_enabled: bool = False, buttons_cfg: list = None, save_images: bool = False,
+                 private_transcripts: bool = False, support_role_ids: list = None, team_role_ids: list = None):
         super().__init__(timeout=None)
         self.channel = channel
         self.creator = creator
         self.save_transcripts = save_transcripts
         self.log_channel_id = log_channel_id
+        self.save_images = save_images
+        self.private_transcripts = private_transcripts
+        self.support_role_ids = set(support_role_ids or [])
+        self.team_role_ids = set(team_role_ids or [])
         self.transcript_manager = TranscriptManager(bot)
-        close_button = discord.ui.Button(
-            label="🔒 Ticket schließen",
-            style=discord.ButtonStyle.danger,
+        self.claimed_by = None
+        self.claim_button = None
+
+        buttons_cfg = buttons_cfg or []
+        close_cfg = next((b for b in buttons_cfg if b.get("action") == "close"), None)
+        transcript_cfg = next((b for b in buttons_cfg if b.get("action") == "transcript"), None)
+
+        close_button = _safe_button(
+            label=(close_cfg or {}).get("label") or "Ticket schließen",
+            emoji=(close_cfg or {}).get("emoji") or "🔒",
+            style=_button_style_from_hex((close_cfg or {}).get("color")) if close_cfg else discord.ButtonStyle.danger,
             custom_id=f"close_ticket_{channel.id}"
         )
         close_button.callback = self.close_callback
         self.add_item(close_button)
+
         if save_transcripts:
-            transcript_button = discord.ui.Button(
-                label="📄 Transkript speichern",
-                style=discord.ButtonStyle.secondary,
+            transcript_button = _safe_button(
+                label=(transcript_cfg or {}).get("label") or "Transkript speichern",
+                emoji=(transcript_cfg or {}).get("emoji") or "📄",
+                style=_button_style_from_hex((transcript_cfg or {}).get("color")) if transcript_cfg else discord.ButtonStyle.secondary,
                 custom_id=f"transcript_{channel.id}"
             )
             transcript_button.callback = self.transcript_callback
             self.add_item(transcript_button)
+
+        if claim_enabled:
+            self.claim_button = discord.ui.Button(
+                label="Ticket beanspruchen",
+                emoji="🙋",
+                style=discord.ButtonStyle.primary,
+                custom_id=f"claim_ticket_{channel.id}"
+            )
+            self.claim_button.callback = self.claim_callback
+            self.add_item(self.claim_button)
+
+    async def claim_callback(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        member_role_ids = {str(r.id) for r in interaction.user.roles} if isinstance(interaction.user, discord.Member) else set()
+        is_privileged = (
+            interaction.user.guild_permissions.administrator
+            or bool(member_role_ids & self.support_role_ids)
+            or bool(member_role_ids & self.team_role_ids)
+        )
+        if not is_privileged:
+            await interaction.followup.send("❌ Nur Team-/Support-Mitglieder können Tickets beanspruchen.", ephemeral=True)
+            return
+        if self.claimed_by:
+            await interaction.followup.send(f"ℹ️ Dieses Ticket wurde bereits von <@{self.claimed_by}> beansprucht.", ephemeral=True)
+            return
+        self.claimed_by = interaction.user.id
+        if self.claim_button:
+            self.claim_button.disabled = True
+            self.claim_button.label = f"Beansprucht von {interaction.user.display_name}"
+            try:
+                await interaction.message.edit(view=self)
+            except Exception as e:
+                logger.error(f"[TICKET] Fehler beim Aktualisieren des Claim-Buttons: {e}")
+        try:
+            await self.channel.edit(topic=f"Beansprucht von {interaction.user.display_name}")
+        except Exception:
+            pass  # Threads unterstützen kein Topic
+        await self.channel.send(f"🙋 Ticket wurde von {interaction.user.mention} beansprucht.")
+        await interaction.followup.send("✅ Du hast dieses Ticket beansprucht.", ephemeral=True)
 
     async def close_callback(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
@@ -698,11 +861,17 @@ class TicketCloseView(discord.ui.View):
             transcript_path = None
             log_channel = None
             if self.save_transcripts:
-                transcript_path = await self.transcript_manager.create_transcript(self.channel)
-                if self.log_channel_id:
+                transcript_path = await self.transcript_manager.create_transcript(self.channel, save_images=self.save_images)
+                if self.log_channel_id and not self.private_transcripts:
                     log_channel = self.channel.guild.get_channel(int(self.log_channel_id))
                     if log_channel:
                         await self.transcript_manager.send_transcript_to_channel(self.channel, transcript_path, log_channel)
+                if self.private_transcripts:
+                    for recipient in {self.creator, interaction.user}:
+                        try:
+                            await recipient.send("📄 Hier ist das Transkript des geschlossenen Tickets (privat):", file=discord.File(transcript_path))
+                        except discord.Forbidden:
+                            pass
                 if db is not None and transcripts_collection is not None:
                     await self.transcript_manager.save_transcript_to_db(self.channel, transcript_path)
             if self.log_channel_id and not log_channel:
@@ -716,7 +885,10 @@ class TicketCloseView(discord.ui.View):
                         timestamp=datetime.now(BERLIN_TZ)
                     )
                     if transcript_path:
-                        log_embed.add_field(name="📄 Transkript", value="Siehe angehängte Datei", inline=False)
+                        if self.private_transcripts:
+                            log_embed.add_field(name="📄 Transkript", value="Privat an Ersteller & Schließer gesendet (Private Transkripte aktiv)", inline=False)
+                        else:
+                            log_embed.add_field(name="📄 Transkript", value="Siehe angehängte Datei", inline=False)
                     await log_channel.send(embed=log_embed)
                     logger.info(f"[TICKET] Log gesendet: Ticket geschlossen von {interaction.user.name}")
                 except Exception as e:
@@ -737,9 +909,9 @@ class TicketCloseView(discord.ui.View):
     async def transcript_callback(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         try:
-            transcript_path = await self.transcript_manager.create_transcript(self.channel)
+            transcript_path = await self.transcript_manager.create_transcript(self.channel, save_images=self.save_images)
             await interaction.user.send("📄 Hier ist das Transkript des Tickets:", file=discord.File(transcript_path))
-            if self.log_channel_id:
+            if self.log_channel_id and not self.private_transcripts:
                 log_channel = self.channel.guild.get_channel(int(self.log_channel_id))
                 if log_channel:
                     await self.transcript_manager.send_transcript_to_channel(self.channel, transcript_path, log_channel)
@@ -770,6 +942,17 @@ async def send_ticket_panel(guild: discord.Guild):
     for idx, panel in enumerate(panels):
         panel_options = panel.get("options", [])
         if not panel_options:
+            continue
+        if panel.get("enabled", True) is False:
+            # Deaktiviertes Panel: falls bereits gepostet, alte Nachricht entfernen statt sie zu aktualisieren
+            title = panel.get("title", "🎫 Tickets")
+            async for message in channel.history(limit=20):
+                if message.author == bot.user and message.embeds and message.embeds[0].title == title:
+                    try:
+                        await message.delete()
+                    except Exception as e:
+                        logger.error(f"[TICKET] Konnte deaktiviertes Panel nicht entfernen: {e}")
+                    break
             continue
         embed = discord.Embed(
             title=panel.get("title", "🎫 Tickets"),
@@ -4081,7 +4264,7 @@ async def get_active_shift(guild_id, user_id):
         logger.error(f"[SHIFT] Fehler beim Laden der aktiven Schicht: {e}")
         return None
 
-async def create_shift(guild_id, user_id, start_time):
+async def create_shift(guild_id, user_id, start_time, shift_type=None):
     if shifts_collection is None:
         return None
     try:
@@ -4095,7 +4278,9 @@ async def create_shift(guild_id, user_id, start_time):
             "totalPausedDuration": 0,
             "endTime": None,
             "totalSeconds": 0,
-            "status": "active"
+            "status": "active",
+            # shift_type: {"id": ..., "name": ...} oder None (= allgemeine/klassische Schicht)
+            "shiftType": shift_type
         }
         await db_call(shifts_collection.insert_one, doc)
         _invalidate_shift_caches(guild_id, user_id)
@@ -4202,7 +4387,16 @@ async def get_leaderboard_shifts(guild_id, limit=10):
         logger.error(f"[SHIFT] Fehler beim Laden der Bestenliste: {e}")
         return []
 
-async def has_shift_permission(interaction: discord.Interaction, target_user: discord.Member = None):
+def find_shift_type(config: dict, shift_type_id: str):
+    """Sucht eine konfigurierte Schichtart anhand ihrer ID (oder ihres Namens als Fallback)."""
+    if not shift_type_id:
+        return None
+    for t in config.get("shiftTypes", []) or []:
+        if t.get("id") == shift_type_id or t.get("name") == shift_type_id:
+            return t
+    return None
+
+async def has_shift_permission(interaction: discord.Interaction, target_user: discord.Member = None, shift_type_id: str = None):
     guild = interaction.guild
     user = interaction.user
     config = await get_shift_config(guild.id)
@@ -4221,6 +4415,12 @@ async def has_shift_permission(interaction: discord.Interaction, target_user: di
     if is_manager:
         return True, True, "Manager"
     if not self_role_ids or user_role_ids.intersection(set(self_role_ids)):
+        # Grundsätzliche Shift-Berechtigung vorhanden – jetzt ggf. noch die Schichtart selbst prüfen
+        shift_type = find_shift_type(config, shift_type_id)
+        if shift_type:
+            type_role_ids = shift_type.get("roleIds", [])
+            if type_role_ids and not user_role_ids.intersection(set(type_role_ids)):
+                return False, False, f"Du hast keine Berechtigung, die Schichtart „{shift_type.get('name')}“ zu starten."
         return True, False, "Self"
     return False, False, "Du hast keine Berechtigung, Schichten zu verwalten."
 
@@ -4242,16 +4442,44 @@ async def log_shift_event(guild: discord.Guild, title: str, description: str):
 # SHIFT COMMANDS - OPTIMIERT
 # ============================================================
 
+async def shift_type_autocomplete(interaction: discord.Interaction, current: str):
+    """Schlägt die im Dashboard konfigurierten Schichtarten vor, gefiltert nach Eingabe und Berechtigung."""
+    config = await get_shift_config(interaction.guild_id)
+    shift_types = config.get("shiftTypes", []) or []
+    user_role_ids = {str(r.id) for r in interaction.user.roles} if isinstance(interaction.user, discord.Member) else set()
+    is_privileged = (
+        interaction.user.guild_permissions.administrator
+        or user_role_ids.intersection(set(config.get("managerRoleIds", [])))
+    )
+    choices = []
+    for t in shift_types:
+        name = t.get("name", "")
+        if not name:
+            continue
+        if current and current.lower() not in name.lower():
+            continue
+        type_role_ids = t.get("roleIds", [])
+        if type_role_ids and not is_privileged and not user_role_ids.intersection(set(type_role_ids)):
+            continue
+        choices.append(app_commands.Choice(name=name, value=t.get("id", name)))
+    return choices[:25]
+
 @bot.tree.command(name="shift_start", description="Starte eine neue Schicht.")
-@app_commands.describe(user="Für wen die Schicht gestartet werden soll (nur Manager)")
-async def shift_start(interaction: discord.Interaction, user: discord.Member = None):
+@app_commands.describe(user="Für wen die Schicht gestartet werden soll (nur Manager)", schichtart="Welche Schichtart (falls konfiguriert)")
+@app_commands.autocomplete(schichtart=shift_type_autocomplete)
+async def shift_start(interaction: discord.Interaction, user: discord.Member = None, schichtart: str = None):
     await interaction.response.defer()
     guild = interaction.guild
     target = user or interaction.user
     if target.bot:
         await interaction.followup.send("❌ Bots haben keine Schichten.")
         return
-    darf, is_manager, grund = await has_shift_permission(interaction, target)
+    config = await get_shift_config(guild.id)
+    shift_type = find_shift_type(config, schichtart)
+    if schichtart and not shift_type:
+        await interaction.followup.send("❌ Unbekannte Schichtart. Bitte über die Vorschläge auswählen.")
+        return
+    darf, is_manager, grund = await has_shift_permission(interaction, target, shift_type_id=schichtart)
     if not darf:
         await interaction.followup.send(f"❌ {grund}")
         return
@@ -4263,15 +4491,17 @@ async def shift_start(interaction: discord.Interaction, user: discord.Member = N
         )
         return
     now = datetime.now(timezone.utc)
-    shift = await create_shift(guild.id, target.id, now)
+    shift_type_data = {"id": shift_type.get("id"), "name": shift_type.get("name")} if shift_type else None
+    shift = await create_shift(guild.id, target.id, now, shift_type=shift_type_data)
     if not shift:
         await interaction.followup.send("❌ Fehler beim Erstellen der Schicht.")
         return
-    msg = f"✅ Schicht für {target.mention} gestartet um <t:{int(now.timestamp())}:T>."
+    type_suffix = f" ({shift_type_data['name']})" if shift_type_data else ""
+    msg = f"✅ Schicht{type_suffix} für {target.mention} gestartet um <t:{int(now.timestamp())}:T>."
     if is_manager and target.id != interaction.user.id:
         msg += f"\n(ausgeführt von {interaction.user.mention})"
     await interaction.followup.send(msg)
-    await log_shift_event(guild, f"Schicht gestartet von {target.display_name}", msg)
+    await log_shift_event(guild, f"Schicht{type_suffix} gestartet von {target.display_name}", msg)
 
 @bot.tree.command(name="shift_pause", description="Pausiere deine aktive Schicht.")
 @app_commands.describe(user="Für wen die Schicht pausiert werden soll (nur Manager)")
@@ -4365,6 +4595,9 @@ async def shift_status(interaction: discord.Interaction, user: discord.Member = 
     if active:
         start = active["startTime"]
         status_text = "⏸️ Pausiert" if active.get("isPaused") else "🟢 Aktiv"
+        shift_type = active.get("shiftType")
+        if shift_type:
+            embed.add_field(name="Schichtart", value=shift_type.get("name", "-"), inline=True)
         embed.add_field(name="Status", value=status_text, inline=True)
         embed.add_field(name="Beginn", value=f"<t:{int(start.timestamp())}:R>", inline=True)
         if active.get("isPaused") and active.get("pausedAt"):
