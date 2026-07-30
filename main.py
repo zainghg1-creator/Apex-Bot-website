@@ -1475,7 +1475,7 @@ def create_giveaway_embed(giveaway: dict) -> discord.Embed:
             try:
                 user = bot.get_user(int(uid))
                 participant_mentions.append(user.display_name if user else f"<@{uid}>")
-            except:
+            except Exception:
                 participant_mentions.append(f"<@{uid}>")
         participants_str = ", ".join(participant_mentions)
         if len(participants) > 10:
@@ -1563,7 +1563,7 @@ async def end_giveaway(giveaway_id: str):
             try:
                 message = await channel.fetch_message(int(message_id))
                 await message.edit(embed=embed, view=GiveawayView(giveaway_id, 0, ended=True))
-            except:
+            except Exception:
                 await channel.send(embed=embed)
         await db_call(giveaways_collection.update_one, {"_id": giveaway_id}, {"$set": {"ended": True}})
         return
@@ -1595,7 +1595,7 @@ async def end_giveaway(giveaway_id: str):
         try:
             message = await channel.fetch_message(int(message_id))
             await message.edit(embed=embed, view=GiveawayView(giveaway_id, len(participants), ended=True))
-        except:
+        except Exception:
             await channel.send(embed=embed)
     elif channel:
         await channel.send(embed=embed)
@@ -2002,7 +2002,7 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
         embed_desc = embed_desc.replace("{user}", member.mention).replace("{username}", member.display_name).replace("{server}", guild.name)
         try:
             color_int = int(embed_color.lstrip("#"), 16)
-        except:
+        except Exception:
             color_int = 0x5865f2
         embed = discord.Embed(
             title=embed_title,
@@ -2250,7 +2250,7 @@ async def on_member_join(member):
     color_hex = welcome_config.get("color", "#ffffff")
     try:
         color = int(color_hex.lstrip('#'), 16)
-    except:
+    except Exception:
         color = 0xffffff
     embed = discord.Embed(title=title, description=text, color=color, timestamp=datetime.now(BERLIN_TZ))
     if welcome_config.get("useAvatarThumbnail", True):
@@ -2274,7 +2274,7 @@ async def on_member_join(member):
         if role:
             try:
                 await member.add_roles(role)
-            except:
+            except Exception:
                 pass
 
 # ============================================================
@@ -2294,7 +2294,7 @@ async def on_member_remove(member):
     color_hex = leave_config.get("color", "#ffffff")
     try:
         color = int(color_hex.lstrip('#'), 16)
-    except:
+    except Exception:
         color = 0xffffff
     embed = discord.Embed(title=title, description=text, color=color, timestamp=datetime.now(BERLIN_TZ))
     if leave_config.get("useAvatarThumbnail", True):
@@ -2323,7 +2323,7 @@ async def on_guild_member_add(member):
     cached_invites = invites_cache.get(guild.id, {})
     try:
         new_invites = await guild.invites()
-    except:
+    except Exception:
         return
     used_inviter_id = None
     for inv in new_invites:
@@ -3942,7 +3942,7 @@ async def test_welcome(interaction: discord.Interaction):
     color_hex = welcome_config.get("color", "#ffffff")
     try:
         color = int(color_hex.lstrip('#'), 16)
-    except:
+    except Exception:
         color = 0xffffff
     embed = discord.Embed(title=title, description=text, color=color, timestamp=datetime.now(BERLIN_TZ))
     if welcome_config.get("useAvatarThumbnail", True):
@@ -3990,7 +3990,7 @@ async def giveaway(
     
     try:
         seconds = parse_duration(dauer)
-    except:
+    except Exception:
         await interaction.followup.send("❌ Ungültige Dauer!")
         return
     if seconds <= 0:
@@ -4153,7 +4153,7 @@ async def serverlist(interaction: discord.Interaction):
                 try:
                     invite_url = (await channel.create_invite(max_age=3600, max_uses=1)).url
                     break
-                except:
+                except Exception:
                     continue
         entries.append(f"• **{guild.name}** — `{guild.member_count}` Member\n  🔗 {invite_url}")
 
