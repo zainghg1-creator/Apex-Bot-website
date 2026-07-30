@@ -314,7 +314,7 @@ async function loadRolesAndChannels(guildId) {
 }
 
 function renderAllSelects() {
-  const selectIds = ['join-channel', 'leave-channel', 'teamliste-channel', 'automod-log-channel', 'teamupdate-channel', 'verification-channel', 'minigames-counting-channel', 'minigames-flags-channel', 'minigames-emoji-channel', 'levels-channel', 'statusembed-channel'];
+  const selectIds = ['join-channel', 'leave-channel', 'teamliste-channel', 'automod-log-channel', 'teamupdate-channel', 'verification-channel', 'minigames-counting-channel', 'minigames-flags-channel', 'minigames-emoji-channel', 'levels-channel', 'statusembed-channel', 'rp-channel'];
   selectIds.forEach(id => renderChannelSelect(id, 0));
   TEAMUPDATE_COMMANDS.forEach(cmd => renderChannelSelect(`cmd-${cmd}-channel`, 0));
 }
@@ -607,7 +607,22 @@ async function loadAllModuleSettings(guildId) {
     applyVoiceSupportConfig(config.voice_support || {});
     applyShiftConfig(config.shiftsystem || {});
     applyAbmeldeConfig(config.abmeldesystem || {});
+    applyRpConfig(config.rp || {});
   } catch (err) { console.error('Fehler beim Laden der Konfiguration:', err); }
+}
+
+// ============================================================
+// RP-INFO (mit /rp_start und /rp_stop)
+// ============================================================
+function applyRpConfig(cfg) {
+  setSelectValue('rp-mode', cfg.mode || 'embed');
+  setSelectValue('rp-channel', cfg.channelId || '');
+  setValue('rp-title', cfg.title || '');
+  setValue('rp-text', cfg.text || '');
+  setColor('rp', cfg.color || '#5865f2');
+  setImage('rp', cfg.image);
+  renderRoleChips('rp-allowed-roles', cfg.allowedRoles || []);
+  updateEmbedPreview('rp');
 }
 
 // ============================================================
@@ -1140,7 +1155,7 @@ window.addApplicationForm = function(data = null) {
     </div>
     <div class="form-group"><label>Ergebnis-Kanal (fertige Bewerbungen mit Buttons)</label><select class="app-result-channel"></select></div>
     <div class="form-group"><label>Rolle pingen (optional)</label><select class="app-role"><option value="">Keine Rolle</option></select></div>
-    <div class="form-group"><label>Rolle bei Annahme</label><select class="app-accept-role"><option value="">Keine Rolle</option></select></div>
+    <div class="form-group"><label>Rolle(n) bei Annahme</label><small style="display:block; margin-bottom:6px;">Alle ausgewählten Rollen werden bei Annahme vergeben.</small><div class="chip-select app-accept-roles"></div></div>
     <div class="form-group"><label>Rolle bei Ablehnung (optional)</label><select class="app-reject-role"><option value="">Keine Rolle</option></select></div>
     <div class="form-group"><label>Entscheider-Rollen (dürfen annehmen/ablehnen)</label><div class="chip-select app-review-roles"></div></div>
     <div class="form-group">
@@ -1169,7 +1184,7 @@ window.addApplicationForm = function(data = null) {
   resultChannelSelect.innerHTML = channelOptions;
   if (data && data.resultChannelId) resultChannelSelect.value = data.resultChannelId;
 
-  const roleSelects = wrapper.querySelectorAll('.app-role, .app-accept-role, .app-reject-role');
+  const roleSelects = wrapper.querySelectorAll('.app-role, .app-reject-role');
   const roleOptions = state.guildRoles.length
     ? state.guildRoles.map(r => `<option value="${r.id}">@${escapeHtml(r.name)}</option>`).join('')
     : `<option value="">Keine Rollen</option>`;
@@ -1180,13 +1195,18 @@ window.addApplicationForm = function(data = null) {
     const pingSel = wrapper.querySelector('.app-role');
     if (pingSel) pingSel.value = data.pingRoleId;
   }
-  if (data && data.acceptRoleId) {
-    const acceptSel = wrapper.querySelector('.app-accept-role');
-    if (acceptSel) acceptSel.value = data.acceptRoleId;
-  }
   if (data && data.rejectRoleId) {
     const rejectSel = wrapper.querySelector('.app-reject-role');
     if (rejectSel) rejectSel.value = data.rejectRoleId;
+  }
+
+  const acceptRolesContainer = wrapper.querySelector('.app-accept-roles');
+  if (acceptRolesContainer) {
+    // Abwärtskompatibel: alte Konfigs hatten nur ein einzelnes acceptRoleId
+    const acceptRoleIds = (data && data.acceptRoleIds) || (data && data.acceptRoleId ? [data.acceptRoleId] : []);
+    const acceptChipId = `app-accept-roles-${panelId}`;
+    acceptRolesContainer.id = acceptChipId;
+    renderRoleChips(acceptChipId, acceptRoleIds, false);
   }
 
   const reviewRolesContainer = wrapper.querySelector('.app-review-roles');
@@ -1215,7 +1235,7 @@ function collectApplicationForms() {
     const questions = Array.from(form.querySelectorAll('.app-question'))
       .map(input => input.value.trim())
       .filter(q => q);
-    const acceptRoleId = form.querySelector('.app-accept-role')?.value || '';
+    const acceptRoleIds = getSelectedRoleIds(form.querySelector('.app-accept-roles')?.id);
     const rejectRoleId = form.querySelector('.app-reject-role')?.value || '';
     const reviewRoles = getSelectedRoleIds(form.querySelector('.app-review-roles')?.id);
     return {
@@ -1229,7 +1249,7 @@ function collectApplicationForms() {
       color: form.querySelector('.app-color-hex')?.value || '#2b2d31',
       resultChannelId: form.querySelector('.app-result-channel')?.value || '',
       pingRoleId: form.querySelector('.app-role')?.value || null,
-      acceptRoleId: acceptRoleId,
+      acceptRoleIds: acceptRoleIds,
       rejectRoleId: rejectRoleId,
       reviewRoles: reviewRoles,
       questions,
@@ -1526,6 +1546,17 @@ async function saveModuleSettings(moduleName) {
           logChannelId: document.getElementById('abmeldesystem-log-channel')?.value || '',
           title: document.getElementById('abmeldesystem-title')?.value || '',
           abgemeldeteRoleId: getSelectedRoleIds('abmeldesystem-role')[0] || null
+        };
+        break;
+      case 'rp':
+        payload = {
+          mode: document.getElementById('rp-mode')?.value || 'embed',
+          channelId: document.getElementById('rp-channel')?.value || '',
+          title: document.getElementById('rp-title')?.value || '',
+          text: document.getElementById('rp-text')?.value || '',
+          color: document.getElementById('rp-color')?.value || '#5865f2',
+          image: document.getElementById('rp-image-input')?.dataset.value || '',
+          allowedRoles: getSelectedRoleIds('rp-allowed-roles')
         };
         break;
       case 'voice_support':
