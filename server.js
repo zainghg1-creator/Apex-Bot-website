@@ -28,7 +28,7 @@ console.log('REDIRECT_URI:', REDIRECT_URI);
 
 const DISCORD_API = 'https://discord.com/api/v10';
 const ADMINISTRATOR = 0x8n;
-const ALLOWED_MODULES = ['welcome', 'tickets', 'teamliste', 'automod', 'teamupdate', 'stats', 'levels', 'verification', 'antinuke', 'minigames', 'rolenicknames', 'reactionroles', 'custom_buttons', 'statusembed', 'applications', 'voice_support', 'shiftsystem'];
+const ALLOWED_MODULES = ['welcome', 'tickets', 'teamliste', 'automod', 'teamupdate', 'stats', 'levels', 'verification', 'antinuke', 'minigames', 'rolenicknames', 'reactionroles', 'custom_buttons', 'statusembed', 'applications', 'voice_support', 'shiftsystem', 'abmeldesystem'];
 
 // ============================================================
 // EXPRESS APP
@@ -1184,6 +1184,75 @@ app.post('/api/guild/:guildId/send-duty-embed', requireAuth, async (req, res) =>
     res.json({ success: true, message: 'Duty-Nachricht gesendet!', data });
   } catch (err) {
     console.error('❌ Fehler beim Senden des Dienststatus-Embeds:', err);
+    res.status(500).json({ error: 'Interner Serverfehler: ' + err.message });
+  }
+});
+
+app.post('/api/guild/:guildId/send-abmelde-embed', requireAuth, async (req, res) => {
+  const { guildId } = req.params;
+
+  if (!BOT_TOKEN) {
+    return res.status(503).json({ error: 'bot_not_configured' });
+  }
+
+  try {
+    const config = await getGuildConfig(guildId);
+    const cfg = config.abmeldesystem || {};
+
+    if (!cfg.enabled) {
+      return res.status(400).json({ error: 'Das Abmelde-System ist nicht aktiviert.' });
+    }
+    const channelId = cfg.panelChannelId;
+    if (!channelId) {
+      return res.status(400).json({ error: 'Kein Kanal für das Abmelde-Panel konfiguriert.' });
+    }
+    if (!cfg.abgemeldeteRoleId) {
+      return res.status(400).json({ error: 'Bitte konfiguriere die Rolle für abgemeldete Mitglieder.' });
+    }
+
+    const embed = {
+      title: 'Abmelde System',
+      description: 'Klicke auf den Button und trage **von**, **bis** und den **Grund** ein.',
+      color: 0x5865f2,
+      timestamp: new Date().toISOString()
+    };
+
+    const components = [{
+      type: 1,
+      components: [
+        {
+          type: 2,
+          style: 1,
+          label: 'Abmeldung erstellen',
+          custom_id: 'abm_create'
+        },
+        {
+          type: 2,
+          style: 3,
+          label: 'Anmelden',
+          custom_id: 'abm_return'
+        }
+      ]
+    }];
+
+    const response = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bot ${BOT_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ embeds: [embed], components })
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      console.error('❌ Discord API Fehler (Abmelde-Embed):', response.status, data);
+      return res.status(response.status).json({ error: `Discord Fehler: ${data.message || 'Unbekannt'}` });
+    }
+
+    console.log('✅ Abmelde-System-Embed gesendet!');
+    res.json({ success: true, message: 'Abmelde-Panel gesendet!', data });
+  } catch (err) {
+    console.error('❌ Fehler beim Senden des Abmelde-Embeds:', err);
     res.status(500).json({ error: 'Interner Serverfehler: ' + err.message });
   }
 });
