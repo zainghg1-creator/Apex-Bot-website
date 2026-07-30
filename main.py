@@ -516,13 +516,14 @@ class TranscriptManager:
             return False
 
 # ============================================================
-# TEAMLISTE
+# TEAMLISTE (mit konfigurierbarem Titel)
 # ============================================================
 async def build_teamliste_embed(guild: discord.Guild) -> discord.Embed:
     config = await get_config(guild.id)
     team_cfg = config.get("teamliste", {})
+    title = team_cfg.get("title") or "🌟 Teamliste"
+    embed = discord.Embed(title=title, color=0xffffff)
     role_ids = team_cfg.get("roles", [])
-    embed = discord.Embed(title="🌟 Teamliste", color=0xffffff)
     if not role_ids:
         embed.description = "❌ **Keine Rollen konfiguriert!**\n\nBitte lege die Teamliste im Dashboard fest."
         return embed
@@ -553,7 +554,7 @@ async def update_teamliste(guild: discord.Guild):
         return
     embed = await build_teamliste_embed(guild)
     async for message in channel.history(limit=10):
-        if message.author == bot.user and message.embeds and message.embeds[0].title == "🌟 Teamliste":
+        if message.author == bot.user and message.embeds and message.embeds[0].title == embed.title:
             await message.edit(embed=embed)
             return
     await channel.send(embed=embed)
@@ -2207,7 +2208,7 @@ async def handle_counting_message(message: discord.Message):
     await set_counting_state(message.guild.id, message.channel.id, number, message.author.id)
 
 # ============================================================
-# MINIGAMES: FLAGGEN- & EMOJI-RATEN
+# MINIGAMES: FLAGGEN- & EMOJI-RATEN (mit konfigurierbarem Titel)
 # ============================================================
 
 FLAG_ITEMS = [
@@ -2641,9 +2642,14 @@ async def clear_guessgame_state(guild_id, channel_id, game_key: str):
     except Exception as e:
         logger.error(f"[MINIGAMES] Fehler beim Löschen des {game_key}-Status: {e}")
 
-def build_guessgame_embed(game_key: str, item: dict) -> discord.Embed:
+# ============================================================
+# NEU: build_guessgame_embed mit konfigurierbarem Titel
+# ============================================================
+def build_guessgame_embed(game_key: str, item: dict, config: dict) -> discord.Embed:
     meta = GUESSGAME_META[game_key]
-    embed = discord.Embed(title=meta["title"], description=meta["prompt"], color=meta["color"])
+    game_cfg = config.get("minigames", {}).get(game_key, {})
+    title = game_cfg.get("title") or meta["title"]
+    embed = discord.Embed(title=title, description=meta["prompt"], color=meta["color"])
     if item.get("image"):
         embed.set_image(url=item["image"])
     if item.get("display_emoji"):
@@ -2669,7 +2675,9 @@ async def start_guessgame_round(guild: discord.Guild, channel_id, game_key: str,
     if not cfg.get("enabled") or str(cfg.get("channelId")) != str(channel_id):
         return
     item = pick_guessgame_item(game_key, exclude_id)
-    embed = build_guessgame_embed(game_key, item)
+    # gesamte Server-Config für den Titel übergeben
+    full_config = await get_config(guild.id)
+    embed = build_guessgame_embed(game_key, item, full_config)
     view = build_guessgame_view(game_key, cfg.get("buttons", {}))
     try:
         message = await channel.send(embed=embed, view=view)
@@ -2725,7 +2733,7 @@ async def handle_guessgame_message(message: discord.Message, game_key: str):
         await start_guessgame_round(message.guild, message.channel.id, game_key, exclude_id=item["id"])
 
 # ============================================================
-# AUTOMOD
+# AUTOMOD (mit konfigurierbarem Log-Titel)
 # ============================================================
 automod_message_times = defaultdict(deque)
 automod_message_cache = defaultdict(list)
@@ -2751,6 +2759,9 @@ def is_automod_whitelisted(member: discord.Member, channel, cfg: dict) -> bool:
         return True
     return False
 
+# ============================================================
+# NEU: automod_log mit konfigurierbarem Titel
+# ============================================================
 async def automod_log(guild: discord.Guild, cfg: dict, title: str, description: str, color: int = 0xff5555):
     log_channel_id = cfg.get("logChannelId")
     if not log_channel_id:
@@ -2758,7 +2769,8 @@ async def automod_log(guild: discord.Guild, cfg: dict, title: str, description: 
     channel = guild.get_channel(int(log_channel_id))
     if not channel:
         return
-    embed = discord.Embed(title=title, description=description, color=color, timestamp=datetime.now(BERLIN_TZ))
+    log_title = cfg.get("title") or "🛡️ Automod"
+    embed = discord.Embed(title=log_title, description=description, color=color, timestamp=datetime.now(BERLIN_TZ))
     try:
         await channel.send(embed=embed)
     except Exception as e:
@@ -4225,7 +4237,7 @@ async def on_guild_join(guild):
     await update_stats_channels(guild)
 
 # ============================================================
-# SHIFT-SYSTEM
+# SHIFT-SYSTEM (mit konfigurierbarem Log-Titel)
 # ============================================================
 async def get_shift_config(guild_id):
     config = await get_config(guild_id)
@@ -4424,15 +4436,19 @@ async def has_shift_permission(interaction: discord.Interaction, target_user: di
         return True, False, "Self"
     return False, False, "Du hast keine Berechtigung, Schichten zu verwalten."
 
+# ============================================================
+# NEU: log_shift_event mit konfigurierbarem Titel
+# ============================================================
 async def log_shift_event(guild: discord.Guild, title: str, description: str):
     config = await get_shift_config(guild.id)
+    log_title = config.get("title") or "🕒 Schicht"
+    embed = discord.Embed(title=log_title, description=description, color=0x5865f2, timestamp=datetime.now(timezone.utc))
     log_channel_id = config.get("logChannelId")
     if not log_channel_id:
         return
     channel = guild.get_channel(int(log_channel_id))
     if not channel:
         return
-    embed = discord.Embed(title=f"🕒 {title}", description=description, color=0x5865f2, timestamp=datetime.now(timezone.utc))
     try:
         await channel.send(embed=embed)
     except Exception as e:
@@ -4640,7 +4656,7 @@ async def shift_leaderboard(interaction: discord.Interaction):
     await interaction.followup.send(embed=embed)
 
 # ============================================================
-# ABMELDE-SYSTEM (Team & Support)
+# ABMELDE-SYSTEM (Team & Support) – mit konfigurierbarem Log-Titel
 # ============================================================
 async def get_abmeldesystem_config(guild_id):
     config = await get_config(guild_id)
@@ -4740,17 +4756,20 @@ class AbmeldeModal(discord.ui.Modal, title="Abmeldung erstellen"):
         await interaction.followup.send("✅ Deine Abmeldung wurde erstellt.", ephemeral=True)
         await send_abmeldesystem_log(guild, cfg, interaction.user, doc, event="create")
 
+# ============================================================
+# NEU: send_abmeldesystem_log mit konfigurierbarem Titel
+# ============================================================
 async def send_abmeldesystem_log(guild: discord.Guild, cfg: dict, user: discord.abc.User, doc: dict, event: str):
-    """Sendet ein Log-Embed in den konfigurierten Kanal, sobald sich jemand ab- oder anmeldet."""
     log_channel_id = cfg.get("logChannelId")
     if not log_channel_id:
         return
     channel = guild.get_channel(int(log_channel_id))
     if not channel:
         return
+    log_title = cfg.get("title") or "📋 Abmeldung"
     try:
         if event == "create":
-            embed = discord.Embed(title="📋 Neue Abmeldung", color=0xE67E22, timestamp=datetime.now(timezone.utc))
+            embed = discord.Embed(title=log_title, color=0xE67E22, timestamp=datetime.now(timezone.utc))
             embed.add_field(name="User", value=user.mention, inline=False)
             embed.add_field(name="Von", value=doc.get("von", "-"), inline=True)
             embed.add_field(name="Bis", value=doc.get("bis", "-"), inline=True)
