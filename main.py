@@ -1124,14 +1124,21 @@ class ApplicationDecisionModal(discord.ui.Modal):
             user_id = doc.get("userId")
             applicant = guild.get_member(int(user_id)) if user_id else None
             if action == 'accepted':
-                accept_role_id = doc.get("acceptRoleId")
-                if accept_role_id:
-                    role = guild.get_role(int(accept_role_id))
-                    if role and applicant:
+                # Abwärtskompatibel: alte Bewerbungen haben ggf. nur ein einzelnes acceptRoleId
+                accept_role_ids = doc.get("acceptRoleIds") or ([doc.get("acceptRoleId")] if doc.get("acceptRoleId") else [])
+                if accept_role_ids and applicant:
+                    roles_to_add = []
+                    for role_id in accept_role_ids:
+                        if not role_id:
+                            continue
+                        role = guild.get_role(int(role_id))
+                        if role:
+                            roles_to_add.append(role)
+                    if roles_to_add:
                         try:
-                            await applicant.add_roles(role, reason="Bewerbung angenommen")
+                            await applicant.add_roles(*roles_to_add, reason="Bewerbung angenommen")
                         except discord.Forbidden:
-                            logger.warning(f"[BEWERBUNG] Keine Berechtigung, Rolle {role} an {applicant} zu vergeben.")
+                            logger.warning(f"[BEWERBUNG] Keine Berechtigung, Rollen {roles_to_add} an {applicant} zu vergeben.")
                 await db_call(applications_collection.update_one, {"_id": app_id}, {"$set": {"status": "accepted", "acceptedBy": interaction.user.id, "acceptedAt": datetime.now(timezone.utc), "reason": grund}})
                 status_line = f"✅ **Angenommen** von {interaction.user.mention}\n**Grund:** {grund}"
                 new_color = 0x2ECC71
@@ -1217,7 +1224,7 @@ async def submit_application(guild: discord.Guild, form: dict, user: discord.Use
         "createdAt": datetime.now(timezone.utc),
         "channel_id": str(result_channel_id),
         "message_id": None,
-        "acceptRoleId": form.get("acceptRoleId"),
+        "acceptRoleIds": form.get("acceptRoleIds", []),
         "rejectRoleId": form.get("rejectRoleId"),
         "reviewRoles": form.get("reviewRoles", [])
     }
@@ -3184,6 +3191,128 @@ async def teamliste(interaction: discord.Interaction):
     await interaction.followup.send(embed=embed)
 
 # ============================================================
+# RP INFO (/rp_start, /rp_stop)
+# ============================================================
+def _rp_format_placeholders(text: str, member: discord.Member, guild: discord.Guild) -> str:
+    if not text:
+        return text
+    return (text
+            .replace("{user}", member.mention)
+            .replace("{username}", member.display_name)
+            .replace("{server}", guild.name))
+
+def _rp_has_permission(member: discord.Member, rp_cfg: dict) -> bool:
+    if member.guild_permissions.administrator:
+        return True
+    role_ids = rp_cfg.get("allowedRoles", [])
+    if not role_ids:
+        return False
+    member_role_ids = {str(r.id) for r in member.roles}
+    return any(rid in member_role_ids for rid in role_ids)
+
+@bot.tree.command(name="rp_start", description="Startet das Roleplay und postet die konfigurierte RP-Info-Nachricht.")
+async def rp_start(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    guild = interaction.guild
+    config = await get_config(guild.id)
+    rp_cfg = config.get("rp", {})
+
+    if not _rp_has_permission(interaction.user, rp_cfg):
+        await interaction.followup.send("❌ Du hast keine Berechtigung, diesen Befehl zu nutzen.", ephemeral=True)
+        return
+
+    channel_id = rp_cfg.get("channelId")
+    if not channel_id:
+        await interaction.followup.send("❌ Es wurde kein Kanal für RP-Nachrichten konfiguriert (Dashboard → RP Info).", ephemeral=True)
+        return
+    channel = guild.get_channel(int(channel_id))
+    if not channel:
+        await interaction.followup.send("❌ Der konfigurierte Kanal wurde nicht gefunden.", ephemeral=True)
+        return
+
+    title = _rp_format_placeholders(rp_cfg.get("title") or "🎭 Roleplay gestartet", interaction.user, guild)
+    text = _rp_format_placeholders(rp_cfg.get("text") or "Das Roleplay wurde gestartet!", interaction.user, guild)
+    mode = rp_cfg.get("mode", "embed")
+
+    try:
+        if mode == "text":
+            content = f"**{title}**\n{text}" if title else text
+            sent = await channel.send(content)
+        else:
+            try:
+                color_int = int((rp_cfg.get("color") or "#5865f2").lstrip("#"), 16)
+            except ValueError:
+                color_int = 0x5865F2
+            embed = discord.Embed(title=title, description=text, color=color_int)
+            image = rp_cfg.get("image")
+            if image and image.startswith("http"):
+                embed.set_image(url=image)
+            embed.timestamp = datetime.now(BERLIN_TZ)
+            sent = await channel.send(embed=embed)
+    except discord.Forbidden:
+        await interaction.followup.send("❌ Ich habe keine Berechtigung, in diesem Kanal zu schreiben.", ephemeral=True)
+        return
+    except Exception as e:
+        logger.error(f"[RP] Fehler beim Senden der RP-Start-Nachricht: {e}")
+        await interaction.followup.send("❌ Fehler beim Senden der Nachricht.", ephemeral=True)
+        return
+
+    if guild_configs is not None:
+        await db_call(
+            guild_configs.update_one,
+            {"guildId": str(guild.id)},
+            {"$set": {"rpMeta": {"messageId": str(sent.id), "channelId": str(channel.id), "active": True}}},
+            upsert=True,
+        )
+    await interaction.followup.send(f"✅ Roleplay gestartet in {channel.mention}.", ephemeral=True)
+
+@bot.tree.command(name="rp_stop", description="Beendet das aktuell laufende Roleplay.")
+async def rp_stop(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    guild = interaction.guild
+    config = await get_config(guild.id)
+    rp_cfg = config.get("rp", {})
+
+    if not _rp_has_permission(interaction.user, rp_cfg):
+        await interaction.followup.send("❌ Du hast keine Berechtigung, diesen Befehl zu nutzen.", ephemeral=True)
+        return
+
+    if guild_configs is None:
+        await interaction.followup.send("❌ Datenbank nicht verfügbar.", ephemeral=True)
+        return
+
+    doc = await db_call(guild_configs.find_one, {"guildId": str(guild.id)})
+    meta = (doc or {}).get("rpMeta", {}) or {}
+    if not meta.get("active"):
+        await interaction.followup.send("ℹ️ Es läuft aktuell kein Roleplay.", ephemeral=True)
+        return
+
+    channel = guild.get_channel(int(meta["channelId"])) if meta.get("channelId") else None
+    if channel:
+        try:
+            message = await channel.fetch_message(int(meta["messageId"]))
+            if message.embeds:
+                embed = message.embeds[0]
+                embed.title = f"🔴 {embed.title} (beendet)" if embed.title else "🔴 Roleplay beendet"
+                embed.color = discord.Color.red()
+                await message.edit(embed=embed)
+            elif message.content:
+                await message.edit(content=f"{message.content}\n\n🔴 **Roleplay beendet.**")
+        except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+            pass
+        try:
+            await channel.send(f"🔴 Das Roleplay wurde von {interaction.user.mention} beendet.")
+        except discord.Forbidden:
+            pass
+
+    await db_call(
+        guild_configs.update_one,
+        {"guildId": str(guild.id)},
+        {"$set": {"rpMeta.active": False}},
+    )
+    await interaction.followup.send("✅ Roleplay beendet.", ephemeral=True)
+
+# ============================================================
 # TEAMUPDATE / TEAM-MANAGEMENT COMMANDS (OPTIMIERT)
 # ============================================================
 
@@ -3735,7 +3864,7 @@ async def invite_tracker(interaction: discord.Interaction):
 async def help_command(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
     embed = discord.Embed(title="🤖 APEX Bot - Befehle", description="Alle verfügbaren Slash Commands:", color=0xffffff, timestamp=datetime.now(BERLIN_TZ))
-    for cmd in ["/invite", "/invite-tracker", "/support", "/dashboard", "/help", "/giveaway", "/show-config", "/test-welcome", "/teamliste", "/reload-ticket-panel", "/reload-config", "/neuerteamler", "/uprank", "/downrank", "/teamkick", "/teamwarn", "/update-stats", "/leaderboard"]:
+    for cmd in ["/invite", "/invite-tracker", "/support", "/dashboard", "/help", "/giveaway", "/show-config", "/test-welcome", "/teamliste", "/reload-ticket-panel", "/reload-config", "/neuerteamler", "/uprank", "/downrank", "/teamkick", "/teamwarn", "/update-stats", "/leaderboard", "/rp_start", "/rp_stop"]:
         embed.add_field(name=cmd, value=" ", inline=False)
     await interaction.followup.send(embed=embed)
 
