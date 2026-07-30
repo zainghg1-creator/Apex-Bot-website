@@ -617,6 +617,7 @@ function applyAbmeldeConfig(cfg) {
   setChecked('abmeldesystem-enabled', cfg.enabled ?? false);
   setSelectValue('abmeldesystem-panel-channel', cfg.panelChannelId || '');
   setSelectValue('abmeldesystem-log-channel', cfg.logChannelId || '');
+  setValue('abmeldesystem-title', cfg.title || '');
   renderRoleChips('abmeldesystem-role', cfg.abgemeldeteRoleId ? [cfg.abgemeldeteRoleId] : [], true);
 }
 
@@ -652,11 +653,9 @@ function applyShiftConfig(cfg) {
   setChecked('shiftsystem-enabled', cfg.enabled ?? false);
   setSelectValue('shiftsystem-log-channel', cfg.logChannelId || '');
   setSelectValue('shiftsystem-leaderboard-channel', cfg.leaderboardChannelId || '');
-  // Rolle(n), die Shifts ANDERER managen dürfen (start/pause/stop für andere + leaderboard)
+  setValue('shiftsystem-title', cfg.title || '');
   renderRoleChips('shiftsystem-manage-others', cfg.managerRoleIds || []);
-  // Rolle(n), die den eigenen Shift managen dürfen (Mehrfachauswahl)
   renderRoleChips('shiftsystem-manage-self', cfg.selfRoleIds || []);
-  // Schichtarten (z.B. Polizei, Feuerwehr, ...) inkl. Rollen, die sie starten dürfen
   state.shiftTypesDraft = Array.isArray(cfg.shiftTypes) ? cfg.shiftTypes.map(t => ({
     id: t.id || genShiftTypeId(),
     name: t.name || '',
@@ -677,9 +676,6 @@ function renderShiftSelects() {
   renderShiftTypesList();
 }
 
-// ------------------------------------------------------------
-// SCHICHTARTEN (mehrere Shift-Typen mit eigener Rollen-Berechtigung)
-// ------------------------------------------------------------
 function genShiftTypeId() {
   return `type_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -727,7 +723,6 @@ function renderShiftTypesList() {
 }
 
 function collectShiftTypesFromDraft() {
-  // Rollen-Auswahl aus dem DOM zurück in den Draft übernehmen, dann validieren
   state.shiftTypesDraft.forEach(t => {
     t.roleIds = getSelectedRoleIds(`shift-type-roles-${t.id}`);
   });
@@ -770,14 +765,18 @@ function applyWelcomeConfig(cfg) {
   updateEmbedPreview('leave');
 }
 
+// --------------------- NEU: Teamliste mit Titel ---------------------
 function applyTeamlisteConfig(cfg) {
   setSelectValue('teamliste-channel', cfg.channelId || '');
+  setValue('teamliste-title', cfg.title || '');
   renderRoleChips('teamliste-roles', cfg.roles || []);
 }
 
+// --------------------- NEU: Automod mit Titel ---------------------
 function applyAutomodConfig(cfg) {
   setChecked('automod-enabled', cfg.enabled ?? false);
   setSelectValue('automod-log-channel', cfg.logChannelId || '');
+  setValue('automod-title', cfg.title || '');
 
   const spam = cfg.spam || {};
   setChecked('automod-spam-enabled', spam.enabled ?? false);
@@ -849,6 +848,7 @@ function applyTeamupdateConfig(cfg) {
   });
 }
 
+// --------------------- NEU: Minigames mit Titel ---------------------
 function applyMinigamesConfig(cfg) {
   const c = cfg.counting || {};
   setChecked('minigames-counting-enabled', c.enabled ?? false);
@@ -857,6 +857,7 @@ function applyMinigamesConfig(cfg) {
   const f = cfg.flags || {};
   setChecked('minigames-flags-enabled', f.enabled ?? false);
   setSelectValue('minigames-flags-channel', f.channelId || '');
+  setValue('minigames-flags-title', f.title || '');
   const fb = f.buttons || {};
   setChecked('minigames-flags-btn-skip', fb.skip ?? true);
   setChecked('minigames-flags-btn-hint', fb.hint ?? true);
@@ -865,6 +866,7 @@ function applyMinigamesConfig(cfg) {
   const e = cfg.emoji || {};
   setChecked('minigames-emoji-enabled', e.enabled ?? false);
   setSelectValue('minigames-emoji-channel', e.channelId || '');
+  setValue('minigames-emoji-title', e.title || '');
   const eb = e.buttons || {};
   setChecked('minigames-emoji-btn-skip', eb.skip ?? true);
   setChecked('minigames-emoji-btn-hint', eb.hint ?? true);
@@ -1364,12 +1366,17 @@ async function saveModuleSettings(moduleName) {
         invalidateTicketCache();
         break;
       case 'teamliste':
-        payload = { channelId: document.getElementById('teamliste-channel').value, roles: getSelectedRoleIds('teamliste-roles') };
+        payload = {
+          channelId: document.getElementById('teamliste-channel').value,
+          roles: getSelectedRoleIds('teamliste-roles'),
+          title: document.getElementById('teamliste-title').value
+        };
         break;
       case 'automod':
         payload = {
           enabled: document.getElementById('automod-enabled').checked,
           logChannelId: document.getElementById('automod-log-channel').value,
+          title: document.getElementById('automod-title').value,
           spam: {
             enabled: document.getElementById('automod-spam-enabled').checked,
             maxMessages: parseInt(document.getElementById('automod-spam-max').value) || 5,
@@ -1437,6 +1444,7 @@ async function saveModuleSettings(moduleName) {
           flags: {
             enabled: document.getElementById('minigames-flags-enabled').checked,
             channelId: document.getElementById('minigames-flags-channel').value,
+            title: document.getElementById('minigames-flags-title').value,
             buttons: {
               skip: document.getElementById('minigames-flags-btn-skip').checked,
               hint: document.getElementById('minigames-flags-btn-hint').checked,
@@ -1446,6 +1454,7 @@ async function saveModuleSettings(moduleName) {
           emoji: {
             enabled: document.getElementById('minigames-emoji-enabled').checked,
             channelId: document.getElementById('minigames-emoji-channel').value,
+            title: document.getElementById('minigames-emoji-title').value,
             buttons: {
               skip: document.getElementById('minigames-emoji-btn-skip').checked,
               hint: document.getElementById('minigames-emoji-btn-hint').checked,
@@ -1504,6 +1513,7 @@ async function saveModuleSettings(moduleName) {
           enabled: document.getElementById('shiftsystem-enabled')?.checked ?? false,
           logChannelId: document.getElementById('shiftsystem-log-channel')?.value || '',
           leaderboardChannelId: document.getElementById('shiftsystem-leaderboard-channel')?.value || '',
+          title: document.getElementById('shiftsystem-title')?.value || '',
           managerRoleIds: getSelectedRoleIds('shiftsystem-manage-others'),
           selfRoleIds: getSelectedRoleIds('shiftsystem-manage-self'),
           shiftTypes: collectShiftTypesFromDraft()
@@ -1514,6 +1524,7 @@ async function saveModuleSettings(moduleName) {
           enabled: document.getElementById('abmeldesystem-enabled')?.checked ?? false,
           panelChannelId: document.getElementById('abmeldesystem-panel-channel')?.value || '',
           logChannelId: document.getElementById('abmeldesystem-log-channel')?.value || '',
+          title: document.getElementById('abmeldesystem-title')?.value || '',
           abgemeldeteRoleId: getSelectedRoleIds('abmeldesystem-role')[0] || null
         };
         break;
