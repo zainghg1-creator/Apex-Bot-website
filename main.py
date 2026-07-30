@@ -1,3 +1,22 @@
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import os
+import threading
+
+# Webserver für Render & cron-job.org
+class KeepAliveHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot is alive!")
+
+def run_web_server():
+    port = int(os.environ.get("PORT", 8080))
+    server = HTTPServer(("0.0.0.0", port), KeepAliveHandler)
+    server.serve_forever()
+
+# Server in einem eigenen Thread starten
+threading.Thread(target=run_web_server, daemon=True).start()
+
 import discord
 from discord import app_commands
 from discord.ext import commands
