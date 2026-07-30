@@ -553,11 +553,30 @@ async def update_teamliste(guild: discord.Guild):
     if not channel:
         return
     embed = await build_teamliste_embed(guild)
-    async for message in channel.history(limit=10):
-        if message.author == bot.user and message.embeds and message.embeds[0].title == embed.title:
+    guild_id = str(guild.id)
+
+    # Bekannte Message-ID der Teamliste separat gespeichert (nicht Teil von
+    # data.teamliste, damit ein Speichern im Dashboard sie nicht überschreibt).
+    doc = await db_call(guild_configs.find_one, {"guildId": guild_id})
+    meta = (doc or {}).get("teamlisteMeta", {}) or {}
+    message_id = meta.get("messageId")
+    channel_id = meta.get("channelId")
+
+    if message_id and channel_id == str(channel.id):
+        try:
+            message = await channel.fetch_message(int(message_id))
             await message.edit(embed=embed)
             return
-    await channel.send(embed=embed)
+        except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+            pass  # Nachricht existiert nicht mehr -> unten neu senden
+
+    sent = await channel.send(embed=embed)
+    await db_call(
+        guild_configs.update_one,
+        {"guildId": guild_id},
+        {"$set": {"teamlisteMeta": {"messageId": str(sent.id), "channelId": str(channel.id)}}},
+        upsert=True,
+    )
 
 # ============================================================
 # TICKET SYSTEM
@@ -2015,7 +2034,13 @@ async def on_ready():
 async def on_member_update(before: discord.Member, after: discord.Member):
     if before.roles == after.roles:
         return
-    await update_teamliste(after.guild)
+    config = await get_config(after.guild.id)
+    team_role_ids = set(str(r) for r in config.get("teamliste", {}).get("roles", []))
+    before_ids = {str(r.id) for r in before.roles}
+    after_ids = {str(r.id) for r in after.roles}
+    changed_ids = before_ids ^ after_ids
+    if team_role_ids & changed_ids:
+        await update_teamliste(after.guild)
     await apply_role_nickname(after)
 
 # ============================================================
