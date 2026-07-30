@@ -46,8 +46,12 @@ let state = {
   guildDataGuildId: null,
   ticketConfigCache: null,
   ticketConfigCacheGuildId: null,
-  shiftTypesDraft: []
+  shiftTypesDraft: [],
+  specialAccess: false
 };
+
+// Module, die nur mit der Spezial-Rolle nutzbar sind (Krone im Dashboard)
+const CROWN_TABS = ['automod', 'antinuke', 'shiftsystem', 'abmeldesystem', 'bot'];
 
 const TEAMUPDATE_COMMANDS = ['neuer_teamler', 'uprank', 'downrank', 'teamkick', 'teamwarn'];
 
@@ -165,6 +169,7 @@ async function loadDashboard() {
       showState(DOM.errorState);
       return;
     }
+    state.specialAccess = data.specialAccess === true;
     renderUser(data.user);
     renderGuilds(data.guilds, data.clientId || CONFIG.CLIENT_ID);
   } catch (err) {
@@ -402,7 +407,22 @@ function getSelectedChannelIds(containerId) {
 // ============================================================
 // TABS & SUBTABS
 // ============================================================
+function showLockedModulePopup() {
+  const popup = document.getElementById('locked-module-popup');
+  if (popup) popup.classList.remove('hidden');
+}
+
+function closeLockedModulePopup() {
+  const popup = document.getElementById('locked-module-popup');
+  if (popup) popup.classList.add('hidden');
+}
+
 function switchTab(tabName) {
+  if (CROWN_TABS.includes(tabName) && !state.specialAccess) {
+    showLockedModulePopup();
+    return;
+  }
+  closeLockedModulePopup();
   document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
   document.querySelectorAll('.module-page').forEach(page => page.classList.add('hidden'));
   const activeBtn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
