@@ -594,54 +594,74 @@
             flex-shrink: 0;
         }
 
-        /* ===== LOCKED-MODULE POPUP ===== */
-        .locked-popup-overlay {
-            position: fixed;
-            inset: 0;
-            z-index: 9999;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(0, 0, 0, 0.55);
-            backdrop-filter: blur(3px);
-            pointer-events: none;
+        /* ===== LOCKED MODULE BANNER (inline statt Overlay-Popup) ===== */
+        .module-page.module-locked > *:not(.locked-module-banner) {
+            display: none !important;
         }
 
-        .locked-popup-box {
-            pointer-events: none;
+        .locked-module-banner {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            max-width: 380px;
+            margin: 60px auto;
+            padding: 36px 30px;
             background: var(--bg-card);
             border: 1px solid var(--border-medium);
             border-radius: 18px;
-            padding: 36px 30px;
-            max-width: 380px;
-            width: 88%;
-            text-align: center;
-            box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+            box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
         }
 
-        .locked-popup-crown {
+        .module-page.module-locked .locked-module-banner {
+            display: flex;
+        }
+
+        .locked-module-crown {
             font-size: 2.6rem;
             margin-bottom: 14px;
             filter: drop-shadow(0 0 12px rgba(250, 204, 21, 0.6));
         }
 
-        .locked-popup-box h3 {
+        .locked-module-banner h3 {
             font-size: 1.05rem;
             font-weight: 800;
             margin-bottom: 8px;
             color: var(--text-primary);
         }
 
-        .locked-popup-box p {
+        .locked-module-banner p {
             color: var(--text-muted);
-            font-size: 0.82rem;
+            font-size: 0.85rem;
             line-height: 1.55;
+            margin-bottom: 20px;
         }
 
-        .locked-popup-hint {
-            margin-top: 14px;
-            font-size: 0.7rem;
-            color: var(--text-dim);
+        .locked-module-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 20px;
+            border-radius: 10px;
+            background: var(--accent-purple, #7c3aed);
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.85rem;
+            text-decoration: none;
+            transition: transform 0.15s ease, opacity 0.15s ease;
+        }
+
+        .locked-module-link:hover {
+            opacity: 0.9;
+            transform: translateX(2px);
+        }
+
+        .locked-module-arrow {
+            transition: transform 0.15s ease;
+        }
+
+        .locked-module-link:hover .locked-module-arrow {
+            transform: translateX(3px);
         }
 
         .back-btn {
@@ -4045,15 +4065,6 @@
                 </div>
             </div>
 
-        </div>
-    </div>
-
-    <div id="locked-module-popup" class="locked-popup-overlay hidden">
-        <div class="locked-popup-box">
-            <div class="locked-popup-crown">👑</div>
-            <h3>Modul gesperrt</h3>
-            <p>Dieses Modul ist nur für Nutzer mit der entsprechenden Spezial-Rolle freigeschaltet.</p>
-            <div class="locked-popup-hint">Wechsle zu einem anderen Modul, um fortzufahren.</div>
         </div>
     </div>
 
