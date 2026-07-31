@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apex – Moderation & Community Bot</title>
+
+<!-- Favicon -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='50' fill='%23000000'/><path d='M50 18 L22 75 L38 75 L50 48 L62 75 L78 75 Z' fill='%23FFFFFF'/><path d='M15 50 C20 25, 40 12, 68 12' stroke='%23FFFFFF' stroke-width='4' stroke-linecap='round' fill='none'/><path d='M85 50 C80 75, 60 88, 32 88' stroke='%23FFFFFF' stroke-width='4' stroke-linecap='round' fill='none'/><line x1='72' y1='20' x2='28' y2='80' stroke='%23FFFFFF' stroke-width='3' stroke-linecap='round'/></svg>">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style> 
+  :root {
+    --bg-base: #000000;
+    --bg-surface: #0a0a0a;
+    --bg-card: rgba(18, 18, 18, 0.7);
+    --border-subtle: rgba(255, 255, 255, 0.12);
+    --border-active: rgba(255, 255, 255, 0.4);
+    --accent-monochrome: #ffffff;
+    --text-primary: #ffffff;
+    --text-muted: #a1a1aa;
+    --text-dim: #71717a;
+    --accent-purple: #6d5ef8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .bg-grid {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    z-index: -2;
+  }
+
+  #starfield {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    display: block;
+  }
+
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 6%;
+    backdrop-filter: blur(12px);
+    background: rgba(0, 0, 0, 0.8);
+    border-bottom: 1px solid var(--border-subtle);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .brand { display: flex; align-items: center; gap: 14px; text-decoration: none; color: var(--text-primary); }
+  .brand-logo {
+    width: 34px; height: 34px; background: #000; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+  .brand-name { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.02em; }
+
+  .nav-center {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .nav-link {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: color 0.2s ease;
+    position: relative;
+  }
+  .nav-link:hover { color: var(--text-primary); }
+  .nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: -4px; left: 0;
+    width: 0; height: 2px;
+    background: var(--accent-purple);
+    transition: width 0.25s ease;
+  }
+  .nav-link:hover::after { width: 100%; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 10px 20px; border-radius: 10px; font-size: 0.88rem; font-weight: 600;
+    text-decoration: none; border: 1px solid transparent; cursor: pointer;
+    transition: all 0.2s ease; white-space: nowrap;
+  }
+  .btn-primary { background: #ffffff; color: #000000; }
+  .btn-primary:hover { background: #e4e4e7; transform: translateY(-2px); }
+  .btn-secondary { background: rgba(255, 255, 255, 0.05); color: var(--text-primary); border-color: var(--border-subtle); }
+  .btn-secondary:hover { background: rgba(255, 255, 255, 0.12); border-color: var(--border-active); transform: translateY(-2px); }
+
+  /* HERO SECTION */
+  .hero {
+    max-width: 1100px; margin: 0 auto; padding: 90px 24px 50px; text-align: center;
+  }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px;
+    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-subtle);
+    border-radius: 20px; font-size: 0.8rem; font-family: 'JetBrains Mono', monospace;
+    color: var(--text-muted); margin-bottom: 24px;
+  }
+  .hero-title { font-size: 3.2rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 20px; }
+  .hero-subtitle { font-size: 1.1rem; color: var(--text-muted); max-width: 650px; margin: 0 auto 36px; line-height: 1.6; }
+  .hero-buttons { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; }
+
+  /* SHOWCASE CARD */
+  .showcase-section {
+    max-width: 950px; margin: 20px auto 90px; padding: 0 24px;
+  }
+  .showcase-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 20px;
+    padding: 36px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  }
+  .showcase-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: 28px;
+  }
+  .stat-item { text-align: center; }
+  .stat-value { font-size: 1.8rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; }
+  .stat-label { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }
+
+  .showcase-highlights {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 24px;
+  }
+  .highlight-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .highlight-icon {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-subtle);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .highlight-icon svg { width: 18px; height: 18px; stroke: #fff; fill: none; stroke-width: 2; }
+  .highlight-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 4px; }
+  .highlight-desc { font-size: 0.82rem; color: var(--text-muted); line-height: 1.4; }
+
+  /* MODULE GRID – ACCORDION */
+  .modules-section { max-width: 1100px; margin: 0 auto; padding: 0 24px 12px; }
+  .section-header { text-align: center; margin-bottom: 60px; }
+  .section-title { font-size: 2rem; font-weight: 800; margin-bottom: 12px; }
+  .section-subtitle { color: var(--text-muted); font-size: 0.95rem; }
+
+  .modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px;
+  }
+
+  .module-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+  .module-card:hover {
+    border-color: rgba(109, 94, 248, 0.4);
+    box-shadow: 0 12px 30px rgba(109, 94, 248, 0.08);
+  }
+
+  .module-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 20px 24px;
+    transition: background 0.2s ease;
+  }
+  .module-header:hover {
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .module-icon-wrap {
+    width: 44px; height: 44px; border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-subtle);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .module-icon-wrap svg {
+    width: 22px; height: 22px; stroke: #ffffff; fill: none;
+    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  }
+
+  .module-title {
+    flex: 1;
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+
+  .module-arrow {
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    transition: transform 0.3s ease;
+    flex-shrink: 0;
+  }
+  .module-card.open .module-arrow {
+    transform: rotate(180deg);
+  }
+
+  .module-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease, padding 0.3s ease, border-color 0.3s ease;
+    padding: 0 24px;
+    color: var(--text-muted);
+    font-size: 0.92rem;
+    line-height: 1.6;
+    border-top: 1px solid transparent;
+  }
+  .module-card.open .module-body {
+    max-height: 400px;
+    padding: 18px 24px 24px;
+    border-top-color: var(--border-subtle);
+  }
+
+  .module-body ul {
+    list-style: none;
+    padding: 0;
+    margin-top: 8px;
+  }
+  .module-body ul li {
+    padding: 4px 0 4px 20px;
+    position: relative;
+  }
+  .module-body ul li::before {
+    content: '▸';
+    position: absolute;
+    left: 0;
+    color: var(--accent-purple);
+    font-weight: 700;
+  }
+
+  .module-body .badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 2px 12px;
+    border-radius: 20px;
+    background: rgba(109, 94, 248, 0.15);
+    color: var(--accent-purple);
+    border: 1px solid rgba(109, 94, 248, 0.2);
+    margin-top: 10px;
+  }
+
+  /* FOOTER */
+  footer {
+    margin-top: 100px;
+    background: var(--bg-surface);
+    border-top: 1px solid var(--border-subtle);
+    padding: 40px 24px 30px;
+  }
+
+  .footer-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 40px;
+  }
+
+  .footer-col h4 {
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+  }
+
+  .footer-col ul {
+    list-style: none;
+    padding: 0;
+  }
+  .footer-col ul li {
+    margin-bottom: 8px;
+  }
+  .footer-col ul li a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 0.88rem;
+    transition: color 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .footer-col ul li a:hover {
+    color: var(--text-primary);
+  }
+  .footer-col ul li a svg {
+    width: 16px;
+    height: 16px;
+    stroke: var(--text-dim);
+    fill: none;
+    stroke-width: 2;
+    transition: stroke 0.2s ease;
+  }
+  .footer-col ul li a:hover svg {
+    stroke: var(--text-primary);
+  }
+
+  .footer-social {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .footer-social a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1px solid var(--border-subtle);
+    color: var(--text-muted);
+    transition: all 0.2s ease;
+  }
+  .footer-social a:hover {
+    border-color: var(--accent-purple);
+    color: var(--text-primary);
+    background: rgba(109, 94, 248, 0.10);
+    transform: translateY(-3px);
+  }
+  .footer-social a svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+  }
+
+  .footer-bottom {
+    max-width: 1100px;
+    margin: 30px auto 0;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+  }
+  .footer-bottom .back-to-top {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border-subtle);
+    border-radius: 50%;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .footer-bottom .back-to-top:hover {
+    background: rgba(109, 94, 248, 0.15);
+    border-color: var(--accent-purple);
+    color: var(--text-primary);
+    transform: translateY(-3px);
+  }
+  .footer-bottom .back-to-top svg {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+  }
+
+  @media (max-width: 768px) {
+    .nav-center { display: none; }
+    .modules-grid { grid-template-columns: 1fr; }
+    .module-header { padding: 16px 18px; }
+    .module-body { font-size: 0.85rem; }
+    .module-card.open .module-body { max-height: 500px; }
+    .footer-inner {
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+    }
+    .footer-bottom {
+      flex-direction: column-reverse;
+      text-align: center;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .footer-inner {
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+<canvas id="starfield"></canvas>
+
+<header>
+  <a href="/" class="brand">
+    <div class="brand-logo">
+      <svg width="18" height="18" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M50 18 L22 75 L38 75 L50 48 L62 75 L78 75 Z" fill="#FFFFFF"/>
+        <path d="M15 50 C20 25, 40 12, 68 12" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+        <path d="M85 50 C80 75, 60 88, 32 88" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+        <line x1="72" y1="20" x2="28" y2="80" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <span class="brand-name">APEX<span>.</span></span>
+  </a>
+
+  <nav class="nav-center">
+    <a href="/" class="nav-link">Home</a>
+    <a href="#modules" class="nav-link">Module</a>
+    <a href="https://discord.gg/mVQmkEvPdm" target="_blank" rel="noopener noreferrer" class="nav-link">Support</a>
+  </nav>
+
+  <a href="/auth/discord/login" class="btn btn-primary">Discord Login</a>
+</header>
+
+<main>
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-badge"><span style="color: var(--accent-purple);">●</span> APEX SYSTEM v2.4 ONLINE</div>
+    <h1 class="hero-title">Maximale Kontrolle.<br>Minimaler Aufwand.</h1>
+    <p class="hero-subtitle">Der beste Roleplay Bot wie gemacht für jeden RP Server von Notruf Hamburg bis FiveM. Von hochmodernen Ticketsystemen bis hin zu lückenlosem Anti-Nuke Schutz.</p>
+    <div class="hero-buttons">
+      <a href="https://discord.com/api/oauth2/authorize?client_id=1525613011262377994&scope=bot%20applications.commands&permissions=8" target="_blank" rel="noopener noreferrer" class="btn btn-primary">Bot einladen</a>
+      <a href="#modules" class="btn btn-secondary">Module entdecken</a>
+    </div>
+  </section>
+
+  <!-- SHOWCASE -->
+  <section class="showcase-section">
+    <div class="showcase-card">
+      <div class="showcase-stats">
+        <div class="stat-item">
+          <div class="stat-value">99.9%</div>
+          <div class="stat-label">Uptime Garantie</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">&lt; 15ms</div>
+          <div class="stat-label">Reaktionszeit</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">15+</div>
+          <div class="stat-label">Kernmodule</div>
+        </div>
+      </div>
+
+      <div class="showcase-highlights">
+        <div class="highlight-box">
+          <div class="highlight-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <div>
+            <div class="highlight-title">Anti-Nuke & Moderation</div>
+            <div class="highlight-desc">Automatischer Schutz vor Raids, Spam und unbefugtem Rechte-Abuse.</div>
+          </div>
+        </div>
+
+        <div class="highlight-box">
+          <div class="highlight-icon">
+            <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </div>
+          <div>
+            <div class="highlight-title">Blitzschnell & Modular</div>
+            <div class="highlight-desc">Aktiviere nur die Module, die dein Server auch wirklich benötigt.</div>
+          </div>
+        </div>
+
+        <div class="highlight-box">
+          <div class="highlight-icon">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </div>
+          <div>
+            <div class="highlight-title">Einfache Konfiguration</div>
+            <div class="highlight-desc">Verwalte alle Einstellungen direkt über ein übersichtliches Dashboard.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MODULE – ACCORDION -->
+  <section id="modules" class="modules-section">
+    <div class="section-header">
+      <h2 class="section-title" style="font-weight:800;">Unsere Kernmodule</h2>
+      <p class="section-subtitle">Klicke auf eine Karte, um mehr zu erfahren.</p>
+    </div>
+
+    <div class="modules-grid">
+      
+      <!-- 1. Übersicht -->
+      <div class="module-card" onclick="this.classList.toggle('open')">
+        <div class="module-header">
+          <div class="module-icon-wrap">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          </div>
+          <span class="module-title">Zentrale Übersicht</span>
+          <span class="module-arrow">▾</span>
+        </div>
+        <div class="module-body">
+          <p>Echtzeit-Analyse deines Bot-Status, Aktivitäts-Logs und Performance-Werte – alles auf einen Blick im Dashboard.</p>
+          <ul>
+            <li>Serverstatistiken (Mitglieder, Boosts, Bots)</li>
+            <li>Live-Status des Bots</li>
+            <li>Schneller Zugriff auf alle Module</li>
+          </ul>
+          <span class="badge">immer aktiv</span>
+        </div>
+      </div>
+
+      <!-- 2. Willkommen & Verlassen -->
+      <div class="module-card" onclick="this.classList.toggle('open')">
+        <div class="module-header">
+          <div class="module-icon-wrap">
+            <svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+          </div>
+          <span class="module-title">Willkommens-System</span>
+          <span class="module-arrow">▾</span>
+        </div>
+        <div class="module-body">
+          <p>Begrüße neue Mitglieder mit individuellen Embeds und vergib automatisch Rollen.</p>
+          <ul>
+            <li>Individuelle Begrüßungs- und Verabschiedungs-Nachrichten</li>
+            <li>Automatische Rollenvergabe beim Beitritt</li>
+            <li>Unterstützt Bilder, Farben und Platzhalter</li>
+          </ul>
+          <span class="badge">Community</span>
+        </div>
+      </div>
+
+      <!-- 3. Ticket System -->
+      <div class="module-card" onclick="this.classList.toggle('open')">
+        <div class="module-header">
+          <div class="module-icon-wrap">
+            <svg viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><line x1="12" y1="9" x2="12" y2="15"/></svg>
+          </div>
+          <span class="module-title">Ticket System</span>
+          <span class="module-arrow">▾</span>
+        </div>
+        <div class="module-body">
+          <p>Professionelle Dropdown- und Button-Panels für Support-Anfragen.</p>
+          <ul>
+            <li>Mehrere Panels mit eigenen Kategorien</li>
+            <li>Automatische Berechtigungen und Logging</li>
+            <li>Transkript-Export und Ticket-Statistiken</li>
+          </ul>
+          <span class="badge">Support</span>
+        </div>
+      </div>
+
+      <!-- 4. Moderation & Automod -->
+      <div class="module-card" onclick="this.classList.toggle('open')">
+        <div class="module-header">
+          <div class="module-icon-wrap">
+            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <span class="module-title">Moderation & Automod</span>
+          <span class="module-arrow">▾</span>
+        </div>
+        <div class="module-body">
+          <p>Schütze deinen Server mit leistungsstarken Moderationswerkzeugen.</p>
+          <ul>
+            <li>Automatische Spam- und Link-Erkennung</li>
+            <li>Whitelist für Kanäle, Rollen und User</li>
+            <li>Timeout und Logging bei Verstößen</li>
+          </ul>
+          <span class="badge">Sicherheit</span>
+        </div>
+      </div>
+
+      <!-- 5. Teamverwaltung (Teamliste + Teamupdate) -->
+      <div class="module-card" onclick="this.classList.toggle('open')">
+        <div class="module-header">
+          <div class="module-icon-wrap">
+            <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <span class="module-title">Teamverwaltung</span>
+          <span class="module-arrow">▾</span>
+        </div>
+        <div class="module-body">
+          <p>Mehrere Funktionen in einem Modul: Professionelles Teammanagement.</p>
+          <ul>
+            <li><strong>Teamliste:</strong> Automatische Übersicht aller Teammitglieder</li>
+            <li><strong>Teamupdate:</strong> Protokolliere Upranks, Downranks, Teamkicks und noch vieles mehr</li>
+            <li>Mit Berechtigungssteuerung und Warnstufen</li>
+          </ul>
+          <span class="badge">Team</span>
+        </div>
+      </div>
+
+      <!-- 6. Verifizierung -->
+      <div class="module-card" onclick="this.classList.toggle('open')">
+        <div class="module-header">
+          <div class="module-icon-wrap">
+            <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <span class="module-title">Verifizierungs-System</span>
+          <span class="module-arrow">▾</span>
+        </div>
+        <div class="module-body">
+          <p>Schütze deine Community vor Raid-Bots durch einfache Verifizierung.</p>
+          <ul>
+            <li>Button- oder Mathe-Aufgaben-Verifizierung</li>
+            <li>Automatische Rollenvergabe nach Verifizierung</li>
+            <li>Modernes und vielfältiges Verifizierungssystem</li>
+          </ul>
+          <span class="badge">Sicherheit</span>
+        </div>
+      </div>
+
+      <!-- 7. Level-System -->
+      <div class="module-card" onclick="this.classList.toggle('open')">
+        <div class="module-header">
+          <div class="module-icon-wrap">
+            <svg viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5L18.5 21 12 16.5 5.5 21l2-7.5L2 9h7z"/></svg>
+          </div>
+          <span class="module-title">Level-System</span>
+          <span class="module-arrow">▾</span>
+        </div>
+        <div class="module-body">
+          <p>Belohne aktive Mitglieder mit XP und steigenden Leveln.</p>
+          <ul>
+            <li>XP pro Nachricht (zufällig einstellbar zwischen Min und Max)</li>
+            <li>Voice-XP für aktive Sprachkanal-Teilnahme</li>
+            <li>Individuelle Level-Up-Nachrichten</li>
+            <li>Steigender XP-Bedarf pro Level</li>
+          </ul>
+          <span class="badge">Community</span>
+        </div>
+      </div>
+
+      <!-- 8. Reaction Roles & Rollen-Nicknames -->
+      <div class="module-card" onclick="this.classList.toggle('open')">
+        <div class="module-header">
+          <div class="module-icon-wrap">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+          </div>
+          <span class="module-title">Reaction Roles & Nicknames</span>
+          <span class="module-arrow">▾</span>
+        </div>
+        <div class="module-body">
+          <p>Mehrere praktische Rollen-Tools in einem Modul.</p>
+          <ul>
+            <li><strong>Reaction Roles:</strong> Rollen per Emoji-Reaktion vergeben/entfernen</li>
+            <li><strong>Rollen-Nicknames:</strong> Automatische Nickname-Präfixe/Suffixe basierend auf Rollen</li>
+            <li>Mehrere Panels pro Modul möglich</li>
+          </ul>
+          <span class="badge">Anpassung</span>
+        </div>
+      </div>
+
+      <!-- 9. Bot Control & Statistiken -->
+      <div class="module-card" onclick="this.classList.toggle('open')">
+        <div class="module-header">
+          <div class="module-icon-wrap">
+            <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><circle cx="12" cy="12" r="3"/></svg>
+          </div>
+          <span class="module-title">Bot Control & Statistiken</span>
+          <span class="module-arrow">▾</span>
+        </div>
+        <div class="module-body">
+          <p>Zwei leistungsstarke Werkzeuge für die Bot- und Server-Verwaltung.</p>
+          <ul>
+            <li><strong>Bot Control:</strong> Nachrichten senden, bearbeiten und Buttons mit Aktionen (Rollen zuweisen/entfernen/toggeln, Nachricht senden)</li>
+            <li><strong>Statistik-Kanäle:</strong> Automatische Sprachkanäle mit Live-Zahlen (Mitglieder, Bots, Rollen, Boosts)</li>
+          </ul>
+          <span class="badge">Verwaltung</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-col">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+        <div class="brand-logo" style="width:32px; height:32px;">
+          <svg width="16" height="16" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M50 18 L22 75 L38 75 L50 48 L62 75 L78 75 Z" fill="#FFFFFF"/>
+            <path d="M15 50 C20 25, 40 12, 68 12" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+            <path d="M85 50 C80 75, 60 88, 32 88" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+            <line x1="72" y1="20" x2="28" y2="80" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span style="font-weight:700; font-size:1rem;">APEX</span>
+      </div>
+      <p style="color:var(--text-dim); font-size:0.85rem; line-height:1.5; max-width:220px;">
+        Der ultimative Discord-Bot für Moderation, Tickets, Level und mehr.
+      </p>
+    </div>
+
+    <div class="footer-col">
+      <h4>Navigation</h4>
+      <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="#modules">Module</a></li>
+        <li><a href="https://discord.gg/mVQmkEvPdm" target="_blank" rel="noopener">Support</a></li>
+        <li><a href="/auth/discord/login">Dashboard</a></li>
+      </ul>
+    </div>
+
+    <div class="footer-col">
+      <h4>Rechtliches</h4>
+      <ul>
+        <li><a href="#" onclick="alert('Impressum folgt in Kürze.'); return false;">Impressum</a></li>
+        <li><a href="#" onclick="alert('Datenschutzerklärung folgt in Kürze.'); return false;">Datenschutz</a></li>
+        <li><a href="#" onclick="alert('AGB folgen in Kürze.'); return false;">AGB</a></li>
+      </ul>
+    </div>
+
+    <div class="footer-col">
+      <h4>Social</h4>
+      <div class="footer-social">
+        <a href="https://discord.gg/mVQmkEvPdm" target="_blank" rel="noopener" aria-label="Discord">
+          <svg viewBox="0 0 24 24"><path d="M20.3 5.1c-1.5-.7-3.1-1.2-4.8-1.5-.2.4-.5.9-.7 1.3-1.8-.3-3.6-.3-5.4 0-.2-.4-.5-.9-.7-1.3-1.7.3-3.4.8-4.8 1.5C2.5 8.5 1.5 11.9 2 15.2c1.8 1.3 3.8 2.3 5.9 2.9.5-.7 1-1.5 1.4-2.3-.8-.3-1.5-.7-2.2-1.2.2-.1.4-.2.6-.4 1.2.6 2.5.9 3.9.9s2.7-.3 3.9-.9c.2.2.4.3.6.4-.7.5-1.4.9-2.2 1.2.4.8.9 1.6 1.4 2.3 2.1-.6 4.1-1.6 5.9-2.9.6-3.3-.4-6.7-1.7-10.1zM8.7 13.6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm6.6 0c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>
+        </a>
+        <a href="#" aria-label="Twitter / X" onclick="alert('Twitter folgt in Kürze.'); return false;">
+          <svg viewBox="0 0 24 24"><path d="M18.2 3.3h3.3l-7.2 8.2 8.5 11.2h-6.6l-5.2-6.8-5.9 6.8H2.1l7.7-8.8L1.5 3.3h6.8l4.7 6.2 5.2-6.2zm-1.2 17.6h1.8L7.2 5.6H5.2l11.8 15.3z"/></svg>
+        </a>
+        <a href="#" aria-label="GitHub" onclick="alert('GitHub folgt in Kürze.'); return false;">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12c0 4.4 2.9 8.2 6.8 9.5.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.4-3.4-1.4-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.3 1.1 2.9.8.1-.6.4-1.1.7-1.4-2.2-.2-4.5-1.1-4.5-4.8 0-1.1.4-1.9 1-2.6-.1-.2-.4-1.2.1-2.5 0 0 .8-.3 2.6 1 .8-.2 1.6-.3 2.4-.3.8 0 1.6.1 2.4.3 1.8-1.2 2.6-1 2.6-1 .5 1.3.2 2.3.1 2.5.6.7 1 1.6 1 2.6 0 3.8-2.3 4.6-4.5 4.8.4.3.7.9.7 1.8v2.6c0 .3.2.6.7.5C19.1 20.2 22 16.4 22 12c0-5.5-4.5-10-10-10z"/></svg>
+        </a>
+        <a href="#" aria-label="YouTube" onclick="alert('YouTube folgt in Kürze.'); return false;">
+          <svg viewBox="0 0 24 24"><path d="M23.5 6.2c-.3-1.2-1.2-2.1-2.4-2.4C19.1 3.2 12 3.2 12 3.2s-7.1 0-9.1.6C1.7 4.1.8 5 .5 6.2 0 8.2 0 12 0 12s0 3.8.5 5.8c.3 1.2 1.2 2.1 2.4 2.4 2 .6 9.1.6 9.1.6s7.1 0 9.1-.6c1.2-.3 2.1-1.2 2.4-2.4.5-2 .5-5.8.5-5.8s0-3.8-.5-5.8zM9.5 15.2V8.8l6.2 3.2-6.2 3.2z"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <span>&copy; <span id="year"></span> APEX BOT SYSTEM. Alle Rechte vorberhalten.</span>
+    <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Nach oben">
+      <svg viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg>
+    </button>
+  </div>
+</footer>
+
+<script>
+document.getElementById('year').textContent = new Date().getFullYear();
+
+// ===== STARFIELD (unverändert) =====
+(function () {
+  var canvas = document.getElementById('starfield');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var stars = [];
+  var shooters = [];
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var vw, vh, dpr, nextShot = 0;
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    vw = window.innerWidth;
+    vh = window.innerHeight;
+    canvas.width = vw * dpr;
+    canvas.height = vh * dpr;
+    canvas.style.width = vw + 'px';
+    canvas.style.height = vh + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    seedStars();
+  }
+
+  function seedStars() {
+    var count = Math.round((vw * vh) / 8500);
+    stars = [];
+    for (var i = 0; i < count; i++) {
+      stars.push({
+        x: Math.random() * vw,
+        y: Math.random() * vh,
+        r: Math.random() * 1.2 + 0.4,
+        base: Math.random() * 0.5 + 0.25,
+        speed: Math.random() * 0.02 + 0.006,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+  }
+
+  function spawnShooter() {
+    var startX = Math.random() * vw * 0.6 + vw * 0.2;
+    var angle = (Math.random() * 18 + 48) * Math.PI / 180;
+    var speed = Math.random() * 5 + 10;
+    shooters.push({
+      x: startX,
+      y: -10,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1
+    });
+  }
+
+  function frame(t) {
+    ctx.clearRect(0, 0, vw, vh);
+
+    for (var i = 0; i < stars.length; i++) {
+      var s = stars[i];
+      var a = s.base;
+      if (!reduced) {
+        s.phase += s.speed;
+        a = s.base + Math.sin(s.phase) * 0.3;
+        if (a < 0.05) a = 0.05;
+        if (a > 1) a = 1;
+      }
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,' + a.toFixed(3) + ')';
+      ctx.fill();
+    }
+
+    if (!reduced) {
+      if (t > nextShot) {
+        spawnShooter();
+        nextShot = t + (Math.random() * 5000 + 3500);
+      }
+      for (var j = shooters.length - 1; j >= 0; j--) {
+        var sh = shooters[j];
+        sh.x += sh.vx;
+        sh.y += sh.vy;
+        sh.life -= 0.014;
+
+        var tx = sh.x - sh.vx * 9;
+        var ty = sh.y - sh.vy * 9;
+        var life = Math.max(sh.life, 0);
+        var grad = ctx.createLinearGradient(sh.x, sh.y, tx, ty);
+        grad.addColorStop(0, 'rgba(255,255,255,' + life + ')');
+        grad.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 1.6;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(sh.x, sh.y);
+        ctx.lineTo(tx, ty);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(sh.x, sh.y, 1.3, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,' + life + ')';
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = '#fff';
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        if (sh.life <= 0 || sh.x > vw + 50 || sh.y > vh + 50) {
+          shooters.splice(j, 1);
+        }
+      }
+    }
+
+    requestAnimationFrame(frame);
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  requestAnimationFrame(frame);
+})();
+</script>
+
+</body>
+</html>
