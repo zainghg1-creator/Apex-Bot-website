@@ -31,6 +31,102 @@ const ADMINISTRATOR = 0x8n;
 const ALLOWED_MODULES = ['welcome', 'tickets', 'teamliste', 'automod', 'teamupdate', 'stats', 'levels', 'verification', 'antinuke', 'minigames', 'rolenicknames', 'reactionroles', 'custom_buttons', 'statusembed', 'applications', 'voice_support', 'shiftsystem', 'abmeldesystem', 'rp'];
 
 // ============================================================
+// PREMIUM-PRÜFUNG (gleiche Logik wie im Bot / main.py)
+// ============================================================
+// Wer die Premium-Rolle auf dem Premium-Server hat UND auf einem anderen
+// Server Administrator ist, schaltet Premium NUR für DIESEN Server frei.
+// Auf dem Premium-Server selbst ist jeder Administrator automatisch Premium.
+const PREMIUM_GUILD_ID = '1525533723574140980';
+const PREMIUM_ROLE_ID = '1529085177555587103';
+const PREMIUM_CACHE_TTL = 5 * 60 * 1000; // 5 Minuten, wie im Bot
+
+let premiumRoleMembersCache = { ids: new Set(), fetchedAt: 0 };
+const guildPremiumCache = new Map(); // guildId -> { value, fetchedAt }
+
+async function fetchAllGuildMembers(guildId) {
+  if (!BOT_TOKEN) return [];
+  const members = [];
+  let after = '0';
+  try {
+    for (let page = 0; page < 10; page++) {
+      const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members?limit=1000&after=${after}`, {
+        headers: { Authorization: `Bot ${BOT_TOKEN}` }
+      });
+      if (!res.ok) break;
+      const batch = await res.json();
+      members.push(...batch);
+      if (batch.length < 1000) break;
+      after = batch[batch.length - 1].user.id;
+      await new Promise(r => setTimeout(r, 120));
+    }
+  } catch (err) {
+    console.error(`Fehler beim Laden der Mitglieder von Guild ${guildId}:`, err);
+  }
+  return members;
+}
+
+// Gibt die User-IDs aller Mitglieder zurück, die auf dem Premium-Server die
+// Premium-Rolle besitzen (5 Minuten gecached).
+async function getPremiumRoleMemberIds() {
+  if (Date.now() - premiumRoleMembersCache.fetchedAt < PREMIUM_CACHE_TTL) {
+    return premiumRoleMembersCache.ids;
+  }
+  const members = await fetchAllGuildMembers(PREMIUM_GUILD_ID);
+  const ids = new Set(
+    members.filter(m => (m.roles || []).includes(PREMIUM_ROLE_ID)).map(m => m.user.id)
+  );
+  premiumRoleMembersCache = { ids, fetchedAt: Date.now() };
+  return ids;
+}
+
+// Prüft, ob der angegebene Server Premium freigeschaltet hat:
+// - Auf dem Premium-Server selbst ist es immer freigeschaltet.
+// - Auf anderen Servern nur, wenn mindestens ein Administrator dieses
+//   Servers die Premium-Rolle auf dem Premium-Server besitzt.
+async function isGuildPremium(guildId) {
+  if (guildId === PREMIUM_GUILD_ID) return true;
+  if (!BOT_TOKEN) return false;
+
+  const cached = guildPremiumCache.get(guildId);
+  if (cached && Date.now() - cached.fetchedAt < PREMIUM_CACHE_TTL) {
+    return cached.value;
+  }
+
+  let result = false;
+  try {
+    const premiumMembers = await getPremiumRoleMemberIds();
+    if (premiumMembers.size > 0) {
+      const [guildRes, rolesRes] = await Promise.all([
+        fetch(`${DISCORD_API}/guilds/${guildId}`, { headers: { Authorization: `Bot ${BOT_TOKEN}` } }),
+        fetch(`${DISCORD_API}/guilds/${guildId}/roles`, { headers: { Authorization: `Bot ${BOT_TOKEN}` } })
+      ]);
+      const guildData = guildRes.ok ? await guildRes.json() : null;
+      const roles = rolesRes.ok ? await rolesRes.json() : [];
+      const adminRoleIds = new Set(
+        roles.filter(r => (BigInt(r.permissions ?? 0) & ADMINISTRATOR) === ADMINISTRATOR).map(r => r.id)
+      );
+      const ownerId = guildData?.owner_id;
+
+      const members = await fetchAllGuildMembers(guildId);
+      for (const m of members) {
+        const uid = m.user?.id;
+        if (!uid || !premiumMembers.has(uid)) continue;
+        const isAdmin = uid === ownerId || (m.roles || []).some(rid => adminRoleIds.has(rid));
+        if (isAdmin) {
+          result = true;
+          break;
+        }
+      }
+    }
+  } catch (err) {
+    console.error(`Fehler bei der Premium-Prüfung für Guild ${guildId}:`, err);
+  }
+
+  guildPremiumCache.set(guildId, { value: result, fetchedAt: Date.now() });
+  return result;
+}
+
+// ============================================================
 // EXPRESS APP
 // ============================================================
 const app = express();
@@ -392,15 +488,17 @@ app.get('/api/guild/:guildId', requireAuth, requireGuildAdmin, async (req, res) 
     });
     if (!guildRes.ok) return res.status(guildRes.status).json({ error: 'guild_not_found' });
     const guildData = await guildRes.json();
-    const [owner, botCount] = await Promise.all([
+    const [owner, botCount, premium] = await Promise.all([
       fetchGuildOwner(guildData.owner_id),
-      countGuildBots(req.params.guildId)
+      countGuildBots(req.params.guildId),
+      isGuildPremium(req.params.guildId)
     ]);
     res.json({
       members: guildData.approximate_member_count ?? 0,
       boosts: guildData.premium_subscription_count ?? 0,
       botCount,
-      owner
+      owner,
+      premium
     });
   } catch (err) {
     console.error('API /guild/:id Fehler:', err);
