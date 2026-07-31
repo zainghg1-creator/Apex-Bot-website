@@ -169,7 +169,9 @@ async function loadDashboard() {
       showState(DOM.errorState);
       return;
     }
-    state.specialAccess = data.specialAccess === true;
+    // Premium wird NICHT mehr global gesetzt, sondern pro Server erst beim
+    // Öffnen der Verwaltung geladen (siehe loadGuildDetails) – so bleibt der
+    // Premium-Status strikt auf den jeweiligen Server beschränkt.
     renderUser(data.user);
     renderGuilds(data.guilds, data.clientId || CONFIG.CLIENT_ID);
   } catch (err) {
@@ -227,6 +229,10 @@ function renderGuilds(guilds, clientId) {
 // ============================================================
 async function openManagement(guildId, name, iconUrl) {
   state.activeGuildId = guildId;
+  // Premium-Status des zuvor geöffneten Servers darf hier nicht "durchsickern" –
+  // wird gleich in loadGuildDetails() für DIESEN Server neu geladen.
+  state.specialAccess = false;
+  refreshPremiumUI();
   DOM.activeGuildName.textContent = name;
   DOM.activeGuildIcon.src = iconUrl;
   DOM.activeGuildIcon.alt = `${name} Icon`;
@@ -269,12 +275,32 @@ async function loadGuildDetails(guildId) {
       DOM.overviewBoosts.textContent = data.boosts ?? '0';
       DOM.overviewBots.textContent = data.botCount ?? data.bots ?? 'N/A';
       renderGuildOwner(data.owner);
+      // Premium gilt NUR für den Server, für den er hier vom Backend bestätigt wird.
+      state.specialAccess = data.premium === true;
+      refreshPremiumUI();
     }
   } catch {
     DOM.overviewMembers.textContent = 'N/A';
     DOM.overviewBoosts.textContent = 'N/A';
     DOM.overviewBots.textContent = 'N/A';
     renderGuildOwner(null);
+    state.specialAccess = false;
+    refreshPremiumUI();
+  }
+}
+
+// Aktualisiert die Krone/Premium-Badges in der Sidebar und entsperrt/sperrt
+// das gerade offene Modul erneut, sobald der Premium-Status für den aktiven
+// Server bekannt ist.
+function refreshPremiumUI() {
+  document.querySelectorAll('.crown-badge').forEach(el => {
+    el.classList.toggle('unlocked', state.specialAccess === true);
+  });
+  const activeBtn = document.querySelector('.tab-btn.active');
+  if (activeBtn) {
+    const tabName = activeBtn.dataset.tab;
+    const activePage = document.getElementById(`mod-${tabName}`);
+    applyModuleLockState(tabName, activePage);
   }
 }
 
@@ -415,7 +441,7 @@ function ensureLockedBanner(pageEl) {
   banner = document.createElement('div');
   banner.className = 'locked-module-banner';
   banner.innerHTML = `
-    <div class="locked-module-crown">👑</div>
+    <svg class="locked-module-crown" viewBox="0 0 24 24"><use href="#icon-premium"></use></svg>
     <h3>Modul gesperrt</h3>
     <p>Dieses Modul ist nur mit Premium verfügbar.</p>
     <a href="${DISCORD_SUPPORT_URL}" target="_blank" rel="noopener noreferrer" class="locked-module-link">
