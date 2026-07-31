@@ -1024,7 +1024,16 @@ window.addRoleNicknameRow = function(data = null) {
   select.innerHTML = state.guildRoles.length
     ? state.guildRoles.map(r => `<option value="${r.id}">@${escapeHtml(r.name)}</option>`).join('')
     : `<option value="">Keine Rollen gefunden</option>`;
-  if (data && data.roleId) select.value = data.roleId;
+  if (data && data.roleId) {
+    const roleExists = state.guildRoles.some(r => r.id === data.roleId);
+    if (!roleExists) {
+      // Rolle wurde gelöscht oder ist noch nicht geladen - nicht einfach auf die erste
+      // Rolle der Liste springen lassen, sonst wird beim Speichern versehentlich eine
+      // andere Rolle für diese Regel übernommen.
+      select.insertAdjacentHTML('afterbegin', `<option value="${data.roleId}">⚠️ Unbekannte Rolle (${data.roleId})</option>`);
+    }
+    select.value = data.roleId;
+  }
 };
 
 function collectRoleNicknames() {
