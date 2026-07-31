@@ -449,7 +449,7 @@
             display: flex;
             flex-direction: row;
             align-items: center;
-            gap: 6px;
+            gap: 10px;
             overflow-x: auto;
             flex-shrink: 0;
             min-height: 50px;
@@ -462,16 +462,20 @@
         }
 
         .sidebar::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.12);
+            background: rgba(139, 125, 255, 0.3);
             border-radius: 10px;
         }
 
         .sidebar-header {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
             flex-shrink: 0;
             margin-right: 6px;
+            padding: 6px 8px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-subtle);
         }
 
         .guild-icon-small {
@@ -505,6 +509,11 @@
             height: 2px;
         }
 
+        .sidebar-nav::-webkit-scrollbar-thumb {
+            background: rgba(139, 125, 255, 0.35);
+            border-radius: 10px;
+        }
+
         .sidebar-group {
             display: flex;
             flex-direction: column;
@@ -512,43 +521,73 @@
         }
 
         .sidebar-group+.sidebar-group {
-            margin-top: 14px;
-            padding-top: 14px;
+            margin-top: 16px;
+            padding-top: 16px;
             border-top: 1px solid var(--border-subtle);
         }
 
         .sidebar-group-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
             font-size: 0.64rem;
             font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 0.09em;
+            letter-spacing: 0.1em;
             color: var(--text-dim);
-            padding: 2px 10px 6px;
+            padding: 2px 10px 8px;
+            flex-shrink: 0;
+        }
+
+        .sidebar-group-label::before {
+            content: '';
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #8b7dff, #6d5ef8);
             flex-shrink: 0;
         }
 
         .tab-btn {
+            position: relative;
             background: transparent;
             border: none;
             color: var(--text-muted);
-            padding: 6px 10px;
-            border-radius: 8px;
+            padding: 7px 10px 7px 8px;
+            border-radius: 9px;
             font-size: 0.7rem;
             font-weight: 600;
             cursor: pointer;
             font-family: inherit;
-            transition: all 0.2s ease;
+            transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 8px;
             white-space: nowrap;
             flex-shrink: 0;
-            min-height: 32px;
+            min-height: 34px;
+        }
+
+        .tab-btn::before {
+            content: '';
+            position: absolute;
+            left: -8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 0;
+            border-radius: 0 3px 3px 0;
+            background: linear-gradient(180deg, #8b7dff, #6d5ef8);
+            transition: height 0.2s ease;
         }
 
         .tab-btn:hover {
             color: var(--text-primary);
             background: rgba(109, 94, 248, 0.08);
+        }
+
+        .tab-btn:hover .tab-icon {
+            background: rgba(139, 125, 255, 0.14);
         }
 
         .tab-btn:hover .tab-icon svg {
@@ -559,6 +598,15 @@
             background: linear-gradient(135deg, #8b7dff, #6d5ef8);
             color: #ffffff;
             box-shadow: 0 4px 18px rgba(109, 94, 248, 0.4);
+            transform: translateX(1px);
+        }
+
+        .tab-btn.active::before {
+            height: 60%;
+        }
+
+        .tab-btn.active .tab-icon {
+            background: rgba(255, 255, 255, 0.16);
         }
 
         .tab-btn.active .tab-icon svg {
@@ -566,17 +614,20 @@
         }
 
         .tab-icon {
-            width: 14px;
-            height: 14px;
+            width: 22px;
+            height: 22px;
+            border-radius: 7px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
+            background: rgba(255, 255, 255, 0.03);
+            transition: background 0.2s ease;
         }
 
         .tab-icon svg {
-            width: 14px;
-            height: 14px;
+            width: 13px;
+            height: 13px;
             stroke: var(--text-muted);
             fill: none;
             stroke-width: 2;
@@ -585,13 +636,26 @@
             transition: stroke 0.2s ease;
         }
 
-        /* ===== CROWN-BADGE (Rollen-geschützte Module) ===== */
+        /* ===== PREMIUM-BADGE (Rollen-geschützte Module) ===== */
         .crown-badge {
             margin-left: auto;
-            font-size: 0.72rem;
-            line-height: 1;
-            filter: drop-shadow(0 0 4px rgba(250, 204, 21, 0.55));
+            display: inline-flex;
+            align-items: center;
             flex-shrink: 0;
+        }
+
+        .crown-badge-icon {
+            width: 13px;
+            height: 13px;
+            color: #8b7dff;
+            filter: drop-shadow(0 0 4px rgba(139, 125, 255, 0.55));
+            transition: color 0.2s ease, filter 0.2s ease;
+        }
+
+        /* Wird von dashboard.js gesetzt, sobald der Server Premium hat */
+        .crown-badge.unlocked .crown-badge-icon {
+            color: #22c55e;
+            filter: drop-shadow(0 0 5px rgba(34, 197, 94, 0.6));
         }
 
         /* ===== LOCKED MODULE BANNER (inline statt Overlay-Popup) ===== */
@@ -618,9 +682,11 @@
         }
 
         .locked-module-crown {
-            font-size: 2.6rem;
-            margin-bottom: 14px;
-            filter: drop-shadow(0 0 12px rgba(250, 204, 21, 0.6));
+            width: 46px;
+            height: 46px;
+            margin-bottom: 16px;
+            color: #8b7dff;
+            filter: drop-shadow(0 0 14px rgba(139, 125, 255, 0.55));
         }
 
         .locked-module-banner h3 {
@@ -2231,21 +2297,22 @@
             }
 
             .tab-btn {
-                padding: 10px 12px;
+                padding: 8px 12px 8px 10px;
                 font-size: 0.85rem;
                 white-space: normal;
-                border-radius: 10px;
+                border-radius: 11px;
                 min-height: 44px;
             }
 
             .tab-icon {
-                width: 20px;
-                height: 20px;
+                width: 30px;
+                height: 30px;
+                border-radius: 9px;
             }
 
             .tab-icon svg {
-                width: 20px;
-                height: 20px;
+                width: 17px;
+                height: 17px;
             }
 
             .back-btn {
@@ -2329,19 +2396,20 @@
             }
 
             .tab-btn {
-                padding: 10px 12px;
-                font-size: 0.85rem;
+                padding: 8px 12px 8px 10px;
+                font-size: 0.8rem;
                 white-space: normal;
             }
 
             .tab-icon {
-                width: 18px;
-                height: 18px;
+                width: 26px;
+                height: 26px;
+                border-radius: 8px;
             }
 
             .tab-icon svg {
-                width: 18px;
-                height: 18px;
+                width: 15px;
+                height: 15px;
             }
 
             .back-btn {
@@ -2468,6 +2536,17 @@
 
 <body>
 
+    <!-- Wiederverwendbares Premium-Icon (ersetzt das Krone-Emoji) -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+        <defs>
+            <symbol id="icon-premium" viewBox="0 0 24 24">
+                <path d="M6 4h12l4 6-10 10L2 10Z" fill="currentColor" />
+                <path d="M6 4l3 6h6l3-6M2 10h20M9 10l3 10 3-10" stroke="rgba(0,0,0,0.32)" stroke-width="0.7"
+                    stroke-linejoin="round" fill="none" />
+            </symbol>
+        </defs>
+    </svg>
+
     <div class="bg-grid"></div>
     <canvas id="starfield"></canvas>
 
@@ -2561,13 +2640,23 @@
                     <button class="tab-btn" data-tab="automod" onclick="switchTab('automod'); closeOverlayMenu();">
                         <span class="tab-icon"><svg viewBox="0 0 24 24">
                                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                            </svg></span> Automod<span class="crown-badge" title="Nur mit Spezial-Rolle">👑</span>
+                            </svg></span> Automod
+                        <span class="crown-badge" title="Premium-Modul – nur mit freigeschaltetem Server">
+                            <svg class="crown-badge-icon" viewBox="0 0 24 24">
+                                <use href="#icon-premium"></use>
+                            </svg>
+                        </span>
                     </button>
                     <button class="tab-btn" data-tab="antinuke" onclick="switchTab('antinuke'); closeOverlayMenu();">
                         <span class="tab-icon"><svg viewBox="0 0 24 24">
                                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                                 <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                            </svg></span> Anti Nuke<span class="crown-badge" title="Nur mit Spezial-Rolle">👑</span>
+                            </svg></span> Anti Nuke
+                        <span class="crown-badge" title="Premium-Modul – nur mit freigeschaltetem Server">
+                            <svg class="crown-badge-icon" viewBox="0 0 24 24">
+                                <use href="#icon-premium"></use>
+                            </svg>
+                        </span>
                     </button>
                     <button class="tab-btn" data-tab="verification"
                         onclick="switchTab('verification'); closeOverlayMenu();">
@@ -2610,6 +2699,12 @@
                                 <rect x="2" y="6" width="20" height="12" rx="6" />
                             </svg></span> Minigames
                     </button>
+                    <button class="tab-btn" data-tab="rp" onclick="switchTab('rp'); closeOverlayMenu();">
+                        <span class="tab-icon"><svg viewBox="0 0 24 24">
+                                <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3z" />
+                                <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+                            </svg></span> RP Info
+                    </button>
                 </div>
 
                 <div class="sidebar-group">
@@ -2630,6 +2725,19 @@
                                 <line x1="8" y1="23" x2="16" y2="23" />
                             </svg></span> Voice Support
                     </button>
+                    <button class="tab-btn" data-tab="applications"
+                        onclick="switchTab('applications'); closeOverlayMenu();">
+                        <span class="tab-icon"><svg viewBox="0 0 24 24">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                                <line x1="9" y1="15" x2="15" y2="15" />
+                                <line x1="9" y1="11" x2="12" y2="11" />
+                            </svg></span> Bewerbungen
+                    </button>
+                </div>
+
+                <div class="sidebar-group">
+                    <div class="sidebar-group-label">Team-Verwaltung</div>
                     <button class="tab-btn" data-tab="teamliste" onclick="switchTab('teamliste'); closeOverlayMenu();">
                         <span class="tab-icon"><svg viewBox="0 0 24 24">
                                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -2661,7 +2769,12 @@
                         <span class="tab-icon"><svg viewBox="0 0 24 24">
                                 <circle cx="12" cy="12" r="10" />
                                 <polyline points="12 6 12 12 16 14" />
-                            </svg></span> Schicht-System<span class="crown-badge" title="Nur mit Spezial-Rolle">👑</span>
+                            </svg></span> Schicht-System
+                        <span class="crown-badge" title="Premium-Modul – nur mit freigeschaltetem Server">
+                            <svg class="crown-badge-icon" viewBox="0 0 24 24">
+                                <use href="#icon-premium"></use>
+                            </svg>
+                        </span>
                     </button>
                     <button class="tab-btn" data-tab="abmeldesystem"
                         onclick="switchTab('abmeldesystem'); closeOverlayMenu();">
@@ -2669,23 +2782,15 @@
                                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
                                 <polyline points="16 17 21 12 16 7" />
                                 <line x1="21" y1="12" x2="9" y2="12" />
-                            </svg></span> Abmelde-System<span class="crown-badge" title="Nur mit Spezial-Rolle">👑</span>
+                            </svg></span> Abmelde-System
+                        <span class="crown-badge" title="Premium-Modul – nur mit freigeschaltetem Server">
+                            <svg class="crown-badge-icon" viewBox="0 0 24 24">
+                                <use href="#icon-premium"></use>
+                            </svg>
+                        </span>
                     </button>
                 </div>
 
-                <!-- RP Info -->
-                <div class="sidebar-group">
-                    <div class="sidebar-group-label">Roleplay</div>
-                    <button class="tab-btn" data-tab="rp"
-                        onclick="switchTab('rp'); closeOverlayMenu();">
-                        <span class="tab-icon"><svg viewBox="0 0 24 24">
-                                <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3z" />
-                                <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
-                            </svg></span> RP Info
-                    </button>
-                </div>
-
-                <!-- Bot Control -->
                 <div class="sidebar-group">
                     <div class="sidebar-group-label">Bot</div>
                     <button class="tab-btn" data-tab="bot" onclick="switchTab('bot'); closeOverlayMenu();">
@@ -2693,41 +2798,18 @@
                                 <path
                                     d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
                                 <circle cx="12" cy="12" r="3" />
-                            </svg></span> Bot Control<span class="crown-badge" title="Nur mit Spezial-Rolle">👑</span>
+                            </svg></span> Bot Control
+                        <span class="crown-badge" title="Premium-Modul – nur mit freigeschaltetem Server">
+                            <svg class="crown-badge-icon" viewBox="0 0 24 24">
+                                <use href="#icon-premium"></use>
+                            </svg>
+                        </span>
                     </button>
                     <button class="tab-btn" data-tab="statusembed"
                         onclick="switchTab('statusembed'); closeOverlayMenu();">
                         <span class="tab-icon"><svg viewBox="0 0 24 24">
                                 <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
                             </svg></span> Status-Anzeige
-                    </button>
-                </div>
-
-                <!-- Bewerbungen -->
-                <div class="sidebar-group">
-                    <div class="sidebar-group-label">Bewerbungen</div>
-                    <button class="tab-btn" data-tab="applications"
-                        onclick="switchTab('applications'); closeOverlayMenu();">
-                        <span class="tab-icon"><svg viewBox="0 0 24 24">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                <polyline points="14 2 14 8 20 8" />
-                                <line x1="9" y1="15" x2="15" y2="15" />
-                                <line x1="9" y1="11" x2="12" y2="11" />
-                            </svg></span> Bewerbungen
-                    </button>
-                </div>
-
-                <!-- Voice Support -->
-                <div class="sidebar-group">
-                    <div class="sidebar-group-label">Support</div>
-                    <button class="tab-btn" data-tab="voice_support"
-                        onclick="switchTab('voice_support'); closeOverlayMenu();">
-                        <span class="tab-icon"><svg viewBox="0 0 24 24">
-                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                                <line x1="12" y1="19" x2="12" y2="23" />
-                                <line x1="8" y1="23" x2="16" y2="23" />
-                            </svg></span> Voice Support
                     </button>
                 </div>
             </nav>
