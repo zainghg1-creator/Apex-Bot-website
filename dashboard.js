@@ -407,28 +407,47 @@ function getSelectedChannelIds(containerId) {
 // ============================================================
 // TABS & SUBTABS
 // ============================================================
-function showLockedModulePopup() {
-  const popup = document.getElementById('locked-module-popup');
-  if (popup) popup.classList.remove('hidden');
+const DISCORD_SUPPORT_URL = 'https://discord.gg/mVQmkEvPdm';
+
+function ensureLockedBanner(pageEl) {
+  let banner = pageEl.querySelector(':scope > .locked-module-banner');
+  if (banner) return banner;
+  banner = document.createElement('div');
+  banner.className = 'locked-module-banner';
+  banner.innerHTML = `
+    <div class="locked-module-crown">👑</div>
+    <h3>Modul gesperrt</h3>
+    <p>Dieses Modul ist nur mit Premium verfügbar.</p>
+    <a href="${DISCORD_SUPPORT_URL}" target="_blank" rel="noopener noreferrer" class="locked-module-link">
+      Premium beantragen <span class="locked-module-arrow">→</span>
+    </a>
+  `;
+  pageEl.appendChild(banner);
+  return banner;
 }
 
-function closeLockedModulePopup() {
-  const popup = document.getElementById('locked-module-popup');
-  if (popup) popup.classList.add('hidden');
+function applyModuleLockState(tabName, pageEl) {
+  if (!pageEl) return;
+  const isLocked = CROWN_TABS.includes(tabName) && !state.specialAccess;
+  if (isLocked) {
+    ensureLockedBanner(pageEl);
+    pageEl.classList.add('module-locked');
+  } else {
+    pageEl.classList.remove('module-locked');
+  }
 }
 
 function switchTab(tabName) {
-  if (CROWN_TABS.includes(tabName) && !state.specialAccess) {
-    showLockedModulePopup();
-    return;
-  }
-  closeLockedModulePopup();
   document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
   document.querySelectorAll('.module-page').forEach(page => page.classList.add('hidden'));
   const activeBtn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
   const activePage = document.getElementById(`mod-${tabName}`);
   if (activeBtn) activeBtn.classList.add('active');
-  if (activePage) activePage.classList.remove('hidden');
+  if (activePage) {
+    activePage.classList.remove('hidden');
+    applyModuleLockState(tabName, activePage);
+  }
+  if (CROWN_TABS.includes(tabName) && !state.specialAccess) return;
   if (tabName === 'tickets' && state.activeGuildId) {
     setTimeout(() => renderTicketOverview(), 50);
   }
