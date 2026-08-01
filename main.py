@@ -3211,6 +3211,49 @@ def _rp_has_permission(member: discord.Member, rp_cfg: dict) -> bool:
     member_role_ids = {str(r.id) for r in member.roles}
     return any(rid in member_role_ids for rid in role_ids)
 
+@bot.tree.command(name="serverliste", description="Zeigt alle Server an, auf denen der Bot ist.")
+async def serverliste(interaction: discord.Interaction):
+    if interaction.user.id != 1086731728468578477:
+        await interaction.response.send_message("❌ Du bist nicht berechtigt, diesen Befehl zu benutzen.", ephemeral=True)
+        return
+
+    await interaction.response.defer(ephemeral=True)
+
+    embed = discord.Embed(
+        title="📋 Serverliste",
+        description=f"Der Bot ist aktuell auf **{len(bot.guilds)}** Server(n).",
+        color=0xffffff,
+        timestamp=datetime.now(timezone.utc)
+    )
+
+    for guild in bot.guilds:
+        joined_at = guild.me.joined_at
+        if joined_at:
+            joined_ts = int(ensure_aware(joined_at).timestamp())
+            since_text = f"<t:{joined_ts}:F> (<t:{joined_ts}:R>)"
+        else:
+            since_text = "Unbekannt"
+
+        invite_link = None
+        try:
+            for channel in guild.text_channels:
+                if channel.permissions_for(guild.me).create_instant_invite:
+                    invite = await channel.create_invite(max_age=0, max_uses=0, reason="Serverliste Command")
+                    invite_link = invite.url
+                    break
+        except Exception:
+            invite_link = None
+
+        link_text = f"[Server-Link]({invite_link})" if invite_link else "Kein Invite verfügbar"
+
+        embed.add_field(
+            name=f"{guild.name} ({guild.id})",
+            value=f"👥 Mitglieder: {guild.member_count}\n🕒 Auf dem Server seit: {since_text}\n🔗 {link_text}",
+            inline=False
+        )
+
+    await interaction.followup.send(embed=embed, ephemeral=True)
+
 @bot.tree.command(name="rp_start", description="Startet das Roleplay und postet die konfigurierte RP-Info-Nachricht.")
 async def rp_start(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
