@@ -5229,6 +5229,27 @@ if not BOT_TOKEN:
     logger.error("❌ Kein BOT_TOKEN in .env gefunden!")
     exit(1)
 
+import signal
+
+def _graceful_shutdown(signum, frame):
+    # Wichtig: schließt den MongoClient, damit der blockierende
+    # Change-Stream-Watcher-Thread (_watch_guild_configs_sync) aus seiner
+    # "for change in stream:"-Schleife geworfen wird und der Prozess
+    # sauber beendet werden kann, statt als Zombie weiterzulaufen und
+    # weiter Discord-Interaktionen mit einer sterbenden DB-Verbindung
+    # zu beantworten.
+    logger.info(f"⚠️ Signal {signum} empfangen – fahre sauber herunter...")
+    try:
+        if mongo_client is not None:
+            mongo_client.close()
+            logger.info("✅ MongoDB-Verbindung geschlossen.")
+    except Exception as e:
+        logger.error(f"Fehler beim Schließen von MongoDB: {e}")
+    os._exit(0)
+
+signal.signal(signal.SIGTERM, _graceful_shutdown)
+signal.signal(signal.SIGINT, _graceful_shutdown)
+
 logger.info("🚀 Starte Bot...")
 try:
     bot.run(BOT_TOKEN)
