@@ -4041,7 +4041,8 @@ async def ping(interaction: discord.Interaction):
             await db_call(db.command, "ping")
             db_latency = (time.monotonic() - db_start) * 1000
         except Exception as e:
-            logger.error(f"[PING] Fehler beim Prüfen der DB-Latenz: {e}")
+            logger.error(f"[PING] Fehler beim Prüfen der DB-Latenz: {type(e).__name__}: {e}")
+            traceback.print_exc()
 
     def rate(ms):
         if ms < 150:
