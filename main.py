@@ -87,6 +87,7 @@ MONGODB_URI = os.getenv("MONGODB_URI")
 if MONGODB_URI:
     try:
         mongo_client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
+        mongo_client.admin.command('ping')
         db = mongo_client["apex"]
         guild_configs = db["guildconfigs"]
         giveaways_collection = db["giveaways"]
