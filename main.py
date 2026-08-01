@@ -44,8 +44,6 @@ import io
 import base64
 import tempfile
 import shutil
-import socket
-import uuid
 from collections import defaultdict, deque
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
@@ -105,7 +103,6 @@ if MONGODB_URI:
         quiz_stats_collection = db["quiz_stats"]
         logouts_collection = db["logouts"]
         tickets_collection = db["tickets"]
-        instances_collection = db["instances"]
         logger.info("✅ MongoDB erfolgreich verbunden")
     except Exception as e:
         logger.error(f"❌ MongoDB Verbindungsfehler: {e}")
@@ -124,7 +121,6 @@ if MONGODB_URI:
         quiz_stats_collection = None
         logouts_collection = None
         tickets_collection = None
-        instances_collection = None
 else:
     logger.warning("⚠️ Keine MONGODB_URI gefunden – laufe ohne DB")
     db = None
@@ -142,7 +138,6 @@ else:
     quiz_stats_collection = None
     logouts_collection = None
     tickets_collection = None
-    instances_collection = None
 
 # ============================================================
 # GENERISCHER IN-MEMORY-CACHE (RAM) MIT AUTOMATISCHEM ABLAUF (TTL)
@@ -313,45 +308,6 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 invites_cache = {}
 BOT_START_TIME = time.time()
-
-# ============================================================
-# INSTANZ-ERKENNUNG (gegen doppelt laufende Bot-Prozesse/Hosts)
-# ============================================================
-INSTANCE_ID = str(uuid.uuid4())[:8]
-INSTANCE_STARTED_AT = datetime.now(timezone.utc)
-INSTANCE_HEARTBEAT_INTERVAL = 15  # Sekunden
-INSTANCE_STALE_AFTER = 45         # Sekunden ohne Heartbeat = Instanz gilt als tot
-
-async def instance_heartbeat_loop():
-    """Schreibt alle INSTANCE_HEARTBEAT_INTERVAL Sekunden ein Lebenszeichen dieser
-    konkreten Prozess-Instanz in die DB. So kann /hosts erkennen, ob z.B. gleichzeitig
-    ein alter Prozess auf bot-hosting.net UND ein neuer auf Render laufen."""
-    if instances_collection is None:
-        logger.warning("[INSTANCE] Keine MongoDB-Verbindung – Instanz-Heartbeat deaktiviert.")
-        return
-    hostname = socket.gethostname()
-    platform_name = detect_hosting_platform()
-    pid = os.getpid()
-    while True:
-        try:
-            await db_call(
-                instances_collection.update_one,
-                {"_id": INSTANCE_ID},
-                {"$set": {
-                    "hostname": hostname,
-                    "platform": platform_name,
-                    "pid": pid,
-                    "startedAt": INSTANCE_STARTED_AT,
-                    "lastHeartbeat": datetime.now(timezone.utc),
-                    "mongoUriHost": (re.search(r'@([^/]+)/', MONGODB_URI).group(1) if MONGODB_URI and re.search(r'@([^/]+)/', MONGODB_URI) else "unbekannt"),
-                }},
-                upsert=True
-            )
-        except asyncio.CancelledError:
-            raise
-        except Exception as e:
-            logger.error(f"[INSTANCE] Heartbeat fehlgeschlagen: {e}")
-        await asyncio.sleep(INSTANCE_HEARTBEAT_INTERVAL)
 
 # ============================================================
 # VOICE-SUPPORT-VORAUSSETZUNGEN PRÜFEN
@@ -2115,7 +2071,6 @@ async def on_ready():
     _bot_ready_once = True
 
     bot.loop.create_task(status_loop())
-    bot.loop.create_task(instance_heartbeat_loop())
 
     try:
         bot.add_view(AbmeldeView())
@@ -4128,7 +4083,7 @@ async def ping(interaction: discord.Interaction):
     # ================================================================
     # 🔥 ULTIMATIVER FIX: Wenn db None ist, bauen wir SOFORT neu auf
     # ================================================================
-    global db, guild_configs, giveaways_collection, team_warns_collection, counting_collection, levels_collection, button_actions, applications_collection, minigame_rounds_collection, transcripts_collection, shifts_collection, shift_stats_collection, quiz_stats_collection, logouts_collection, tickets_collection, instances_collection
+    global db, guild_configs, giveaways_collection, team_warns_collection, counting_collection, levels_collection, button_actions, applications_collection, minigame_rounds_collection, transcripts_collection, shifts_collection, shift_stats_collection, quiz_stats_collection, logouts_collection, tickets_collection
     
     try:
         if db is None and MONGODB_URI:
@@ -4159,7 +4114,6 @@ async def ping(interaction: discord.Interaction):
             quiz_stats_collection = db["quiz_stats"]
             logouts_collection = db["logouts"]
             tickets_collection = db["tickets"]
-            instances_collection = db["instances"]
             
             logger.info("[PING] NOTFALL-Reconnect inkl. Collections erfolgreich! ✅")
     except Exception as e:
@@ -4206,118 +4160,8 @@ async def ping(interaction: discord.Interaction):
         except:
             pass
 # ============================================================
-# NEUE BEFEHLE: /debug und /hostinfo
+# BEFEHL: /hostinfo
 # ============================================================
-
-@bot.tree.command(name="debug", description="Zeigt detaillierte Debug-Informationen über den Bot und die Datenbankverbindung.")
-@app_commands.default_permissions(administrator=True)
-async def debug_command(interaction: discord.Interaction):
-    await interaction.response.defer(ephemeral=True)
-    embed = discord.Embed(title="🐞 Debug-Informationen", color=0x5865f2, timestamp=datetime.now(timezone.utc))
-    
-    embed.add_field(name="Bot", value=f"{bot.user} (ID: {bot.user.id})", inline=False)
-    embed.add_field(name="Server", value=str(len(bot.guilds)), inline=True)
-    embed.add_field(name="Latenz (Websocket)", value=f"{round(bot.latency * 1000)} ms", inline=True)
-    
-    db_status = "✅ Verbunden" if db is not None else "❌ Nicht verbunden"
-    db_detail = ""
-    if db is not None:
-        try:
-            start = time.monotonic()
-            await db_call(db.command, "ping")
-            db_latency = (time.monotonic() - start) * 1000
-            db_status = f"✅ Verbunden ({db_latency:.0f} ms)"
-        except Exception as e:
-            db_status = "❌ Fehler beim Ping"
-            db_detail = f"**Fehler:** {type(e).__name__}: {str(e)[:200]}"
-    else:
-        db_detail = "❌ `db` ist `None` – MongoDB nicht initialisiert (URI fehlt oder Verbindung fehlgeschlagen)."
-    
-    embed.add_field(name="Datenbank", value=db_status, inline=False)
-    if db_detail:
-        embed.add_field(name="Details", value=db_detail, inline=False)
-    
-    cache_size = len(_config_cache._store)
-    embed.add_field(name="Config-Cache-Einträge", value=str(cache_size), inline=True)
-    
-    tasks = [t for t in asyncio.all_tasks() if not t.done()]
-    embed.add_field(name="Aktive asyncio-Tasks", value=str(len(tasks)), inline=True)
-    
-    mongo_uri = os.getenv("MONGODB_URI")
-    if mongo_uri:
-        masked = re.sub(r':([^@]+)@', ':****@', mongo_uri)
-        embed.add_field(name="MONGODB_URI (maskiert)", value=masked, inline=False)
-    else:
-        embed.add_field(name="MONGODB_URI", value="❌ Nicht gesetzt", inline=False)
-    
-    await interaction.followup.send(embed=embed)
-
-@bot.tree.command(name="hosts", description="Zeigt, auf wie vielen Hosts/Prozessen der Bot gerade aktiv läuft.")
-@app_commands.default_permissions(administrator=True)
-async def hosts_command(interaction: discord.Interaction):
-    await interaction.response.defer(ephemeral=True)
-
-    if instances_collection is None:
-        await interaction.followup.send(
-            "❌ Keine MongoDB-Verbindung in dieser Instanz – kann keine anderen Hosts nachschlagen.\n"
-            f"Diese Instanz selbst: `{socket.gethostname()}` auf **{detect_hosting_platform()}** (PID {os.getpid()}, Instanz-ID `{INSTANCE_ID}`)."
-        )
-        return
-
-    cutoff = datetime.now(timezone.utc) - timedelta(seconds=INSTANCE_STALE_AFTER)
-    try:
-        docs = await db_call(lambda: list(instances_collection.find({"lastHeartbeat": {"$gte": cutoff}})))
-    except Exception as e:
-        await interaction.followup.send(f"❌ Fehler beim Abfragen der Instanzen: {e}")
-        return
-
-    docs.sort(key=lambda d: d.get("startedAt", datetime.min.replace(tzinfo=timezone.utc)))
-
-    if len(docs) <= 1:
-        color = 0x2ECC71
-        title = "✅ Nur eine aktive Instanz gefunden"
-    else:
-        color = 0xE74C3C
-        title = f"⚠️ {len(docs)} aktive Instanzen gefunden – das ist vermutlich dein Problem!"
-
-    embed = discord.Embed(title=title, color=color, timestamp=datetime.now(timezone.utc))
-    embed.set_footer(text=f"Heartbeat alle {INSTANCE_HEARTBEAT_INTERVAL}s • gilt als tot nach {INSTANCE_STALE_AFTER}s ohne Lebenszeichen")
-
-    if not docs:
-        embed.description = "Keine Instanz hat sich innerhalb der letzten Sekunden gemeldet (evtl. gerade erst gestartet, oder alle Instanzen nutzen ein anderes MongoDB-Cluster als diese hier)."
-    else:
-        for i, doc in enumerate(docs, start=1):
-            started = doc.get("startedAt")
-            last_hb = doc.get("lastHeartbeat")
-            uptime = ""
-            if started:
-                delta = datetime.now(timezone.utc) - ensure_aware(started)
-                total_min = int(delta.total_seconds() // 60)
-                uptime = f"{total_min // 60}h {total_min % 60}m" if total_min >= 60 else f"{total_min}m"
-            age_sec = int((datetime.now(timezone.utc) - ensure_aware(last_hb)).total_seconds()) if last_hb else "?"
-            embed.add_field(
-                name=f"#{i} · {doc.get('platform', 'unbekannt')}",
-                value=(
-                    f"Host: `{doc.get('hostname', '?')}`\n"
-                    f"PID: `{doc.get('pid', '?')}`\n"
-                    f"Instanz-ID: `{doc.get('_id', '?')}`\n"
-                    f"Mongo-Cluster: `{doc.get('mongoUriHost', '?')}`\n"
-                    f"Läuft seit: {uptime}\n"
-                    f"Letzter Heartbeat vor: {age_sec}s"
-                ),
-                inline=True
-            )
-
-    if len(docs) > 1:
-        clusters = {d.get("mongoUriHost") for d in docs}
-        if len(clusters) > 1:
-            embed.add_field(
-                name="🔍 Zusatzbefund",
-                value="Diese Instanzen nutzen sogar **unterschiedliche MongoDB-Cluster** – wahrscheinlich läuft der Bot auf zwei verschiedenen Hosts mit unterschiedlicher Konfiguration. Alte Instanz(en) stoppen!",
-                inline=False
-            )
-
-    await interaction.followup.send(embed=embed)
 
 def detect_hosting_platform() -> str:
     if os.getenv("RENDER"):
