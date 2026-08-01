@@ -315,6 +315,30 @@ async function hasPremiumRole(userId) {
   }
 }
 
+// Module, die nur mit Premium (eigene Rolle ODER für den Server freigeschaltet) nutzbar sind
+const PREMIUM_MODULES = ['automod', 'antinuke', 'shiftsystem', 'abmeldesystem'];
+
+// Prüft, ob für einen bestimmten Server Premium freigeschaltet wurde (unabhängig davon, wer gerade eingeloggt ist)
+async function isGuildPremiumUnlocked(guildId) {
+  try {
+    const config = await getGuildConfig(guildId);
+    return config?.premium?.enabled === true;
+  } catch (err) {
+    console.error('Fehler bei isGuildPremiumUnlocked:', err);
+    return false;
+  }
+}
+
+// Effektiver Premium-Zugriff für einen User auf einem bestimmten Server:
+// entweder er hat selbst die Premium-Rolle, oder der Server wurde von einem Premium-Inhaber freigeschaltet
+async function hasEffectivePremiumAccess(userId, guildId) {
+  const [ownRole, guildUnlocked] = await Promise.all([
+    hasPremiumRole(userId),
+    isGuildPremiumUnlocked(guildId)
+  ]);
+  return { hasAccess: ownRole || guildUnlocked, ownRole, guildUnlocked };
+}
+
 app.get('/api/guilds', requireAuth, async (req, res) => {
   try {
     const guildsRes = await fetch(`${DISCORD_API}/users/@me/guilds`, {
@@ -410,15 +434,22 @@ app.get('/api/guild/:guildId', requireAuth, async (req, res) => {
     });
     if (!guildRes.ok) return res.status(guildRes.status).json({ error: 'guild_not_found' });
     const guildData = await guildRes.json();
-    const [owner, botCount] = await Promise.all([
+    const [owner, botCount, premiumStatus] = await Promise.all([
       fetchGuildOwner(guildData.owner_id),
-      countGuildBots(req.params.guildId)
+      countGuildBots(req.params.guildId),
+      hasEffectivePremiumAccess(req.session.user?.id, req.params.guildId)
     ]);
     res.json({
       members: guildData.approximate_member_count ?? 0,
       boosts: guildData.premium_subscription_count ?? 0,
       botCount,
-      owner
+      owner,
+      // premiumUnlocked = darf dieser User auf DIESEM Server die Premium-Module nutzen
+      premiumUnlocked: premiumStatus.hasAccess,
+      // guildPremiumEnabled = wurde der Server generell freigeschaltet (für alle Admins)
+      guildPremiumEnabled: premiumStatus.guildUnlocked,
+      // canManagePremium = darf dieser User den Server-Premium-Status an/aus schalten (braucht eigene Premium-Rolle)
+      canManagePremium: premiumStatus.ownRole
     });
   } catch (err) {
     console.error('API /guild/:id Fehler:', err);
@@ -428,6 +459,26 @@ app.get('/api/guild/:guildId', requireAuth, async (req, res) => {
 
 
 
+
+app.post('/api/guild/:guildId/premium/toggle', requireAuth, requireGuildAdmin, async (req, res) => {
+  const { guildId } = req.params;
+  try {
+    const ownRole = await hasPremiumRole(req.session.user?.id);
+    if (!ownRole) {
+      return res.status(403).json({ error: 'not_premium_holder', message: 'Nur Nutzer mit eigener Premium-Rolle können Premium für einen Server freischalten.' });
+    }
+    const enabled = req.body?.enabled === true;
+    await saveModuleConfig(guildId, 'premium', {
+      enabled,
+      unlockedBy: enabled ? req.session.user?.id : null,
+      unlockedAt: enabled ? new Date().toISOString() : null
+    });
+    res.json({ success: true, guildPremiumEnabled: enabled });
+  } catch (err) {
+    console.error('Fehler beim Umschalten von Server-Premium:', err);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
 
 app.get('/api/guild/:guildId/config', requireAuth, async (req, res) => {
   try {
@@ -576,6 +627,12 @@ app.post('/api/guild/:guildId/config/:module', requireAuth, async (req, res) => 
   const { guildId, module } = req.params;
   if (!ALLOWED_MODULES.includes(module)) {
     return res.status(400).json({ error: 'unknown_module' });
+  }
+  if (PREMIUM_MODULES.includes(module)) {
+    const premiumStatus = await hasEffectivePremiumAccess(req.session.user?.id, guildId);
+    if (!premiumStatus.hasAccess) {
+      return res.status(403).json({ error: 'premium_required', message: 'Dieses Modul ist nur mit Premium verfügbar.' });
+    }
   }
   try {
     let moduleData = req.body;
@@ -1217,6 +1274,11 @@ app.post('/api/guild/:guildId/send-abmelde-embed', requireAuth, async (req, res)
     return res.status(503).json({ error: 'bot_not_configured' });
   }
 
+  const premiumStatus = await hasEffectivePremiumAccess(req.session.user?.id, guildId);
+  if (!premiumStatus.hasAccess) {
+    return res.status(403).json({ error: 'premium_required', message: 'Dieses Modul ist nur mit Premium verfügbar.' });
+  }
+
   try {
     const config = await getGuildConfig(guildId);
     const cfg = config.abmeldesystem || {};
@@ -1285,6 +1347,11 @@ app.post('/api/guild/:guildId/send-abmelde-embed', requireAuth, async (req, res)
 app.post('/api/guild/:guildId/bot/send', requireAuth, requireGuildAdmin, async (req, res) => {
   const { guildId } = req.params;
   const { channelId, content, embeds, components } = req.body;
+
+  const premiumStatus = await hasEffectivePremiumAccess(req.session.user?.id, guildId);
+  if (!premiumStatus.hasAccess) {
+    return res.status(403).json({ error: 'premium_required', message: 'Dieses Modul ist nur mit Premium verfügbar.' });
+  }
 
   if (!channelId) {
     return res.status(400).json({ error: 'channelId ist erforderlich' });
@@ -1368,6 +1435,11 @@ app.post('/api/guild/:guildId/bot/edit', requireAuth, requireGuildAdmin, async (
   const { guildId } = req.params;
   const { channelId, messageId, content, embeds, components } = req.body;
 
+  const premiumStatus = await hasEffectivePremiumAccess(req.session.user?.id, guildId);
+  if (!premiumStatus.hasAccess) {
+    return res.status(403).json({ error: 'premium_required', message: 'Dieses Modul ist nur mit Premium verfügbar.' });
+  }
+
   if (!channelId || !messageId) {
     return res.status(400).json({ error: 'channelId und messageId sind erforderlich' });
   }
@@ -1413,6 +1485,11 @@ app.post('/api/guild/:guildId/bot/edit', requireAuth, requireGuildAdmin, async (
 app.get('/api/guild/:guildId/bot/messages', requireAuth, requireGuildAdmin, async (req, res) => {
   const { guildId } = req.params;
   const { channelId, limit = 20 } = req.query;
+
+  const premiumStatus = await hasEffectivePremiumAccess(req.session.user?.id, guildId);
+  if (!premiumStatus.hasAccess) {
+    return res.status(403).json({ error: 'premium_required', message: 'Dieses Modul ist nur mit Premium verfügbar.' });
+  }
 
   if (!channelId) {
     return res.status(400).json({ error: 'channelId ist erforderlich' });
