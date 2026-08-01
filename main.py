@@ -1114,6 +1114,66 @@ async def send_ticket_panel(guild: discord.Guild):
                 await channel.send(embed=embed, view=view, files=attachments)
             else:
                 await channel.send(embed=embed, view=view)
+# ============================================================
+# HOSTING-PLATTFORM ERKENNEN
+# ============================================================
+
+def detect_hosting_platform() -> str:
+    """Erkennt die Hosting-Plattform anhand von Umgebungsvariablen."""
+    if os.getenv("RENDER"):
+        return "Render"
+    if os.getenv("HEROKU"):
+        return "Heroku"
+    if os.getenv("REPL_ID") or os.getenv("REPL_SLUG"):
+        return "Replit"
+    if os.getenv("RAILWAY_ENVIRONMENT"):
+        return "Railway"
+    if os.getenv("FLY_APP_NAME"):
+        return "Fly.io"
+    if os.getenv("DYNO"):
+        return "Heroku (Dyno)"
+    if os.getenv("AWS_EXECUTION_ENV"):
+        return "AWS Lambda / ECS"
+    if os.getenv("WEBSITE_INSTANCE_ID"):
+        return "Azure Web App"
+    if os.getenv("KUBERNETES_SERVICE_HOST"):
+        return "Kubernetes (Generic)"
+    if os.getenv("GCP_PROJECT"):
+        return "Google Cloud Platform"
+    if os.getenv("CODESPACES"):
+        return "GitHub Codespaces"
+    if os.getenv("GITPOD_WORKSPACE_ID"):
+        return "Gitpod"
+    if os.getenv("DETA_RUNTIME"):
+        return "Deta"
+    # Fallback: lokale Ausführung
+    return "Lokal / Unbekannt"
+
+@bot.tree.command(name="hostinfo", description="Zeigt Informationen über die Hosting-Plattform und Systemumgebung.")
+@app_commands.default_permissions(administrator=True)
+async def hostinfo(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    
+    platform = detect_hosting_platform()
+    import platform as plat
+    import sys
+    
+    embed = discord.Embed(title="🖥️ Hosting-Informationen", color=0x5865f2, timestamp=datetime.now(timezone.utc))
+    embed.add_field(name="Plattform", value=platform, inline=False)
+    embed.add_field(name="Betriebssystem", value=f"{plat.system()} {plat.release()} ({plat.machine()})", inline=False)
+    embed.add_field(name="Python-Version", value=sys.version.split()[0], inline=True)
+    embed.add_field(name="Hostname", value=os.uname().nodename if hasattr(os, 'uname') else "unbekannt", inline=True)
+    embed.add_field(name="Arbeitsverzeichnis", value=os.getcwd()[:100], inline=False)
+    
+    # Nochmal die URI (maskiert) zur Kontrolle
+    mongo_uri = os.getenv("MONGODB_URI")
+    if mongo_uri:
+        masked = re.sub(r':([^@]+)@', ':****@', mongo_uri)
+        embed.add_field(name="MONGODB_URI (maskiert)", value=masked, inline=False)
+    else:
+        embed.add_field(name="MONGODB_URI", value="❌ Nicht gesetzt", inline=False)
+    
+    await interaction.followup.send(embed=embed)
 
 # ============================================================
 # BEWERBUNGEN
