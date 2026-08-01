@@ -47,7 +47,9 @@ let state = {
   ticketConfigCache: null,
   ticketConfigCacheGuildId: null,
   shiftTypesDraft: [],
-  specialAccess: false
+  specialAccess: false,
+  guildPremiumEnabled: false,
+  canManagePremium: false
 };
 
 
@@ -117,7 +119,9 @@ const FRIENDLY_ERRORS = {
   unknown_module: 'Unbekanntes Modul.',
   discord_api_error: 'Discord konnte nicht erreicht werden.',
   sound_too_large: 'Die Sounddatei ist zu groß (max. 4MB).',
-  unknown_error: 'Zeitüberschreitung beim Server – bitte erneut versuchen.'
+  unknown_error: 'Zeitüberschreitung beim Server – bitte erneut versuchen.',
+  premium_required: 'Dieses Modul ist nur mit Premium verfügbar.',
+  not_premium_holder: 'Nur Nutzer mit eigener Premium-Rolle können Premium für einen Server freischalten.'
 };
 
 async function apiFetch(endpoint, options = {}) {
@@ -269,12 +273,67 @@ async function loadGuildDetails(guildId) {
       DOM.overviewBoosts.textContent = data.boosts ?? '0';
       DOM.overviewBots.textContent = data.botCount ?? data.bots ?? 'N/A';
       renderGuildOwner(data.owner);
+      // Premium-Zugriff gilt pro Server: eigene Premium-Rolle ODER Server wurde freigeschaltet
+      state.specialAccess = data.premiumUnlocked === true;
+      state.guildPremiumEnabled = data.guildPremiumEnabled === true;
+      state.canManagePremium = data.canManagePremium === true;
+      renderPremiumToggle();
     }
   } catch {
     DOM.overviewMembers.textContent = 'N/A';
     DOM.overviewBoosts.textContent = 'N/A';
     DOM.overviewBots.textContent = 'N/A';
     renderGuildOwner(null);
+    state.specialAccess = false;
+    state.guildPremiumEnabled = false;
+    state.canManagePremium = false;
+    renderPremiumToggle();
+  }
+}
+
+// Zeigt einen Umschalter, mit dem ein Premium-Rollen-Inhaber Premium für DIESEN Server an/aus schaltet.
+// Dadurch bekommen auch Admins ohne eigene Premium-Rolle (z.B. Freunde) Zugriff auf die Premium-Module.
+function renderPremiumToggle() {
+  let box = document.getElementById('premium-toggle-box');
+  if (!state.canManagePremium) {
+    if (box) box.remove();
+    return;
+  }
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'premium-toggle-box';
+    box.style.cssText = 'display:flex;align-items:center;gap:10px;margin:10px 0;padding:10px 14px;border-radius:8px;background:rgba(255,215,0,0.08);border:1px solid rgba(255,215,0,0.3);font-size:14px;';
+    const anchor = DOM.activeGuildName?.closest('div, header') || DOM.activeGuildName?.parentElement;
+    if (anchor && anchor.parentElement) {
+      anchor.parentElement.insertBefore(box, anchor.nextSibling);
+    } else {
+      document.body.appendChild(box);
+    }
+  }
+  box.innerHTML = '';
+  const label = document.createElement('span');
+  label.textContent = state.guildPremiumEnabled
+    ? '👑 Premium ist für diesen Server freigeschaltet'
+    : '👑 Premium ist für diesen Server nicht freigeschaltet';
+  box.appendChild(label);
+  const btn = document.createElement('button');
+  btn.className = state.guildPremiumEnabled ? 'btn btn-secondary' : 'btn btn-primary';
+  btn.textContent = state.guildPremiumEnabled ? 'Deaktivieren' : 'Für diesen Server freischalten';
+  btn.onclick = () => toggleGuildPremium(!state.guildPremiumEnabled);
+  box.appendChild(btn);
+}
+
+async function toggleGuildPremium(enable) {
+  if (!state.activeGuildId) return;
+  try {
+    await apiFetch(`/guild/${state.activeGuildId}/premium/toggle`, {
+      method: 'POST',
+      body: JSON.stringify({ enabled: enable })
+    });
+    showToast(enable ? 'Premium für diesen Server freigeschaltet!' : 'Premium für diesen Server deaktiviert.', 'success');
+    await loadGuildDetails(state.activeGuildId);
+  } catch (err) {
+    showToast(err.message || 'Fehler beim Umschalten von Premium.', 'error');
   }
 }
 
