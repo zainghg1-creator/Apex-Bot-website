@@ -4072,21 +4072,30 @@ async def leaderboard(
 
 # ============================================================
 # NEUE ROBUSTE /ping IMPLEMENTIERUNG (ersetzt den alten /ping)
-# ============================================================
 @bot.tree.command(name="ping", description="Zeigt die aktuelle Verbindungsgeschwindigkeit des Bots an.")
 async def ping(interaction: discord.Interaction):
-    # WICHTIGER FIX: Abfangen des Cold-Start-Fehlers (10062), bevor der Bot überhaupt deferen kann
+    # 1. Abfangen des 10062 Cold-Start-Fehlers
     try:
         await interaction.response.defer(ephemeral=True)
     except discord.NotFound:
-        # Die Interaktion ist bereits abgelaufen, weil Render zu lange zum Aufwachen gebraucht hat.
-        # Wir beenden den Befehl hier sauber, ohne dass der Bot abstürzt.
         logger.warning(f"[PING] Interaktion abgelaufen (10062) für {interaction.user}. Render Cold Start?")
         return
+
+    # =================================================================
+    # 🔥 DER ULTIMATIVE FIX: Wenn db None ist, bauen wir SOFORT neu auf!
+    # =================================================================
+    global db
+    try:
+        if db is None and MONGODB_URI:
+            logger.warning("[PING] DB war im Speicher None, starte NOTFALL-Reconnect...")
+            mongo_client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
+            mongo_client.admin.command('ping')  # Erzwingt sofortigen Verbindungstest
+            db = mongo_client["apex"]
+            logger.info("[PING] NOTFALL-Reconnect erfolgreich! ✅")
     except Exception as e:
-        # Falls etwas anderes schief läuft, loggen wir es.
-        logger.error(f"[PING] Unerwarteter Fehler beim Defer: {e}")
-        return
+        logger.error(f"[PING] NOTFALL-Reconnect fehlgeschlagen: {e}")
+        db = None
+    # =================================================================
 
     try:
         start = time.monotonic()
@@ -4126,7 +4135,7 @@ async def ping(interaction: discord.Interaction):
             await interaction.followup.send(f"❌ Fehler: {e}", ephemeral=True)
         except:
             pass
-
+        
 # ============================================================
 # NEUE BEFEHLE: /debug und /hostinfo
 # ============================================================
