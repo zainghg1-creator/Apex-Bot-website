@@ -28,6 +28,8 @@ console.log('REDIRECT_URI:', REDIRECT_URI);
 
 const DISCORD_API = 'https://discord.com/api/v10';
 const ADMINISTRATOR = 0x8n;
+const PREMIUM_ROLE_ID = '1529085177555587103';
+const PREMIUM_GUILD_ID = '1525533723574140980';
 const ALLOWED_MODULES = ['welcome', 'tickets', 'teamliste', 'automod', 'teamupdate', 'stats', 'levels', 'verification', 'antinuke', 'minigames', 'rolenicknames', 'reactionroles', 'custom_buttons', 'statusembed', 'applications', 'voice_support', 'shiftsystem', 'abmeldesystem', 'rp'];
 
 
@@ -298,6 +300,21 @@ async function getBotGuildIds() {
 
 
 
+async function hasPremiumRole(userId) {
+  if (!BOT_TOKEN || !userId) return false;
+  try {
+    const memberRes = await fetch(`${DISCORD_API}/guilds/${PREMIUM_GUILD_ID}/members/${userId}`, {
+      headers: { Authorization: `Bot ${BOT_TOKEN}` }
+    });
+    if (!memberRes.ok) return false;
+    const member = await memberRes.json();
+    return (member.roles || []).includes(PREMIUM_ROLE_ID);
+  } catch (err) {
+    console.error('Fehler bei hasPremiumRole:', err);
+    return false;
+  }
+}
+
 app.get('/api/guilds', requireAuth, async (req, res) => {
   try {
     const guildsRes = await fetch(`${DISCORD_API}/users/@me/guilds`, {
@@ -320,7 +337,8 @@ app.get('/api/guilds', requireAuth, async (req, res) => {
       icon: g.icon ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png` : null,
       botIstDrauf: botGuildIds.has(g.id)
     })).sort((a, b) => Number(b.botIstDrauf) - Number(a.botIstDrauf) || a.name.localeCompare(b.name));
-    res.json({ user: req.session.user, guilds: result, clientId: CLIENT_ID });
+    const specialAccess = await hasPremiumRole(req.session.user?.id);
+    res.json({ user: req.session.user, guilds: result, clientId: CLIENT_ID, specialAccess });
   } catch (err) {
     console.error('API /guilds Fehler:', err);
     res.status(500).json({ error: 'server_error' });
