@@ -1114,66 +1114,6 @@ async def send_ticket_panel(guild: discord.Guild):
                 await channel.send(embed=embed, view=view, files=attachments)
             else:
                 await channel.send(embed=embed, view=view)
-# ============================================================
-# HOSTING-PLATTFORM ERKENNEN
-# ============================================================
-
-def detect_hosting_platform() -> str:
-    """Erkennt die Hosting-Plattform anhand von Umgebungsvariablen."""
-    if os.getenv("RENDER"):
-        return "Render"
-    if os.getenv("HEROKU"):
-        return "Heroku"
-    if os.getenv("REPL_ID") or os.getenv("REPL_SLUG"):
-        return "Replit"
-    if os.getenv("RAILWAY_ENVIRONMENT"):
-        return "Railway"
-    if os.getenv("FLY_APP_NAME"):
-        return "Fly.io"
-    if os.getenv("DYNO"):
-        return "Heroku (Dyno)"
-    if os.getenv("AWS_EXECUTION_ENV"):
-        return "AWS Lambda / ECS"
-    if os.getenv("WEBSITE_INSTANCE_ID"):
-        return "Azure Web App"
-    if os.getenv("KUBERNETES_SERVICE_HOST"):
-        return "Kubernetes (Generic)"
-    if os.getenv("GCP_PROJECT"):
-        return "Google Cloud Platform"
-    if os.getenv("CODESPACES"):
-        return "GitHub Codespaces"
-    if os.getenv("GITPOD_WORKSPACE_ID"):
-        return "Gitpod"
-    if os.getenv("DETA_RUNTIME"):
-        return "Deta"
-    # Fallback: lokale Ausführung
-    return "Lokal / Unbekannt"
-
-@bot.tree.command(name="hostinfo", description="Zeigt Informationen über die Hosting-Plattform und Systemumgebung.")
-@app_commands.default_permissions(administrator=True)
-async def hostinfo(interaction: discord.Interaction):
-    await interaction.response.defer(ephemeral=True)
-    
-    platform = detect_hosting_platform()
-    import platform as plat
-    import sys
-    
-    embed = discord.Embed(title="🖥️ Hosting-Informationen", color=0x5865f2, timestamp=datetime.now(timezone.utc))
-    embed.add_field(name="Plattform", value=platform, inline=False)
-    embed.add_field(name="Betriebssystem", value=f"{plat.system()} {plat.release()} ({plat.machine()})", inline=False)
-    embed.add_field(name="Python-Version", value=sys.version.split()[0], inline=True)
-    embed.add_field(name="Hostname", value=os.uname().nodename if hasattr(os, 'uname') else "unbekannt", inline=True)
-    embed.add_field(name="Arbeitsverzeichnis", value=os.getcwd()[:100], inline=False)
-    
-    # Nochmal die URI (maskiert) zur Kontrolle
-    mongo_uri = os.getenv("MONGODB_URI")
-    if mongo_uri:
-        masked = re.sub(r':([^@]+)@', ':****@', mongo_uri)
-        embed.add_field(name="MONGODB_URI (maskiert)", value=masked, inline=False)
-    else:
-        embed.add_field(name="MONGODB_URI", value="❌ Nicht gesetzt", inline=False)
-    
-    await interaction.followup.send(embed=embed)
 
 # ============================================================
 # BEWERBUNGEN
@@ -1470,58 +1410,6 @@ async def application_registration_loop():
         except Exception as e:
             logger.error(f"Fehler in application_registration_loop: {e}")
         await asyncio.sleep(20)
-
-# ============================================================
-# DEBUG-BEFEHL FÜR FEHLERDIAGNOSE
-# ============================================================
-
-@bot.tree.command(name="debug", description="Zeigt detaillierte Debug-Informationen über den Bot und die Datenbankverbindung.")
-@app_commands.default_permissions(administrator=True)
-async def debug_command(interaction: discord.Interaction):
-    await interaction.response.defer(ephemeral=True)
-    embed = discord.Embed(title="🐞 Debug-Informationen", color=0x5865f2, timestamp=datetime.now(timezone.utc))
-    
-    # Bot-Info
-    embed.add_field(name="Bot", value=f"{bot.user} (ID: {bot.user.id})", inline=False)
-    embed.add_field(name="Server", value=str(len(bot.guilds)), inline=True)
-    embed.add_field(name="Latenz (Websocket)", value=f"{round(bot.latency * 1000)} ms", inline=True)
-    
-    # Datenbankstatus
-    db_status = "✅ Verbunden" if db is not None else "❌ Nicht verbunden"
-    db_detail = ""
-    if db is not None:
-        try:
-            start = time.monotonic()
-            await db_call(db.command, "ping")
-            db_latency = (time.monotonic() - start) * 1000
-            db_status = f"✅ Verbunden ({db_latency:.0f} ms)"
-        except Exception as e:
-            db_status = "❌ Fehler beim Ping"
-            db_detail = f"**Fehler:** {type(e).__name__}: {str(e)[:200]}"
-    else:
-        db_detail = "❌ `db` ist `None` – MongoDB nicht initialisiert (URI fehlt oder Verbindung fehlgeschlagen)."
-    
-    embed.add_field(name="Datenbank", value=db_status, inline=False)
-    if db_detail:
-        embed.add_field(name="Details", value=db_detail, inline=False)
-    
-    # Cache-Info
-    cache_size = len(_config_cache._store)
-    embed.add_field(name="Config-Cache-Einträge", value=str(cache_size), inline=True)
-    
-    # Aktive Tasks
-    tasks = [t for t in asyncio.all_tasks() if not t.done()]
-    embed.add_field(name="Aktive asyncio-Tasks", value=str(len(tasks)), inline=True)
-    
-    # Umgebungsvariablen (URI maskiert)
-    mongo_uri = os.getenv("MONGODB_URI")
-    if mongo_uri:
-        masked = re.sub(r':([^@]+)@', ':****@', mongo_uri)  # Passwort unkenntlich machen
-        embed.add_field(name="MONGODB_URI (maskiert)", value=masked, inline=False)
-    else:
-        embed.add_field(name="MONGODB_URI", value="❌ Nicht gesetzt", inline=False)
-    
-    await interaction.followup.send(embed=embed)
 
 # ============================================================
 # GIVEAWAY
@@ -4168,113 +4056,150 @@ async def leaderboard(
     embed.description = "\n".join(description)
     await interaction.followup.send(embed=embed)
 
+# ============================================================
+# NEUE ROBUSTE /ping IMPLEMENTIERUNG (ersetzt den alten /ping)
+# ============================================================
 @bot.tree.command(name="ping", description="Zeigt die aktuelle Verbindungsgeschwindigkeit des Bots an.")
 async def ping(interaction: discord.Interaction):
-    start = time.monotonic()
-    await interaction.response.defer(ephemeral=True)
-    api_latency = (time.monotonic() - start) * 1000
-
-    ws_latency = bot.latency * 1000
-
-    db_latency = None
-    if db is not None:
-        db_start = time.monotonic()
-        try:
-            await db_call(db.command, "ping")
-            db_latency = (time.monotonic() - db_start) * 1000
-        except Exception as e:
-            logger.error(f"[PING] Fehler beim Prüfen der DB-Latenz: {type(e).__name__}: {e}")
-            traceback.print_exc()
-
-    def rate(ms):
-        if ms < 150:
-            return "🟢"
-        elif ms < 350:
-            return "🟡"
-        else:
-            return "🔴"
-
-    embed = discord.Embed(title="🏓 Pong!", color=0x5865f2)
-    embed.add_field(name="Websocket", value=f"{rate(ws_latency)} {ws_latency:.0f} ms", inline=True)
-    embed.add_field(name="API-Antwortzeit", value=f"{rate(api_latency)} {api_latency:.0f} ms", inline=True)
-    if db_latency is not None:
-        embed.add_field(name="Datenbank", value=f"{rate(db_latency)} {db_latency:.0f} ms", inline=True)
-    else:
-        embed.add_field(name="Datenbank", value="⚪ nicht verbunden", inline=True)
-    await interaction.followup.send(embed=embed, ephemeral=True)
-
-@bot.tree.command(name="support", description="Tritt unserem Support-Server bei.")
-async def support(interaction: discord.Interaction):
-    await interaction.response.send_message("🛠️ **APEX Support**\n\n👉 [Hier klicken zum Beitreten](https://discord.gg/3eghXPKD4K)")
-
-@bot.tree.command(name="dashboard", description="Link zur APEX Website.")
-async def dashboard(interaction: discord.Interaction):
-    await interaction.response.send_message("🌐 [APEX DASHBOARD](https://apex-bot-website-ob3yip2pe-zainghg1-creators-projects.vercel.app/)")
-
-@bot.tree.command(name="serverlist", description="Zeigt alle Server an (nur für Zain).")
-async def serverlist(interaction: discord.Interaction):
-    if interaction.user.id != 1086731728468578477:
-        await interaction.response.send_message("❌ Nur Zain darf diesen Command benutzen.", ephemeral=True)
-        return
-    await interaction.response.defer(ephemeral=True)
-    sorted_guilds = sorted(bot.guilds, key=lambda g: g.member_count, reverse=True)
-
-    entries = []
-    for guild in sorted_guilds:
-        invite_url = "Kein Link"
-        for channel in guild.text_channels:
-            if channel.permissions_for(guild.me).create_instant_invite:
-                try:
-                    invite_url = (await channel.create_invite(max_age=3600, max_uses=1)).url
-                    break
-                except:
-                    continue
-        entries.append(f"• **{guild.name}** — `{guild.member_count}` Member\n  🔗 {invite_url}")
-
-    MAX_DESC_LENGTH = 4000
-    MAX_EMBEDS_PER_MESSAGE = 10
-
-    chunks = []
-    current_chunk = []
-    current_length = 0
-    for entry in entries:
-        entry_length = len(entry) + 2
-        if current_chunk and current_length + entry_length > MAX_DESC_LENGTH:
-            chunks.append(current_chunk)
-            current_chunk = []
-            current_length = 0
-        current_chunk.append(entry)
-        current_length += entry_length
-    if current_chunk:
-        chunks.append(current_chunk)
-
-    total_pages = len(chunks)
-    embeds = []
-    for i, chunk in enumerate(chunks, start=1):
-        title = f"🌐 Serverliste ({len(bot.guilds)} Server)"
-        if total_pages > 1:
-            title += f" — Seite {i}/{total_pages}"
-        embed = discord.Embed(
-            title=title,
-            description="\n\n".join(chunk),
-            color=0xffffff,
-            timestamp=datetime.now(BERLIN_TZ)
-        )
-        embeds.append(embed)
-
-    for i in range(0, len(embeds), MAX_EMBEDS_PER_MESSAGE):
-        batch = embeds[i:i + MAX_EMBEDS_PER_MESSAGE]
-        await interaction.followup.send(embeds=batch)
-
-@bot.tree.command(name="update-stats", description="Aktualisiert sofort alle Statistik-Kanäle auf diesem Server.")
-async def update_stats(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
     try:
-        await update_stats_channels(interaction.guild)
-        await interaction.followup.send("✅ Statistik-Kanäle wurden aktualisiert!")
+        start = time.monotonic()
+        api_latency = (time.monotonic() - start) * 1000
+        ws_latency = bot.latency * 1000
+
+        db_latency = None
+        if db is not None:
+            try:
+                db_start = time.monotonic()
+                await db_call(db.command, "ping")
+                db_latency = (time.monotonic() - db_start) * 1000
+            except Exception:
+                db_latency = -1
+
+        def rate(ms):
+            if ms < 150:
+                return "🟢"
+            elif ms < 350:
+                return "🟡"
+            else:
+                return "🔴"
+
+        embed = discord.Embed(title="🏓 Pong!", color=0x5865f2)
+        embed.add_field(name="Websocket", value=f"{rate(ws_latency)} {ws_latency:.0f} ms", inline=True)
+        embed.add_field(name="API-Antwortzeit", value=f"{rate(api_latency)} {api_latency:.0f} ms", inline=True)
+        if db_latency is None:
+            embed.add_field(name="Datenbank", value="⚪ nicht verbunden", inline=True)
+        elif db_latency < 0:
+            embed.add_field(name="Datenbank", value="❌ Fehler beim Ping", inline=True)
+        else:
+            embed.add_field(name="Datenbank", value=f"{rate(db_latency)} {db_latency:.0f} ms", inline=True)
+
+        await interaction.followup.send(embed=embed, ephemeral=True)
     except Exception as e:
-        await interaction.followup.send(f"❌ Fehler: {e}")
-        logger.error(f"[STATS] Fehler bei update-stats: {e}")
+        try:
+            await interaction.followup.send(f"❌ Fehler: {e}", ephemeral=True)
+        except:
+            pass
+
+# ============================================================
+# NEUE BEFEHLE: /debug und /hostinfo
+# ============================================================
+
+@bot.tree.command(name="debug", description="Zeigt detaillierte Debug-Informationen über den Bot und die Datenbankverbindung.")
+@app_commands.default_permissions(administrator=True)
+async def debug_command(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    embed = discord.Embed(title="🐞 Debug-Informationen", color=0x5865f2, timestamp=datetime.now(timezone.utc))
+    
+    embed.add_field(name="Bot", value=f"{bot.user} (ID: {bot.user.id})", inline=False)
+    embed.add_field(name="Server", value=str(len(bot.guilds)), inline=True)
+    embed.add_field(name="Latenz (Websocket)", value=f"{round(bot.latency * 1000)} ms", inline=True)
+    
+    db_status = "✅ Verbunden" if db is not None else "❌ Nicht verbunden"
+    db_detail = ""
+    if db is not None:
+        try:
+            start = time.monotonic()
+            await db_call(db.command, "ping")
+            db_latency = (time.monotonic() - start) * 1000
+            db_status = f"✅ Verbunden ({db_latency:.0f} ms)"
+        except Exception as e:
+            db_status = "❌ Fehler beim Ping"
+            db_detail = f"**Fehler:** {type(e).__name__}: {str(e)[:200]}"
+    else:
+        db_detail = "❌ `db` ist `None` – MongoDB nicht initialisiert (URI fehlt oder Verbindung fehlgeschlagen)."
+    
+    embed.add_field(name="Datenbank", value=db_status, inline=False)
+    if db_detail:
+        embed.add_field(name="Details", value=db_detail, inline=False)
+    
+    cache_size = len(_config_cache._store)
+    embed.add_field(name="Config-Cache-Einträge", value=str(cache_size), inline=True)
+    
+    tasks = [t for t in asyncio.all_tasks() if not t.done()]
+    embed.add_field(name="Aktive asyncio-Tasks", value=str(len(tasks)), inline=True)
+    
+    mongo_uri = os.getenv("MONGODB_URI")
+    if mongo_uri:
+        masked = re.sub(r':([^@]+)@', ':****@', mongo_uri)
+        embed.add_field(name="MONGODB_URI (maskiert)", value=masked, inline=False)
+    else:
+        embed.add_field(name="MONGODB_URI", value="❌ Nicht gesetzt", inline=False)
+    
+    await interaction.followup.send(embed=embed)
+
+def detect_hosting_platform() -> str:
+    if os.getenv("RENDER"):
+        return "Render"
+    if os.getenv("HEROKU"):
+        return "Heroku"
+    if os.getenv("REPL_ID") or os.getenv("REPL_SLUG"):
+        return "Replit"
+    if os.getenv("RAILWAY_ENVIRONMENT"):
+        return "Railway"
+    if os.getenv("FLY_APP_NAME"):
+        return "Fly.io"
+    if os.getenv("DYNO"):
+        return "Heroku (Dyno)"
+    if os.getenv("AWS_EXECUTION_ENV"):
+        return "AWS Lambda / ECS"
+    if os.getenv("WEBSITE_INSTANCE_ID"):
+        return "Azure Web App"
+    if os.getenv("KUBERNETES_SERVICE_HOST"):
+        return "Kubernetes (Generic)"
+    if os.getenv("GCP_PROJECT"):
+        return "Google Cloud Platform"
+    if os.getenv("CODESPACES"):
+        return "GitHub Codespaces"
+    if os.getenv("GITPOD_WORKSPACE_ID"):
+        return "Gitpod"
+    if os.getenv("DETA_RUNTIME"):
+        return "Deta"
+    return "Lokal / Unbekannt"
+
+@bot.tree.command(name="hostinfo", description="Zeigt Informationen über die Hosting-Plattform und Systemumgebung.")
+@app_commands.default_permissions(administrator=True)
+async def hostinfo(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    platform = detect_hosting_platform()
+    import platform as plat
+    import sys
+    
+    embed = discord.Embed(title="🖥️ Hosting-Informationen", color=0x5865f2, timestamp=datetime.now(timezone.utc))
+    embed.add_field(name="Plattform", value=platform, inline=False)
+    embed.add_field(name="Betriebssystem", value=f"{plat.system()} {plat.release()} ({plat.machine()})", inline=False)
+    embed.add_field(name="Python-Version", value=sys.version.split()[0], inline=True)
+    embed.add_field(name="Hostname", value=os.uname().nodename if hasattr(os, 'uname') else "unbekannt", inline=True)
+    embed.add_field(name="Arbeitsverzeichnis", value=os.getcwd()[:100], inline=False)
+    
+    mongo_uri = os.getenv("MONGODB_URI")
+    if mongo_uri:
+        masked = re.sub(r':([^@]+)@', ':****@', mongo_uri)
+        embed.add_field(name="MONGODB_URI (maskiert)", value=masked, inline=False)
+    else:
+        embed.add_field(name="MONGODB_URI", value="❌ Nicht gesetzt", inline=False)
+    
+    await interaction.followup.send(embed=embed)
 
 # ============================================================
 # VERIFIZIERUNG
