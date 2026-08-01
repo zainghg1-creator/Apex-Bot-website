@@ -3219,12 +3219,14 @@ async def serverliste(interaction: discord.Interaction):
 
     await interaction.response.defer(ephemeral=True)
 
-    guild_fields = []
-    for guild in bot.guilds:
+    sorted_guilds = sorted(bot.guilds, key=lambda g: g.member_count or 0, reverse=True)
+
+    lines = []
+    for idx, guild in enumerate(sorted_guilds, start=1):
         joined_at = guild.me.joined_at
         if joined_at:
             joined_ts = int(ensure_aware(joined_at).timestamp())
-            since_text = f"<t:{joined_ts}:F> (<t:{joined_ts}:R>)"
+            since_text = f"<t:{joined_ts}:R>"
         else:
             since_text = "Unbekannt"
 
@@ -3238,28 +3240,37 @@ async def serverliste(interaction: discord.Interaction):
         except Exception:
             invite_link = None
 
-        link_text = f"[Server-Link]({invite_link})" if invite_link else "Kein Invite verfügbar"
+        link_text = f"[Link]({invite_link})" if invite_link else "Kein Invite"
 
-        guild_fields.append((
-            f"{guild.name} ({guild.id})",
-            f"👥 Mitglieder: {guild.member_count}\n🕒 Auf dem Server seit: {since_text}\n🔗 {link_text}"
-        ))
+        lines.append(
+            f"**{idx}.** {guild.name} — 👥 **{guild.member_count}** | seit {since_text} | {link_text}"
+        )
 
-    # Discord erlaubt max. 25 Felder pro Embed und max. 10 Embeds pro Nachricht
-    FIELDS_PER_EMBED = 25
+    # Discord erlaubt max. 4096 Zeichen pro Embed-Description und max. 10 Embeds pro Nachricht
+    MAX_DESC_LENGTH = 3500
     MAX_EMBEDS_PER_MESSAGE = 10
-    chunks = [guild_fields[i:i + FIELDS_PER_EMBED] for i in range(0, len(guild_fields), FIELDS_PER_EMBED)]
+
+    pages = []
+    current_page = []
+    current_length = 0
+    for line in lines:
+        if current_length + len(line) + 1 > MAX_DESC_LENGTH and current_page:
+            pages.append(current_page)
+            current_page = []
+            current_length = 0
+        current_page.append(line)
+        current_length += len(line) + 1
+    if current_page:
+        pages.append(current_page)
 
     embeds = []
-    for idx, chunk in enumerate(chunks, start=1):
+    for idx, page in enumerate(pages, start=1):
         embed = discord.Embed(
-            title=f"📋 Serverliste ({idx}/{len(chunks)})" if len(chunks) > 1 else "📋 Serverliste",
-            description=f"Der Bot ist aktuell auf **{len(bot.guilds)}** Server(n).",
+            title=f"📋 Serverliste ({idx}/{len(pages)})" if len(pages) > 1 else "📋 Serverliste",
+            description=f"Der Bot ist aktuell auf **{len(bot.guilds)}** Server(n), sortiert nach Mitgliederzahl:\n\n" + "\n".join(page),
             color=0xffffff,
             timestamp=datetime.now(timezone.utc)
         )
-        for name, value in chunk:
-            embed.add_field(name=name, value=value, inline=False)
         embeds.append(embed)
 
     for i in range(0, len(embeds), MAX_EMBEDS_PER_MESSAGE):
