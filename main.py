@@ -2,6 +2,19 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 import os
 import threading
 
+# ======================================================================
+# 🛑 WICHTIGER HINWEIS FÜR RENDER (Gegen den 10062-Fehler):
+# ======================================================================
+# Der Bot hat jetzt einen Webserver. Damit er NIE mehr einschläft 
+# (Cold Start), MUSST du einen kostenlosen Uptime-Monitor wie 
+# "UptimeRobot" nutzen. 
+# 
+# Gehe auf UptimeRobot, erstelle einen "HTTP(s)" Monitor und gib als URL 
+# deine Render-URL ein (z.B. https://dein-bot-name.onrender.com).
+# Stelle den Monitor auf "Every 5 minutes".
+# Nur so bleibt der Bot dauerhaft wach und der 10062-Fehler kommt nie wieder!
+# ======================================================================
+
 # Webserver für Render & cron-job.org
 class KeepAliveHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -4061,7 +4074,19 @@ async def leaderboard(
 # ============================================================
 @bot.tree.command(name="ping", description="Zeigt die aktuelle Verbindungsgeschwindigkeit des Bots an.")
 async def ping(interaction: discord.Interaction):
-    await interaction.response.defer(ephemeral=True)
+    # WICHTIGER FIX: Abfangen des Cold-Start-Fehlers (10062), bevor der Bot überhaupt deferen kann
+    try:
+        await interaction.response.defer(ephemeral=True)
+    except discord.NotFound:
+        # Die Interaktion ist bereits abgelaufen, weil Render zu lange zum Aufwachen gebraucht hat.
+        # Wir beenden den Befehl hier sauber, ohne dass der Bot abstürzt.
+        logger.warning(f"[PING] Interaktion abgelaufen (10062) für {interaction.user}. Render Cold Start?")
+        return
+    except Exception as e:
+        # Falls etwas anderes schief läuft, loggen wir es.
+        logger.error(f"[PING] Unerwarteter Fehler beim Defer: {e}")
+        return
+
     try:
         start = time.monotonic()
         api_latency = (time.monotonic() - start) * 1000
