@@ -4071,7 +4071,6 @@ async def leaderboard(
     await interaction.followup.send(embed=embed)
 
 # ============================================================
-# NEUE ROBUSTE /ping IMPLEMENTIERUNG (ersetzt den alten /ping)
 @bot.tree.command(name="ping", description="Zeigt die aktuelle Verbindungsgeschwindigkeit des Bots an.")
 async def ping(interaction: discord.Interaction):
     # 1. Abfangen des 10062 Cold-Start-Fehlers
@@ -4081,21 +4080,46 @@ async def ping(interaction: discord.Interaction):
         logger.warning(f"[PING] Interaktion abgelaufen (10062) für {interaction.user}. Render Cold Start?")
         return
 
-    # =================================================================
-    # 🔥 DER ULTIMATIVE FIX: Wenn db None ist, bauen wir SOFORT neu auf!
-    # =================================================================
-    global db
+    # ================================================================
+    # 🔥 ULTIMATIVER FIX: Wenn db None ist, bauen wir SOFORT neu auf
+    # ================================================================
+    global db, guild_configs, giveaways_collection, team_warns_collection, counting_collection, levels_collection, button_actions, applications_collection, minigame_rounds_collection, transcripts_collection, shifts_collection, shift_stats_collection, quiz_stats_collection, logouts_collection, tickets_collection
+    
     try:
         if db is None and MONGODB_URI:
             logger.warning("[PING] DB war im Speicher None, starte NOTFALL-Reconnect...")
-            mongo_client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
-            mongo_client.admin.command('ping')  # Erzwingt sofortigen Verbindungstest
+            
+            # Wichtig: MongoClient ist synchron. Um den Bot nicht einzufrieren, nutzen wir den Thread-Pool!
+            def _sync_reconnect():
+                new_client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
+                new_client.admin.command('ping')
+                return new_client
+            
+            loop = asyncio.get_event_loop()
+            mongo_client = await loop.run_in_executor(_db_call_executor, _sync_reconnect)
+            
             db = mongo_client["apex"]
-            logger.info("[PING] NOTFALL-Reconnect erfolgreich! ✅")
+            # HIER MÜSSEN ALLE COLLECTIONS NEU ZUGEWIESEN WERDEN!
+            guild_configs = db["guildconfigs"]
+            giveaways_collection = db["giveaways"]
+            team_warns_collection = db["teamwarns"]
+            counting_collection = db["counting"]
+            levels_collection = db["levels"]
+            button_actions = db["button_actions"]
+            applications_collection = db["applications"]
+            minigame_rounds_collection = db["minigame_rounds"]
+            transcripts_collection = db["transcripts"]
+            shifts_collection = db["shifts"]
+            shift_stats_collection = db["shift_stats"]
+            quiz_stats_collection = db["quiz_stats"]
+            logouts_collection = db["logouts"]
+            tickets_collection = db["tickets"]
+            
+            logger.info("[PING] NOTFALL-Reconnect inkl. Collections erfolgreich! ✅")
     except Exception as e:
         logger.error(f"[PING] NOTFALL-Reconnect fehlgeschlagen: {e}")
         db = None
-    # =================================================================
+    # ================================================================
 
     try:
         start = time.monotonic()
@@ -4135,7 +4159,6 @@ async def ping(interaction: discord.Interaction):
             await interaction.followup.send(f"❌ Fehler: {e}", ephemeral=True)
         except:
             pass
-        
 # ============================================================
 # NEUE BEFEHLE: /debug und /hostinfo
 # ============================================================
