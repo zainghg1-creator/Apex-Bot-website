@@ -1412,6 +1412,58 @@ async def application_registration_loop():
         await asyncio.sleep(20)
 
 # ============================================================
+# DEBUG-BEFEHL FÜR FEHLERDIAGNOSE
+# ============================================================
+
+@bot.tree.command(name="debug", description="Zeigt detaillierte Debug-Informationen über den Bot und die Datenbankverbindung.")
+@app_commands.default_permissions(administrator=True)
+async def debug_command(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    embed = discord.Embed(title="🐞 Debug-Informationen", color=0x5865f2, timestamp=datetime.now(timezone.utc))
+    
+    # Bot-Info
+    embed.add_field(name="Bot", value=f"{bot.user} (ID: {bot.user.id})", inline=False)
+    embed.add_field(name="Server", value=str(len(bot.guilds)), inline=True)
+    embed.add_field(name="Latenz (Websocket)", value=f"{round(bot.latency * 1000)} ms", inline=True)
+    
+    # Datenbankstatus
+    db_status = "✅ Verbunden" if db is not None else "❌ Nicht verbunden"
+    db_detail = ""
+    if db is not None:
+        try:
+            start = time.monotonic()
+            await db_call(db.command, "ping")
+            db_latency = (time.monotonic() - start) * 1000
+            db_status = f"✅ Verbunden ({db_latency:.0f} ms)"
+        except Exception as e:
+            db_status = "❌ Fehler beim Ping"
+            db_detail = f"**Fehler:** {type(e).__name__}: {str(e)[:200]}"
+    else:
+        db_detail = "❌ `db` ist `None` – MongoDB nicht initialisiert (URI fehlt oder Verbindung fehlgeschlagen)."
+    
+    embed.add_field(name="Datenbank", value=db_status, inline=False)
+    if db_detail:
+        embed.add_field(name="Details", value=db_detail, inline=False)
+    
+    # Cache-Info
+    cache_size = len(_config_cache._store)
+    embed.add_field(name="Config-Cache-Einträge", value=str(cache_size), inline=True)
+    
+    # Aktive Tasks
+    tasks = [t for t in asyncio.all_tasks() if not t.done()]
+    embed.add_field(name="Aktive asyncio-Tasks", value=str(len(tasks)), inline=True)
+    
+    # Umgebungsvariablen (URI maskiert)
+    mongo_uri = os.getenv("MONGODB_URI")
+    if mongo_uri:
+        masked = re.sub(r':([^@]+)@', ':****@', mongo_uri)  # Passwort unkenntlich machen
+        embed.add_field(name="MONGODB_URI (maskiert)", value=masked, inline=False)
+    else:
+        embed.add_field(name="MONGODB_URI", value="❌ Nicht gesetzt", inline=False)
+    
+    await interaction.followup.send(embed=embed)
+
+# ============================================================
 # GIVEAWAY
 # ============================================================
 def create_giveaway_embed(giveaway: dict) -> discord.Embed:
