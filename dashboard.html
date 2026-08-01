@@ -1,0 +1,4283 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Apex Bot – Dashboard</title>
+
+    <script>
+        if (location.search.includes('debug=1')) {
+            var s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/eruda';
+            s.onload = function () { eruda.init(); };
+            document.head.appendChild(s);
+        }
+    </script>
+
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='50' fill='%23000000'/><path d='M50 18 L22 75 L38 75 L50 48 L62 75 L78 75 Z' fill='%23FFFFFF'/><path d='M15 50 C20 25, 40 12, 68 12' stroke='%23FFFFFF' stroke-width='4' stroke-linecap='round' fill='none'/><path d='M85 50 C80 75, 60 88, 32 88' stroke='%23FFFFFF' stroke-width='4' stroke-linecap='round' fill='none'/><line x1='72' y1='20' x2='28' y2='80' stroke='%23FFFFFF' stroke-width='3' stroke-linecap='round'/></svg>">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-base: #000000;
+            --bg-surface: #0a0a0a;
+            --bg-card: #141414;
+            --border-subtle: rgba(255, 255, 255, 0.06);
+            --border-medium: rgba(255, 255, 255, 0.10);
+            --border-active: rgba(255, 255, 255, 0.20);
+            --text-primary: #ffffff;
+            --text-muted: #a1a1aa;
+            --text-dim: #71717a;
+            --accent-purple: #6d5ef8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .bg-grid {
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 40px 40px;
+            z-index: -2;
+            pointer-events: none;
+        }
+
+        #starfield {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+            display: block;
+        }
+
+        
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 4%;
+            backdrop-filter: blur(16px);
+            background: rgba(0, 0, 0, 0.85);
+            border-bottom: 1px solid var(--border-subtle);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            min-height: 60px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .hamburger-btn {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 0;
+            flex-shrink: 0;
+        }
+
+        .hamburger-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(109, 94, 248, 0.4);
+        }
+
+        .hamburger-btn span {
+            display: block;
+            width: 18px;
+            height: 2px;
+            background: var(--text-primary);
+            border-radius: 2px;
+            transition: all 0.25s ease;
+            transform-origin: center;
+        }
+
+        .hamburger-btn.active span:nth-child(1) {
+            transform: translateY(6px) rotate(45deg);
+        }
+
+        .hamburger-btn.active span:nth-child(2) {
+            opacity: 0;
+            transform: scaleX(0);
+        }
+
+        .hamburger-btn.active span:nth-child(3) {
+            transform: translateY(-6px) rotate(-45deg);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+
+        .brand-logo {
+            width: 30px;
+            height: 30px;
+            background: #000;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .brand-logo svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .brand-name {
+            font-size: 1rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        .nav-center {
+            display: none;
+            align-items: center;
+            gap: 24px;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: color 0.2s ease;
+        }
+
+        .nav-link:hover {
+            color: var(--text-primary);
+        }
+
+        .user-chip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.04);
+            padding: 4px 10px 4px 4px;
+            border-radius: 30px;
+            border: 1px solid var(--border-subtle);
+            flex-shrink: 0;
+        }
+
+        .user-chip img {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid var(--border-subtle);
+        }
+
+        #user-name {
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: none;
+        }
+
+        .logout-btn {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.04);
+            transition: all 0.2s ease;
+        }
+
+        .logout-btn:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .brand-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-decoration: none;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            font-family: inherit;
+            min-height: 36px;
+            touch-action: manipulation;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #8b7dff, #6d5ef8);
+            color: #ffffff;
+            box-shadow: 0 4px 14px rgba(109, 94, 248, 0.3);
+        }
+
+        .btn-primary:hover {
+            filter: brightness(1.08);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(109, 94, 248, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-primary);
+            border-color: var(--border-subtle);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--border-medium);
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: #ffffff;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+            transform: translateY(-1px);
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 32px 16px 80px;
+            width: 100%;
+        }
+
+        .page-heading {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .page-heading h2 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 4px;
+        }
+
+        .page-subtitle {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .state-box {
+            background: var(--bg-surface);
+            padding: 2rem 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+            color: var(--text-muted);
+            border: 1px solid var(--border-subtle);
+            font-size: 0.9rem;
+        }
+
+        .state-box.error {
+            border-color: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+
+        .guild-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 14px;
+        }
+
+        .guild-card {
+            background: var(--bg-surface);
+            padding: 1.2rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-subtle);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: all 0.25s ease;
+        }
+
+        .guild-card:hover {
+            border-color: rgba(109, 94, 248, 0.35);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
+        }
+
+        .guild-card.add-card {
+            border-style: dashed;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            cursor: pointer;
+            background: transparent;
+        }
+
+        .guild-card.add-card:hover {
+            border-color: var(--border-active);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .guild-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+            width: 100%;
+        }
+
+        .guild-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-subtle);
+            flex-shrink: 0;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .guild-name {
+            flex: 1;
+            min-width: 0;
+            font-size: 0.95rem;
+            font-weight: 700;
+            line-height: 1.3;
+            color: var(--text-primary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .guild-detail {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .guild-detail span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .guild-action {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .guild-action .btn {
+            flex: 1;
+            min-width: 50px;
+            padding: 6px 12px;
+            font-size: 0.75rem;
+            min-height: 32px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-base);
+            display: flex;
+            flex-direction: column;
+            z-index: 200;
+        }
+
+        
+        .sidebar {
+            background: var(--bg-surface);
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 6px;
+            overflow-x: auto;
+            flex-shrink: 0;
+            min-height: 50px;
+            scrollbar-width: thin;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            height: 3px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 10px;
+        }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+            margin-right: 6px;
+        }
+
+        .guild-icon-small {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid var(--border-subtle);
+        }
+
+        #active-guild-name {
+            font-weight: 700;
+            font-size: 0.75rem;
+            max-width: 100px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .sidebar-nav {
+            display: flex;
+            flex-direction: row;
+            gap: 2px;
+            flex: 1;
+            overflow-x: auto;
+            padding: 2px 0;
+            scrollbar-width: thin;
+        }
+
+        .sidebar-nav::-webkit-scrollbar {
+            height: 2px;
+        }
+
+        .sidebar-group {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .sidebar-group+.sidebar-group {
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        .sidebar-group-label {
+            font-size: 0.64rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.09em;
+            color: var(--text-dim);
+            padding: 2px 10px 6px;
+            flex-shrink: 0;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+            flex-shrink: 0;
+            min-height: 32px;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+            background: rgba(109, 94, 248, 0.08);
+        }
+
+        .tab-btn:hover .tab-icon svg {
+            stroke: #a599ff;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #8b7dff, #6d5ef8);
+            color: #ffffff;
+            box-shadow: 0 4px 18px rgba(109, 94, 248, 0.4);
+        }
+
+        .tab-btn.active .tab-icon svg {
+            stroke: #ffffff;
+        }
+
+        .tab-icon {
+            width: 14px;
+            height: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .tab-icon svg {
+            width: 14px;
+            height: 14px;
+            stroke: var(--text-muted);
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            transition: stroke 0.2s ease;
+        }
+
+        
+        .crown-badge {
+            margin-left: auto;
+            font-size: 0.72rem;
+            line-height: 1;
+            filter: drop-shadow(0 0 4px rgba(250, 204, 21, 0.55));
+            flex-shrink: 0;
+        }
+
+        
+        .locked-popup-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(3px);
+            pointer-events: none;
+        }
+
+        .locked-popup-box {
+            pointer-events: none;
+            background: var(--bg-card);
+            border: 1px solid var(--border-medium);
+            border-radius: 18px;
+            padding: 36px 30px;
+            max-width: 380px;
+            width: 88%;
+            text-align: center;
+            box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+        }
+
+        .locked-popup-crown {
+            font-size: 2.6rem;
+            margin-bottom: 14px;
+            filter: drop-shadow(0 0 12px rgba(250, 204, 21, 0.6));
+        }
+
+        .locked-popup-box h3 {
+            font-size: 1.05rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .locked-popup-box p {
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            line-height: 1.55;
+        }
+
+        .locked-popup-hint {
+            margin-top: 14px;
+            font-size: 0.7rem;
+            color: var(--text-dim);
+        }
+
+        .back-btn {
+            flex-shrink: 0;
+            padding: 4px 10px;
+            font-size: 0.65rem;
+            min-height: 32px;
+            white-space: nowrap;
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 1.2rem;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .content-area h2 {
+            font-size: 1.3rem;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+            margin-bottom: 4px;
+            position: relative;
+            padding-left: 14px;
+        }
+
+        .content-area h2::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 3px;
+            bottom: 3px;
+            width: 4px;
+            border-radius: 4px;
+            background: linear-gradient(180deg, #8b7dff, #6d5ef8);
+        }
+
+        .module-page>p {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+        }
+
+        
+        .ticket-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .ticket-stat {
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(155deg, var(--bg-surface) 0%, var(--bg-card) 100%);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .ticket-stat::after {
+            content: '';
+            position: absolute;
+            top: -30px;
+            right: -30px;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(109, 94, 248, 0.18), transparent 70%);
+        }
+
+        .ticket-stat .num {
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+        }
+
+        .ticket-stat .lbl {
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .ticket-stat.accent .num {
+            color: #6d5ef8;
+        }
+
+        .ticket-stat.ok .num {
+            color: #22c55e;
+        }
+
+        
+        .ticket-toolbar {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 18px;
+            background: linear-gradient(135deg, rgba(109, 94, 248, 0.10), rgba(109, 94, 248, 0.02));
+            padding: 14px 16px;
+            border-radius: 14px;
+            border: 1px solid rgba(109, 94, 248, 0.22);
+        }
+
+        .ticket-toolbar label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            flex-shrink: 0;
+        }
+
+        .ticket-toolbar select {
+            flex: 1;
+            min-width: 130px;
+            background: var(--bg-base);
+            border: 1px solid var(--border-medium);
+            border-radius: 8px;
+            padding: 8px 10px;
+            color: var(--text-primary);
+            font-size: 0.8rem;
+            min-height: 38px;
+            transition: border-color 0.2s ease;
+        }
+
+        .ticket-toolbar select:focus {
+            outline: none;
+            border-color: #6d5ef8;
+        }
+
+        .ticket-toolbar .btn-primary {
+            background: linear-gradient(135deg, #8b7dff, #6d5ef8);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(109, 94, 248, 0.35);
+            border: none;
+        }
+
+        .ticket-toolbar .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(109, 94, 248, 0.45);
+        }
+
+        
+        .ticket-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 14px;
+            margin-top: 4px;
+        }
+
+        .ticket-card {
+            position: relative;
+            background: linear-gradient(160deg, var(--bg-surface) 0%, var(--bg-card) 130%);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            padding: 18px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: all 0.25s ease;
+            overflow: hidden;
+        }
+
+        .ticket-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--ticket-accent, #71717a);
+            box-shadow: 0 0 12px var(--ticket-accent, transparent);
+        }
+
+        .ticket-card:hover {
+            border-color: var(--border-medium);
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+        }
+
+        .ticket-card .header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .ticket-card .title-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .ticket-card .emoji-badge {
+            width: 38px;
+            height: 38px;
+            flex-shrink: 0;
+            border-radius: 10px;
+            background: rgba(109, 94, 248, 0.14);
+            border: 1px solid rgba(109, 94, 248, 0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+
+        .ticket-card .title {
+            font-weight: 700;
+            font-size: 0.98rem;
+            color: var(--text-primary);
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .ticket-card .status-pill {
+            font-size: 0.6rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            padding: 4px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--border-subtle);
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text-dim);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            flex-shrink: 0;
+        }
+
+        .ticket-card .status-pill .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--text-dim);
+        }
+
+        .ticket-card .status-pill.active {
+            color: #22c55e;
+            border-color: rgba(34, 197, 94, 0.25);
+            background: rgba(34, 197, 94, 0.08);
+        }
+
+        .ticket-card .status-pill.active .dot {
+            background: #22c55e;
+            box-shadow: 0 0 6px #22c55e;
+            animation: pulseDot 1.8s ease-in-out infinite;
+        }
+
+        @keyframes pulseDot {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
+        }
+
+        .ticket-card .meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            font-size: 0.72rem;
+            color: var(--text-muted);
+        }
+
+        .ticket-card .meta span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-subtle);
+            padding: 4px 10px;
+            border-radius: 8px;
+        }
+
+        .ticket-card .actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 4px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        .ticket-card .actions .btn {
+            padding: 6px 14px;
+            font-size: 0.72rem;
+            min-height: 32px;
+        }
+
+        .ticket-add-card {
+            background: rgba(109, 94, 248, 0.03);
+            border: 2px dashed rgba(109, 94, 248, 0.3);
+            border-radius: 14px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            color: var(--text-muted);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .ticket-add-card:hover {
+            border-color: #6d5ef8;
+            color: var(--text-primary);
+            background: rgba(109, 94, 248, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .ticket-add-card .icon {
+            font-size: 1.6rem;
+            line-height: 1;
+            color: #6d5ef8;
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(109, 94, 248, 0.14);
+            margin-bottom: 4px;
+        }
+
+        .ticket-add-card .label {
+            font-weight: 700;
+            font-size: 1rem;
+        }
+
+        .ticket-add-card .sub {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+
+        
+        .edit-view {
+            margin-top: 0.5rem;
+        }
+
+        .edit-toolbar {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            background: var(--bg-surface);
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .edit-toolbar label {
+            font-weight: 600;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+
+        .edit-toolbar select {
+            flex: 1;
+            min-width: 140px;
+            background: var(--bg-base);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            padding: 6px 10px;
+            color: var(--text-primary);
+            min-height: 34px;
+            font-size: 0.8rem;
+        }
+
+        .edit-tabs {
+            display: flex;
+            gap: 2px;
+            border-bottom: 1px solid var(--border-subtle);
+            margin-bottom: 1.2rem;
+            flex-wrap: wrap;
+        }
+
+        .edit-tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 8px 16px;
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+            font-family: inherit;
+            font-size: 0.8rem;
+        }
+
+        .edit-tab-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .edit-tab-btn.active {
+            color: var(--text-primary);
+            border-bottom-color: var(--accent-purple);
+        }
+
+        .subtab-btn.active {
+            color: var(--text-primary) !important;
+            border-bottom-color: var(--accent-purple) !important;
+        }
+
+        .edit-tab-content.hidden {
+            display: none;
+        }
+
+        .panel-card {
+            background: linear-gradient(160deg, var(--bg-surface) 0%, var(--bg-card) 140%);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 1.2rem;
+            margin-bottom: 1rem;
+            transition: all 0.25s ease;
+        }
+
+        .panel-card:hover {
+            border-color: rgba(109, 94, 248, 0.3);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .form-card {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-width: 100%;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .form-group label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            background: var(--bg-base);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 8px 12px;
+            color: var(--text-primary);
+            outline: none;
+            font-family: inherit;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+            min-height: 38px;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            border-color: #6d5ef8;
+            box-shadow: 0 0 0 3px rgba(109, 94, 248, 0.15);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .form-group small {
+            color: var(--text-dim);
+            font-size: 0.7rem;
+        }
+
+        .form-group select {
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            padding-right: 32px;
+        }
+
+        .switch-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .switch-row label {
+            margin: 0;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .switch {
+            position: relative;
+            width: 40px;
+            height: 22px;
+            flex-shrink: 0;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .switch-slider {
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.10);
+            border-radius: 30px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .switch-slider::before {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            left: 3px;
+            top: 3px;
+            background: var(--text-muted);
+            border-radius: 50%;
+            transition: 0.2s;
+        }
+
+        .switch input:checked+.switch-slider {
+            background: #ffffff;
+        }
+
+        .switch input:checked+.switch-slider::before {
+            background: #000000;
+            transform: translateX(18px);
+        }
+
+        .chip-select {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            background: var(--bg-base);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 8px;
+            min-height: 40px;
+            transition: border-color 0.2s ease;
+        }
+
+        .chip-select:hover {
+            border-color: var(--border-active);
+        }
+
+        .role-chip {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-subtle);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s ease;
+            color: var(--text-muted);
+        }
+
+        .role-chip:hover {
+            border-color: var(--border-active);
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .role-chip.selected {
+            background: var(--accent-purple);
+            color: #fff;
+            border-color: var(--accent-purple);
+            box-shadow: 0 2px 10px rgba(109, 94, 248, 0.30);
+        }
+
+        .chip-empty {
+            color: var(--text-dim);
+            font-size: 0.8rem;
+            padding: 4px 0;
+        }
+
+        .chip-select-scroll {
+            max-height: 180px;
+            overflow-y: auto;
+        }
+
+        .chip-filter-input {
+            width: 100%;
+            background: var(--bg-base);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 7px 10px;
+            font-size: 0.8rem;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+
+        .chip-filter-input:focus {
+            outline: none;
+            border-color: var(--border-active);
+        }
+
+        .command-list {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .command-row {
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 14px 0;
+        }
+
+        .command-row:last-child {
+            border-bottom: none;
+        }
+
+        .command-row-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .command-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .command-name {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .command-desc {
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            margin-top: 2px;
+        }
+
+        .command-menu-btn {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-muted);
+            border-radius: 8px;
+            width: 32px;
+            height: 32px;
+            flex-shrink: 0;
+            cursor: pointer;
+            font-size: 1rem;
+            line-height: 1;
+            transition: all 0.2s ease;
+        }
+
+        .command-menu-btn:hover {
+            color: var(--text-primary);
+            border-color: var(--border-active);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .command-menu-btn.active {
+            color: var(--text-primary);
+            border-color: var(--accent-purple);
+        }
+
+        .command-roles {
+            margin-top: 12px;
+        }
+
+        .command-roles label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .color-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .color-row input[type="color"] {
+            width: 38px;
+            height: 36px;
+            padding: 2px;
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            background: var(--bg-base);
+            cursor: pointer;
+        }
+
+        .color-row input[type="text"] {
+            max-width: 100px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+        }
+
+        .image-upload {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .image-preview {
+            width: 56px;
+            height: 56px;
+            border-radius: 8px;
+            object-fit: cover;
+            background: var(--bg-base);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .upload-btn-wrap input[type="file"] {
+            display: none;
+        }
+
+        .form-action {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 4px;
+        }
+
+        .form-action .btn {
+            flex: 1;
+            min-width: 100px;
+        }
+
+        .option-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            background: var(--bg-base);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+        }
+
+        .option-row input,
+        .option-row select {
+            flex: 1;
+            min-width: 80px;
+            background: var(--bg-base);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            padding: 6px 10px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.8rem;
+            min-height: 34px;
+        }
+
+        .option-remove {
+            background: transparent;
+            border: 1px solid var(--border-subtle);
+            color: var(--text-muted);
+            border-radius: 6px;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .option-remove:hover {
+            color: #ff6b6b;
+            border-color: #ff6b6b;
+        }
+
+        .add-option-btn {
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px dashed var(--border-subtle);
+            color: var(--text-muted);
+            padding: 6px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            min-height: 34px;
+        }
+
+        .add-option-btn:hover {
+            color: var(--text-primary);
+            border-color: var(--border-active);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .option-support-roles {
+            width: 100%;
+            margin-top: 4px;
+        }
+
+        .option-support-roles label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .embed-preview {
+            background: #2b2d31;
+            border-left: 4px solid #ffffff;
+            border-radius: 6px;
+            padding: 12px 14px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: #dbdee1;
+        }
+
+        .embed-preview-title {
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 4px;
+            font-size: 0.9rem;
+        }
+
+        .embed-preview-desc {
+            font-size: 0.8rem;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .embed-preview-image {
+            width: 100%;
+            border-radius: 6px;
+            margin-top: 6px;
+            max-height: 120px;
+            object-fit: cover;
+        }
+
+        .embed-preview-image.hidden {
+            display: none;
+        }
+
+        .embed-preview-title.hidden {
+            display: none;
+        }
+
+        .edit-preview-wrap {
+            margin-bottom: 16px;
+            background: var(--bg-surface);
+            border-radius: 10px;
+            padding: 14px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        
+        .tpe {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .tpe .switch input:checked+.switch-slider {
+            background: var(--tpe-accent);
+        }
+
+        .tpe .switch input:checked+.switch-slider::before {
+            background: #ffffff;
+        }
+
+        .tpe .role-chip.selected {
+            background: var(--tpe-accent);
+            color: #fff;
+            border-color: var(--tpe-accent);
+            box-shadow: 0 2px 10px rgba(109, 94, 248, 0.30);
+        }
+
+        .tpe .form-group input:focus,
+        .tpe .form-group textarea:focus,
+        .tpe .form-group select:focus {
+            border-color: var(--tpe-accent);
+            box-shadow: 0 0 0 2px var(--tpe-accent-soft);
+        }
+
+        .tpe .add-option-btn {
+            background: var(--tpe-accent-soft);
+            border: 1px dashed var(--tpe-accent);
+            color: var(--tpe-accent);
+        }
+
+        .tpe .add-option-btn:hover {
+            background: rgba(109, 94, 248, 0.22);
+        }
+
+        .tpe .btn-primary {
+            background: var(--tpe-accent);
+            color: #fff;
+        }
+
+        .tpe .btn-primary:hover {
+            background: var(--tpe-accent-hover);
+        }
+
+        .tpe .option-remove:hover,
+        .tpe .button-remove:hover {
+            color: var(--tpe-red);
+            border-color: var(--tpe-red);
+        }
+
+        .tpe-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+            background: var(--tpe-card-bg);
+            border: 1px solid var(--tpe-border);
+            border-radius: 14px;
+            padding: 14px 16px;
+            margin-bottom: 16px;
+        }
+
+        .tpe-back {
+            width: 36px;
+            height: 36px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--tpe-border);
+            border-radius: 10px;
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .tpe-back:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--tpe-border-strong);
+        }
+
+        .tpe-header-titles {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-right: auto;
+            min-width: 140px;
+        }
+
+        .tpe-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+        }
+
+        .tpe-panel-select {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 0;
+            min-height: auto;
+            max-width: 220px;
+        }
+
+        .tpe-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .tpe-channel-select {
+            background: var(--bg-base);
+            border: 1px solid var(--tpe-border);
+            border-radius: 8px;
+            padding: 8px 12px;
+            color: var(--text-primary);
+            font-size: 0.8rem;
+            min-height: 38px;
+            min-width: 180px;
+        }
+
+        .edit-tabs {
+            border-bottom: 1px solid var(--tpe-border);
+        }
+
+        .edit-tab-btn.active {
+            border-bottom-color: var(--tpe-accent);
+        }
+
+        .tpe-card {
+            background: var(--tpe-card-bg);
+            border: 1px solid var(--tpe-border);
+            border-radius: 14px;
+            padding: 18px 20px;
+            margin-bottom: 14px;
+        }
+
+        .tpe-card-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 14px;
+            margin-bottom: 4px;
+        }
+
+        .tpe-card-title {
+            font-weight: 800;
+            font-size: 0.92rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tpe-card-sub {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+
+        .tpe-card .form-group {
+            margin-top: 14px;
+        }
+
+        .tpe-card .form-group:first-child {
+            margin-top: 0;
+        }
+
+        .tpe-stepper {
+            display: flex;
+            align-items: center;
+            width: fit-content;
+            border: 1px solid var(--tpe-border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .tpe-stepper button {
+            width: 38px;
+            height: 40px;
+            border: none;
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-primary);
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .tpe-stepper button:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .tpe-stepper input {
+            width: 64px;
+            text-align: center;
+            border: none;
+            border-left: 1px solid var(--tpe-border);
+            border-right: 1px solid var(--tpe-border);
+            background: var(--bg-base);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            height: 40px;
+            min-height: auto;
+        }
+
+        .tpe-color-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .tpe-swatch {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.15s ease;
+            flex-shrink: 0;
+        }
+
+        .tpe-swatch.selected {
+            box-shadow: 0 0 0 2px var(--tpe-card-bg-alt), 0 0 0 4px currentColor;
+        }
+
+        .tpe-discord-preview {
+            background: #313338;
+            border-radius: 12px;
+            padding: 14px 16px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            margin-bottom: 16px;
+        }
+
+        .tpe-discord-author {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .tpe-discord-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: #000000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .tpe-discord-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .tpe-discord-namerow {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            flex-wrap: wrap;
+        }
+
+        .tpe-discord-name {
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .tpe-discord-app-badge {
+            background: var(--tpe-blue);
+            color: #fff;
+            font-size: 0.55rem;
+            font-weight: 800;
+            padding: 1px 5px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .tpe-discord-time {
+            color: #949ba4;
+            font-size: 0.7rem;
+        }
+
+        .tpe-discord-preview .embed-preview {
+            margin-left: 44px;
+        }
+
+        .tpe-msg-bubble {
+            font-size: 0.82rem;
+            color: #dbdee1;
+            line-height: 1.4;
+            margin-left: 44px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .tpe-btn-card {
+            border: 1px solid var(--tpe-border);
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            background: var(--tpe-card-bg-alt);
+        }
+
+        .tpe-btn-card-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .tpe-btn-card-head input.btn-action-label {
+            background: transparent;
+            border: none;
+            font-weight: 800;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            padding: 0;
+            min-height: auto;
+            width: auto;
+            max-width: 60%;
+        }
+
+        .tpe-btn-card-head input.btn-action-label:focus {
+            outline: none;
+        }
+
+        .tpe-btn-grid {
+            display: grid;
+            grid-template-columns: 64px 1.4fr 1fr;
+            gap: 10px;
+            align-items: end;
+        }
+
+        .tpe-btn-grid .form-group {
+            margin-top: 0 !important;
+        }
+
+        .tpe-btn-preview {
+            margin-top: 12px;
+        }
+
+        .tpe-btn-preview-label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 6px;
+        }
+
+        .tpe-btn-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #fff;
+        }
+
+        .tpe-btn-remove {
+            background: transparent;
+            border: 1px solid var(--tpe-border);
+            color: var(--text-muted);
+            border-radius: 8px;
+            width: 34px;
+            height: 34px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .tpe-btn-remove:hover {
+            color: var(--tpe-red);
+            border-color: var(--tpe-red);
+        }
+
+        .tpe-option-card {
+            border: 1px solid var(--tpe-border);
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            background: var(--tpe-card-bg-alt);
+        }
+
+        .tpe-footer {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            margin-top: 6px;
+            padding-top: 16px;
+            border-top: 1px solid var(--tpe-border);
+        }
+
+        .tpe-footer .btn {
+            min-width: 120px;
+        }
+
+        @media (max-width: 640px) {
+            .tpe-btn-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tpe-header {
+                padding: 12px;
+            }
+
+            .tpe-card {
+                padding: 14px 16px;
+            }
+        }
+
+        
+        #toast-container {
+            position: fixed;
+            bottom: 28px;
+            right: 28px;
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+            width: 92%;
+            max-width: 340px;
+            pointer-events: none;
+        }
+
+        .toast {
+            background: #1a1a1a;
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 0.85rem;
+            padding: 12px 18px;
+            border-radius: 10px;
+            border: 1px solid var(--border-subtle);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+            pointer-events: auto;
+            width: 100%;
+        }
+
+        .toast.success {
+            background: rgba(34, 197, 94, 0.14);
+            border: 1px solid rgba(34, 197, 94, 0.4);
+            color: #86efac;
+        }
+
+        .toast.success::before {
+            content: '✓';
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #22c55e;
+            color: #052e12;
+            font-size: 0.7rem;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        .toast.error {
+            border-left: 4px solid #ef4444;
+        }
+
+        @keyframes toastIn {
+            from {
+                opacity: 0;
+                transform: translateX(24px) scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0) scale(1);
+            }
+        }
+
+        @keyframes toastOut {
+            from {
+                opacity: 1;
+            }
+
+            to {
+                opacity: 0;
+                transform: translateX(24px);
+            }
+        }
+
+        .soon-badge {
+            display: inline-block;
+            font-size: 0.55rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-subtle);
+            padding: 2px 8px;
+            border-radius: 20px;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .status-dot.online {
+            background: #ffffff;
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--border-subtle);
+            border-top-color: var(--accent-purple);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .menu-overlay-bg {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 245;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .menu-overlay-bg.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .hamburger-overlay-btn {
+            display: none;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            width: 38px;
+            height: 38px;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 0;
+            margin-bottom: 12px;
+            flex-shrink: 0;
+        }
+
+        .hamburger-overlay-btn span {
+            display: block;
+            width: 18px;
+            height: 2px;
+            background: var(--text-primary);
+            border-radius: 2px;
+            transition: all 0.25s ease;
+            transform-origin: center;
+        }
+
+        .hamburger-overlay-btn.active span:nth-child(1) {
+            transform: translateY(6px) rotate(45deg);
+        }
+
+        .hamburger-overlay-btn.active span:nth-child(2) {
+            opacity: 0;
+            transform: scaleX(0);
+        }
+
+        .hamburger-overlay-btn.active span:nth-child(3) {
+            transform: translateY(-6px) rotate(-45deg);
+        }
+
+        footer {
+            text-align: center;
+            padding: 24px 16px;
+            border-top: 1px solid var(--border-subtle);
+            color: var(--text-dim);
+            font-size: 0.7rem;
+        }
+
+        
+        @media (max-width: 767px) {
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                width: 280px;
+                flex-direction: column;
+                align-items: stretch;
+                border-bottom: none;
+                border-right: 1px solid var(--border-subtle);
+                padding: 1rem 0.8rem;
+                overflow-y: auto;
+                transform: translateX(-110%);
+                opacity: 0;
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+                z-index: 250;
+                background: var(--bg-surface);
+                box-shadow: 4px 0 30px rgba(0, 0, 0, 0.6);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+                opacity: 1;
+            }
+
+            .sidebar-header {
+                margin-bottom: 1rem;
+                padding-bottom: 0.8rem;
+                border-bottom: 1px solid var(--border-subtle);
+                flex-shrink: 0;
+            }
+
+            #active-guild-name {
+                max-width: 140px;
+                font-size: 0.9rem;
+            }
+
+            .guild-icon-small {
+                width: 34px;
+                height: 34px;
+            }
+
+            .sidebar-nav {
+                flex-direction: column;
+                overflow-y: auto;
+                overflow-x: visible;
+                flex: 1;
+                gap: 2px;
+            }
+
+            .tab-btn {
+                padding: 10px 12px;
+                font-size: 0.85rem;
+                white-space: normal;
+                border-radius: 10px;
+                min-height: 44px;
+            }
+
+            .tab-icon {
+                width: 20px;
+                height: 20px;
+            }
+
+            .tab-icon svg {
+                width: 20px;
+                height: 20px;
+            }
+
+            .back-btn {
+                width: 100%;
+                text-align: center;
+                margin-top: auto;
+                padding: 10px;
+                font-size: 0.8rem;
+                min-height: 44px;
+            }
+
+            .hamburger-overlay-btn {
+                display: flex !important;
+            }
+
+            .menu-overlay-bg {
+                display: block;
+            }
+
+            .nav-center {
+                display: none;
+            }
+
+            #user-name {
+                display: none;
+            }
+
+            .edit-tabs {
+                gap: 2px;
+            }
+
+            .edit-tab-btn {
+                padding: 6px 10px;
+                font-size: 0.7rem;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .hamburger-btn {
+                display: none;
+            }
+
+            .hamburger-overlay-btn {
+                display: none !important;
+            }
+
+            .menu-overlay-bg {
+                display: none !important;
+            }
+
+            .sidebar {
+                width: 230px;
+                flex-direction: column;
+                align-items: stretch;
+                border-bottom: none;
+                border-right: 1px solid var(--border-subtle);
+                padding: 1rem 0.8rem;
+                overflow-y: auto;
+                height: 100%;
+                flex-shrink: 0;
+                position: static;
+                transform: none !important;
+                opacity: 1 !important;
+                z-index: auto;
+                box-shadow: none;
+                background: var(--bg-surface);
+            }
+
+            .sidebar-header {
+                margin-bottom: 1rem;
+                padding-bottom: 0.8rem;
+                border-bottom: 1px solid var(--border-subtle);
+                flex-shrink: 0;
+            }
+
+            .sidebar-nav {
+                flex-direction: column;
+                overflow-y: auto;
+                overflow-x: visible;
+                flex: 1;
+            }
+
+            .tab-btn {
+                padding: 10px 12px;
+                font-size: 0.85rem;
+                white-space: normal;
+            }
+
+            .tab-icon {
+                width: 18px;
+                height: 18px;
+            }
+
+            .tab-icon svg {
+                width: 18px;
+                height: 18px;
+            }
+
+            .back-btn {
+                width: 100%;
+                text-align: center;
+                margin-top: auto;
+            }
+
+            .overlay {
+                flex-direction: row;
+            }
+
+            .content-area {
+                padding: 1.5rem 2rem;
+            }
+
+            #user-name {
+                display: inline !important;
+            }
+
+            .guild-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .ticket-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .guild-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .ticket-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .container {
+                padding: 40px 24px 80px;
+            }
+
+            .content-area {
+                padding: 2rem 2.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            header {
+                padding: 6px 3%;
+                min-height: 48px;
+            }
+
+            .hamburger-btn {
+                width: 34px;
+                height: 34px;
+            }
+
+            .hamburger-btn span {
+                width: 16px;
+                height: 2px;
+            }
+
+            .brand-logo {
+                width: 24px;
+                height: 24px;
+            }
+
+            .brand-logo svg {
+                width: 12px;
+                height: 12px;
+            }
+
+            .brand-name {
+                font-size: 0.8rem;
+            }
+
+            .user-chip img {
+                width: 22px;
+                height: 22px;
+            }
+
+            .logout-btn {
+                font-size: 0.55rem;
+                padding: 2px 6px;
+            }
+
+            .content-area {
+                padding: 0.8rem;
+            }
+
+            .content-area h2 {
+                font-size: 1.1rem;
+            }
+
+            .btn {
+                font-size: 0.75rem;
+                padding: 6px 12px;
+                min-height: 34px;
+            }
+
+            .form-group input,
+            .form-group textarea,
+            .form-group select {
+                font-size: 0.75rem;
+                padding: 6px 8px;
+                min-height: 34px;
+            }
+
+            .ticket-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .ticket-stats {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .ticket-stat .num {
+                font-size: 1.25rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="bg-grid"></div>
+    <canvas id="starfield"></canvas>
+
+    <div id="menu-overlay-bg" class="menu-overlay-bg" onclick="closeMobileMenu()"></div>
+
+    
+    <header>
+        <div class="header-left">
+            <button class="hamburger-btn" id="hamburger-btn" onclick="toggleMobileMenu()" aria-label="Menü">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <a href="/" class="brand">
+                <div class="brand-logo">
+                    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M50 18 L22 75 L38 75 L50 48 L62 75 L78 75 Z" fill="#FFFFFF" />
+                        <path d="M15 50 C20 25, 40 12, 68 12" stroke="#FFFFFF" stroke-width="4"
+                            stroke-linecap="round" />
+                        <path d="M85 50 C80 75, 60 88, 32 88" stroke="#FFFFFF" stroke-width="4"
+                            stroke-linecap="round" />
+                        <line x1="72" y1="20" x2="28" y2="80" stroke="#FFFFFF" stroke-width="3"
+                            stroke-linecap="round" />
+                    </svg>
+                </div>
+                <span class="brand-name">APEX</span>
+            </a>
+        </div>
+
+        <nav class="nav-center">
+            <a href="/" class="nav-link">Startseite</a>
+        </nav>
+
+        <div class="brand-right">
+            <div id="user-chip" class="user-chip">
+                <img id="user-avatar" src="" alt="Avatar">
+                <span id="user-name">Laden...</span>
+                <a href="/auth/logout" class="logout-btn">Abmelden</a>
+            </div>
+        </div>
+    </header>
+
+    
+    <main class="container">
+        <div class="page-heading">
+            <h2>Wähle einen Server</h2>
+            <p class="page-subtitle">Wähle einen Server aus, um die vielfältigen Module zu konfigurieren.</p>
+        </div>
+
+        <div id="loading-state" class="state-box">Lade deine Server...</div>
+        <div id="empty-state" class="state-box hidden">Keine verwalterbaren Server gefunden.</div>
+        <div id="error-state" class="state-box hidden">
+            <span id="error-message">Ein Fehler ist aufgetreten.</span>
+        </div>
+
+        <div id="guild-list" class="guild-grid hidden"></div>
+    </main>
+
+    
+    <div id="manage-overlay" class="overlay hidden">
+
+        
+        <div class="sidebar" id="mobile-sidebar">
+            <div class="sidebar-header">
+                <img id="active-guild-icon" src="" class="guild-icon-small">
+                <span id="active-guild-name">Server</span>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="sidebar-group">
+                    <div class="sidebar-group-label">Allgemein</div>
+                    <button class="tab-btn active" data-tab="overview"
+                        onclick="switchTab('overview'); closeOverlayMenu();">
+                        <span class="tab-icon"><svg viewBox="0 0 24 24">
+                                <rect x="3" y="3" width="7" height="7" />
+                                <rect x="14" y="3" width="7" height="7" />
+                                <rect x="14" y="14" width="7" height="7" />
+                                <rect x="3" y="14" width="7" height="7" />
+                            </svg></span> Übersicht
+                    </button>
+                    <button class="tab-btn" data-tab="stats" onclick="switchTab('stats'); closeOverlayMenu();">
+                        <span class="tab-icon"><svg viewBox="0 0 24 24">
+                                <line x1="18" y1="20" x2="18" y2="10" />
+                                <line x1="12" y1="20" x2="12" y2="4" />
+                                <line x1="6" y1="20" x2="6" y2="14" />
+                            </svg></span> Statistiken
+                    </button>
+                </div>
+
+                <div class="sidebar-group">
+                    <div class="sidebar-group-label">Sicherheit</div>
+                    <button class="tab-btn" data-tab="automod" onclick="switchTab('automod'); closeOverlayMenu();">
+                        <span class="tab-icon"><svg viewBox="0 0 24 24">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                            </svg></span> Automod<span class="crown-badge" title="Nur mit Spezial-Rolle">👑</span>
+                    </button>
+                    <button class="tab-btn" data-tab="antinuke" onclick="switchTab('antinuke'); closeOverlayMenu();">
+                        <span class="tab-icon"><svg viewBox="0 0 24 24">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                            </svg></span> Anti Nuke<span class="crown-badge" title="Nur mit Spezial-Rolle">👑</span>
+                    </button>
+                    <button class="tab-btn" data-tab="verification"
+                        onclick="switchTab('verification'); closeOverlayMenu();">
+                        <span class="tab-icon"><svg viewBox="0 0 24 24">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                <polyline points="22 4 12 14.01 9 11.01" />
+                            </svg></span> Verifizierung
+                    </button>
+                </div>
+
+                <div class="sidebar-group">
+                    <div class="sidebar-group-label">Community</div>
+                    <button class="tab-btn" data-tab="welcome" onclick="switchTab('welcome'); closeOverlayMenu();">
+                        <span class="tab-icon"><svg viewBox="0 0 24 24">
+                                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                                <polyline points="10 17 15 12 10 7" />
+                                <line x1="15" y1="12" x2="3" y2="12" />
+                            </svg></span> Willkommen
+                    </button>
+                    <button class="tab-btn" data-tab="levels" onclick="switchTab('levels'); closeOverlayMenu();">
+                        <span class="tab-icon"><svg viewBox="0 0 24 24">
+                                <path d="M12 2l3 7h7l-5.5 4.5L18.5 21 12 16.5 5.5 21l2-7.5L2 9h7z" />
+                            </svg></span> Level-System
+                    </button>
+                    <button class="tab-btn" data-tab="reactionroles"
+                        onclick="switchTab('reactionroles'); closeOverlayMenu();">
+                        <span class="tab-icon"><svg viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10" />
+                                <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                                <line x1="9" y1="9" x2="9.01" y2="9" />
+                                <line x1="15" y1="9" x2="15.01" y2="9" />
+                            </svg></span> Reaction Roles
+                    </button>
+                    <button class="tab-btn" data-tab="minigames" onclick="switchTab('minigames'); closeOverlayMenu();">
+                        <span class="tab-icon"><svg viewBox="0 0 24 24">
+                                <line x1="6" y1="12" x2="10" y2="12" />
+                                <line x1="8" y1="10" x2="8" y2="14" />
+                                <line x1="15" y1="13" x2="15.01" y2="13" />
+                                <line x1="18" y1="11" x2="18.01" y2="11" />
+                                <rect x="2" y="6" width="20" height="12" rx="6" />
+                            </svg></span> Minigames
+                    </button>
+                </div>
+
+                <div class="sidebar-group">
+                    <div class="sidebar-group-label">Team &amp; Support</div>
+                    <button class="tab-btn" data-tab="tickets" onclick="switchTab('tickets'); closeOverlayMenu();">
+                        <span class="tab-icon"><svg viewBox="0 0 24 24">
+                                <path
+                                    d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z" />
+                                <line x1="12" y1="9" x2="12" y2="15" />
+                            </svg></span> Tickets
+                    </button>
+                    <button class="tab-btn" data-tab="voice_support"
+                        onclick="switchTab('voice_support'); closeOverlayMenu();">
+                        <span class="tab-icon"><svg viewBox="0 0 24 24">
+                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                                <line x1="12" y1="19" x2="12" y2="23" />
+                                <line x1="8" y1="23" x2="16" y2="23" />
+                            </svg></span> Voice Support
+                    </button>
+                    <button class="tab-btn" data-tab="teamliste" onclick="switchTab('teamliste'); closeOverlayMenu();">
+                        <span class="tab-icon"><svg viewBox="0 0 24 24">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                <circle cx="9" cy="7" r="4" />
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                            </svg></span> Teamliste
+                    </button>
+                    <button class="tab-btn" data-tab="teamupdate"
+                        onclick="switchTab('teamupdate'); closeOverlayMenu();">
+                        <span class="tab-icon"><svg viewBox="0 0 24 24">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                <circle cx="8.5" cy="7" r="4" />
+                                <line x1="20" y1="8" x2="20" y2="14" />
+                                <line x1="23" y1="11" x2="17" y2="11" />
+                            </svg></span> Teamupdate
+                    </button>
+                    <button class="tab-btn" data-tab="rolenicknames"
+                        onclick="switchTab('rolenicknames'); closeOverlayMenu();">
+                        <span class="tab-icon"><svg viewBox="0 0 24 24">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                <circle cx="9" cy="7" r="4" />
+                                <path d="M21 8l-2 2-2-2" />
+                                <path d="M15 3l6 0" />
+                            </svg></span> Rollen-Nicknames
+                    </button>
+                    <button class="tab-btn" data-tab="shiftsystem"
+                        onclick="switchTab('shiftsystem'); closeOverlayMenu();">
+                        <span class="tab-icon"><svg viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="12 6 12 12 16 14" />
+                            </svg></span> Schicht-System<span class="crown-badge" title="Nur mit Spezial-Rolle">👑</span>
+                    </button>
+                    <button class="tab-btn" data-tab="abmeldesystem"
+                        onclick="switchTab('abmeldesystem'); closeOverlayMenu();">
+                        <span class="tab-icon"><svg viewBox="0 0 24 24">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                                <polyline points="16 17 21 12 16 7" />
+                                <line x1="21" y1="12" x2="9" y2="12" />
+                            </svg></span> Abmelde-System<span class="crown-badge" title="Nur mit Spezial-Rolle">👑</span>
+                    </button>
+                </div>
+
+                
+                <div class="sidebar-group">
+                    <div class="sidebar-group-label">Roleplay</div>
+                    <button class="tab-btn" data-tab="rp"
+                        onclick="switchTab('rp'); closeOverlayMenu();">
+                        <span class="tab-icon"><svg viewBox="0 0 24 24">
+                                <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3z" />
+                                <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+                            </svg></span> RP Info
+                    </button>
+                </div>
+
+                
+                <div class="sidebar-group">
+                    <div class="sidebar-group-label">Bot</div>
+                    <button class="tab-btn" data-tab="bot" onclick="switchTab('bot'); closeOverlayMenu();">
+                        <span class="tab-icon"><svg viewBox="0 0 24 24">
+                                <path
+                                    d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg></span> Bot Control<span class="crown-badge" title="Nur mit Spezial-Rolle">👑</span>
+                    </button>
+                    <button class="tab-btn" data-tab="statusembed"
+                        onclick="switchTab('statusembed'); closeOverlayMenu();">
+                        <span class="tab-icon"><svg viewBox="0 0 24 24">
+                                <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                            </svg></span> Status-Anzeige
+                    </button>
+                </div>
+
+                
+                <div class="sidebar-group">
+                    <div class="sidebar-group-label">Bewerbungen</div>
+                    <button class="tab-btn" data-tab="applications"
+                        onclick="switchTab('applications'); closeOverlayMenu();">
+                        <span class="tab-icon"><svg viewBox="0 0 24 24">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                                <line x1="9" y1="15" x2="15" y2="15" />
+                                <line x1="9" y1="11" x2="12" y2="11" />
+                            </svg></span> Bewerbungen
+                    </button>
+                </div>
+
+                
+                <div class="sidebar-group">
+                    <div class="sidebar-group-label">Support</div>
+                    <button class="tab-btn" data-tab="voice_support"
+                        onclick="switchTab('voice_support'); closeOverlayMenu();">
+                        <span class="tab-icon"><svg viewBox="0 0 24 24">
+                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                                <line x1="12" y1="19" x2="12" y2="23" />
+                                <line x1="8" y1="23" x2="16" y2="23" />
+                            </svg></span> Voice Support
+                    </button>
+                </div>
+            </nav>
+            <button class="btn btn-secondary back-btn" onclick="closeManagement(); closeOverlayMenu();">← Server
+                wechseln</button>
+        </div>
+
+        
+        <div class="content-area">
+            <button class="hamburger-overlay-btn" id="hamburger-overlay-btn" onclick="toggleOverlayMenu()"
+                aria-label="Menü">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+
+            
+            <div id="mod-overview" class="module-page">
+                <h2>Übersicht</h2>
+                <p>Statistiken und allgemeiner Status des Bots auf deinem Server.</p>
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap:12px;">
+                    <div
+                        style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
+                        <div
+                            style="font-size:0.65rem; text-transform:uppercase; color:var(--text-muted); font-weight:600;">
+                            👥 Mitglieder</div>
+                        <p id="overview-members"
+                            style="font-size:1.3rem; font-weight:800; font-family:'JetBrains Mono',monospace;">N/A</p>
+                    </div>
+                    <div
+                        style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
+                        <div
+                            style="font-size:0.65rem; text-transform:uppercase; color:var(--text-muted); font-weight:600;">
+                            💎 Boosts</div>
+                        <p id="overview-boosts"
+                            style="font-size:1.3rem; font-weight:800; font-family:'JetBrains Mono',monospace;">N/A</p>
+                    </div>
+                    <div
+                        style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
+                        <div
+                            style="font-size:0.65rem; text-transform:uppercase; color:var(--text-muted); font-weight:600;">
+                            🤖 Bots</div>
+                        <p id="overview-bots"
+                            style="font-size:1.3rem; font-weight:800; font-family:'JetBrains Mono',monospace;">N/A</p>
+                    </div>
+                    <div
+                        style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
+                        <div
+                            style="font-size:0.65rem; text-transform:uppercase; color:var(--text-muted); font-weight:600;">
+                            📁 Channels</div>
+                        <p id="overview-channels"
+                            style="font-size:1.3rem; font-weight:800; font-family:'JetBrains Mono',monospace;">N/A</p>
+                    </div>
+                    <div
+                        style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
+                        <div
+                            style="font-size:0.65rem; text-transform:uppercase; color:var(--text-muted); font-weight:600;">
+                            🎭 Rollen</div>
+                        <p id="overview-roles"
+                            style="font-size:1.3rem; font-weight:800; font-family:'JetBrains Mono',monospace;">N/A</p>
+                    </div>
+                    <div
+                        style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
+                        <div
+                            style="font-size:0.65rem; text-transform:uppercase; color:var(--text-muted); font-weight:600;">
+                            📅 Erstellt</div>
+                        <p id="overview-created" style="font-size:0.9rem; font-weight:700;">N/A</p>
+                    </div>
+                    <div
+                        style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
+                        <div
+                            style="font-size:0.65rem; text-transform:uppercase; color:var(--text-muted); font-weight:600;">
+                            👑 Owner</div>
+                        <p id="overview-owner"
+                            style="font-size:0.9rem; font-weight:700; display:flex; align-items:center; gap:6px;">
+                            <img id="overview-owner-avatar" class="hidden" src="" alt=""
+                                style="width:24px;height:24px;border-radius:50%;">
+                            <span id="overview-owner-name">N/A</span>
+                        </p>
+                    </div>
+                    <div
+                        style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:1rem;">
+                        <div
+                            style="font-size:0.65rem; text-transform:uppercase; color:var(--text-muted); font-weight:600;">
+                            🟢 Bot Status</div>
+                        <p style="font-size:0.9rem; font-weight:600; display:flex; align-items:center; gap:6px;"><span
+                                class="status-dot online"></span> Online</p>
+                    </div>
+                </div>
+            </div>
+
+            
+            <div id="mod-welcome" class="module-page hidden">
+                <h2>👋 Willkommen</h2>
+                <p>Lass den Bot automatisch Nachrichten versenden, wenn ein Member beitritt oder verlässt.</p>
+                <div
+                    style="display:flex; gap:6px; border-bottom:1px solid var(--border-subtle); margin-bottom:1rem; flex-wrap:wrap;">
+                    <button class="subtab-btn active" data-sub="join" onclick="switchSubtab('welcome','join')"
+                        style="background:transparent; border:none; color:var(--text-muted); padding:6px 2px; font-size:0.75rem; font-weight:700; cursor:pointer; border-bottom:2px solid transparent; transition:all 0.2s;">Beitritt</button>
+                    <button class="subtab-btn" data-sub="leave" onclick="switchSubtab('welcome','leave')"
+                        style="background:transparent; border:none; color:var(--text-muted); padding:6px 2px; font-size:0.75rem; font-weight:700; cursor:pointer; border-bottom:2px solid transparent; transition:all 0.2s;">Verlassen</button>
+                </div>
+                
+                <div id="welcome-join-page" class="subpage">
+                    <div class="panel-card">
+                        <div class="form-group">
+                            <div class="switch-row"><label>Willkommens-Nachricht aktiv</label><label
+                                    class="switch"><input type="checkbox" id="join-enabled" checked><span
+                                        class="switch-slider"></span></label></div>
+                        </div>
+                        <div class="form-group"><label>Nachrichtentyp</label><select id="join-mode"
+                                onchange="updateEmbedPreview('join')">
+                                <option value="embed">Embed</option>
+                                <option value="text">Einfache Nachricht</option>
+                            </select></div>
+                        <div class="form-group"><label for="join-channel">Kanal</label><select
+                                id="join-channel"></select></div>
+                        <div class="form-group"><label for="join-title">Embed-Titel</label><input type="text"
+                                id="join-title" placeholder="Willkommen auf {server}! 🎉"
+                                oninput="updateEmbedPreview('join')"></div>
+                        <div class="form-group"><label for="join-text">Nachricht / Beschreibung</label><textarea
+                                id="join-text" rows="3" placeholder="Hey {user}, schön dass du da bist!"
+                                oninput="updateEmbedPreview('join')"></textarea><small>Platzhalter: <code>{user}</code>,
+                                <code>{username}</code>, <code>{server}</code>, <code>{membercount}</code></small></div>
+                        <div class="form-group">
+                            <label>Embed-Bild</label>
+                            <div class="image-upload">
+                                <img id="join-image-preview" class="image-preview" src="" alt="">
+                                <div class="upload-btn-wrap"><label class="btn btn-secondary"
+                                        for="join-image-input">Bild hochladen</label><input type="file"
+                                        id="join-image-input" accept="image/*"
+                                        onchange="handleImageUpload(this,'join')"></div>
+                                <button class="btn btn-secondary" onclick="clearImage('join')"
+                                    type="button">Entfernen</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="switch-row"><label>Thumbnail = Profilbild</label><label class="switch"><input
+                                        type="checkbox" id="join-avatar-thumb" checked
+                                        onchange="updateEmbedPreview('join')"><span
+                                        class="switch-slider"></span></label></div>
+                        </div>
+                        <div class="form-group">
+                            <label>Embed-Farbe</label>
+                            <div class="color-row"><input type="color" id="join-color" value="#ffffff"
+                                    oninput="syncColor('join')"><input type="text" id="join-color-hex" value="#ffffff"
+                                    oninput="syncColorHex('join')"></div>
+                        </div>
+                        <div class="form-group"><label>Auto-Rolle(n) bei Beitritt</label>
+                            <div id="join-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span>
+                            </div>
+                        </div>
+                        <div class="form-action"><button class="btn btn-primary"
+                                onclick="handleSaveClick('welcome')">Speichern</button></div>
+                    </div>
+                    <div
+                        style="margin-top:1rem; background:var(--bg-surface); border-radius:10px; padding:14px; border:1px solid var(--border-subtle);">
+                        <label
+                            style="font-size:0.75rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">📺
+                            Live-Vorschau</label>
+                        <div class="embed-preview" id="join-preview" style="border-left-color:#ffffff;">
+                            <div class="embed-preview-title" id="join-preview-title">Willkommen auf {server}! 🎉</div>
+                            <div class="embed-preview-desc" id="join-preview-desc">Hey {user}, schön dass du da bist!
+                            </div>
+                            <img class="embed-preview-image hidden" id="join-preview-image" src="">
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="welcome-leave-page" class="subpage hidden">
+                    <div class="panel-card">
+                        <div class="form-group">
+                            <div class="switch-row"><label>Verlassen-Nachricht aktiv</label><label class="switch"><input
+                                        type="checkbox" id="leave-enabled"><span class="switch-slider"></span></label>
+                            </div>
+                        </div>
+                        <div class="form-group"><label>Nachrichtentyp</label><select id="leave-mode"
+                                onchange="updateEmbedPreview('leave')">
+                                <option value="embed">Embed</option>
+                                <option value="text">Einfache Nachricht</option>
+                            </select></div>
+                        <div class="form-group"><label for="leave-channel">Kanal</label><select
+                                id="leave-channel"></select></div>
+                        <div class="form-group"><label for="leave-title">Embed-Titel</label><input type="text"
+                                id="leave-title" placeholder="Auf Wiedersehen 👋" oninput="updateEmbedPreview('leave')">
+                        </div>
+                        <div class="form-group"><label for="leave-text">Nachricht / Beschreibung</label><textarea
+                                id="leave-text" rows="3" placeholder="{username} hat den Server verlassen."
+                                oninput="updateEmbedPreview('leave')"></textarea><small>Platzhalter:
+                                <code>{username}</code>, <code>{server}</code>, <code>{membercount}</code></small></div>
+                        <div class="form-group">
+                            <label>Embed-Bild</label>
+                            <div class="image-upload">
+                                <img id="leave-image-preview" class="image-preview" src="" alt="">
+                                <div class="upload-btn-wrap"><label class="btn btn-secondary"
+                                        for="leave-image-input">Bild hochladen</label><input type="file"
+                                        id="leave-image-input" accept="image/*"
+                                        onchange="handleImageUpload(this,'leave')"></div>
+                                <button class="btn btn-secondary" onclick="clearImage('leave')"
+                                    type="button">Entfernen</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="switch-row"><label>Thumbnail = Profilbild</label><label class="switch"><input
+                                        type="checkbox" id="leave-avatar-thumb" checked
+                                        onchange="updateEmbedPreview('leave')"><span
+                                        class="switch-slider"></span></label></div>
+                        </div>
+                        <div class="form-group">
+                            <label>Embed-Farbe</label>
+                            <div class="color-row"><input type="color" id="leave-color" value="#ffffff"
+                                    oninput="syncColor('leave')"><input type="text" id="leave-color-hex" value="#ffffff"
+                                    oninput="syncColorHex('leave')"></div>
+                        </div>
+                        <div class="form-action"><button class="btn btn-primary"
+                                onclick="handleSaveClick('welcome')">Speichern</button></div>
+                    </div>
+                    <div
+                        style="margin-top:1rem; background:var(--bg-surface); border-radius:10px; padding:14px; border:1px solid var(--border-subtle);">
+                        <label
+                            style="font-size:0.75rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">📺
+                            Live-Vorschau</label>
+                        <div class="embed-preview" id="leave-preview" style="border-left-color:#ffffff;">
+                            <div class="embed-preview-title" id="leave-preview-title">Auf Wiedersehen 👋</div>
+                            <div class="embed-preview-desc" id="leave-preview-desc">{username} hat den Server verlassen.
+                            </div>
+                            <img class="embed-preview-image hidden" id="leave-preview-image" src="">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            
+            <div id="mod-tickets" class="module-page hidden">
+                <h2>🎫 Ticket System</h2>
+                <p>Verwalte deine Ticket-Panels.</p>
+
+                <div id="ticket-overview-container">
+                    <div id="ticket-overview-grid">
+                        <div class="state-box"><span class="loading-spinner"></span> Lade Ticket-Panels...</div>
+                    </div>
+                </div>
+
+                <div id="ticket-edit-container" class="edit-view hidden">
+                    <a href="#" onclick="closeEditView(); return false;"
+                        style="display:inline-flex; align-items:center; gap:4px; color:var(--text-muted); text-decoration:none; font-weight:600; font-size:0.8rem; margin-bottom:1rem; transition:color 0.2s;">←
+                        Zurück zur Übersicht</a>
+                    <div id="edit-panel-header" style="margin-bottom:16px;"></div>
+                    <div id="ticket-edit-content"></div>
+                </div>
+            </div>
+
+            
+            <div id="mod-teamliste" class="module-page hidden">
+                <h2>👥 Teamliste</h2>
+                <p>Generiert automatisch eine immer aktuelle Übersicht deines Teams in einem Kanal.</p>
+                <div class="panel-card">
+                    <div class="form-group">
+                        <label for="teamliste-title">Embed‑Titel</label>
+                        <input type="text" id="teamliste-title" placeholder="🌟 Teamliste">
+                    </div>
+                    <div class="form-group"><label for="teamliste-channel">Kanal für die Teamliste</label><select
+                            id="teamliste-channel"></select></div>
+                    <div class="form-group"><label>Team-Rollen</label>
+                        <div id="teamliste-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span>
+                        </div>
+                    </div>
+                    <div class="form-action"><button class="btn btn-primary"
+                            onclick="handleSaveClick('teamliste')">Speichern</button></div>
+                </div>
+            </div>
+
+            
+            <div id="mod-automod" class="module-page hidden">
+                <h2>🛡️ Automod</h2>
+                <p>Schütze deinen Server automatisch vor Spam und unerwünschten Links.</p>
+
+                <div class="panel-card">
+                    <div class="form-group">
+                        <div class="switch-row"><label>Automod aktiv</label><label class="switch"><input type="checkbox"
+                                    id="automod-enabled"><span class="switch-slider"></span></label></div>
+                    </div>
+                    <div class="form-group"><label for="automod-log-channel">Log-Kanal</label><select
+                            id="automod-log-channel"></select><small>Hier werden gelöschte Nachrichten und ausgeführte
+                            Aktionen protokolliert.</small></div>
+                    <div class="form-group">
+                        <label for="automod-title">Log‑Embed‑Titel</label>
+                        <input type="text" id="automod-title" placeholder="🛡️ Automod">
+                    </div>
+                </div>
+
+                <div class="panel-card">
+                    <h3 style="font-size:1rem; font-weight:700; margin-bottom:4px;">🚫 Spam-Schutz</h3>
+                    <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:8px;">Löst aus, wenn ein
+                        Mitglied zu viele Nachrichten in kurzer Zeit schreibt.</p>
+                    <div class="form-group">
+                        <div class="switch-row"><label>Spam-Schutz aktiv</label><label class="switch"><input
+                                    type="checkbox" id="automod-spam-enabled"><span
+                                    class="switch-slider"></span></label></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="automod-spam-max">Maximale Nachrichten</label>
+                        <input type="number" id="automod-spam-max" min="2" max="50" value="5">
+                        <small>Ab wie vielen Nachrichten im Zeitraum gilt es als Spam.</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="automod-spam-seconds">Zeitraum (Sekunden)</label>
+                        <input type="number" id="automod-spam-seconds" min="1" max="120" value="5">
+                        <small>Innerhalb welcher Zeitspanne die Nachrichten gezählt werden.</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="automod-spam-action">Aktion bei Spam</label>
+                        <select id="automod-spam-action">
+                            <option value="delete">Nur Nachrichten löschen</option>
+                            <option value="delete_timeout">Nachrichten löschen + Timeout</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="automod-spam-timeout">Timeout-Dauer (Sekunden)</label>
+                        <input type="number" id="automod-spam-timeout" min="10" max="604800" value="60">
+                    </div>
+                </div>
+
+                <div class="panel-card">
+                    <h3 style="font-size:1rem; font-weight:700; margin-bottom:4px;">🔗 Link-Filter</h3>
+                    <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:8px;">Legt fest, ob Links im
+                        Server erlaubt sind.</p>
+                    <div class="form-group">
+                        <div class="switch-row"><label>Links blockieren (nicht erlaubt)</label><label
+                                class="switch"><input type="checkbox" id="automod-links-enabled"><span
+                                    class="switch-slider"></span></label></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="automod-links-action">Aktion bei Links</label>
+                        <select id="automod-links-action">
+                            <option value="delete">Nur Nachricht löschen</option>
+                            <option value="delete_timeout">Nachricht löschen + Timeout</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="automod-links-timeout">Timeout-Dauer (Sekunden)</label>
+                        <input type="number" id="automod-links-timeout" min="10" max="604800" value="60">
+                    </div>
+                </div>
+
+                <div class="panel-card">
+                    <h3 style="font-size:1rem; font-weight:700; margin-bottom:4px;">✅ Whitelist</h3>
+                    <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:8px;">Kanäle, Rollen und Nutzer,
+                        die vom Automod ausgenommen sind. Server-Administratoren sind immer automatisch ausgenommen.</p>
+                    <div class="form-group">
+                        <label>Ausgenommene Kanäle</label>
+                        <div id="automod-whitelist-channels" class="chip-select"><span class="chip-empty">Lade
+                                Kanäle...</span></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Ausgenommene Rollen</label>
+                        <div id="automod-whitelist-roles" class="chip-select"><span class="chip-empty">Lade
+                                Rollen...</span></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Ausgenommene User-IDs</label>
+                        <div id="automod-whitelist-users-list"></div>
+                        <button type="button" class="add-option-btn" onclick="addAutomodUserIdRow()">+ User-ID
+                            hinzufügen</button>
+                    </div>
+                </div>
+
+                <div class="form-action">
+                    <span id="automod-save-status" class="hidden status-success"></span>
+                    <button class="btn btn-primary" onclick="handleSaveClick('automod')">Speichern</button>
+                </div>
+            </div>
+
+            
+            <div id="mod-teamupdate" class="module-page hidden">
+                <h2>📝 Teamupdate Log<span class="soon-badge">Grundeinrichtung</span></h2>
+                <div class="panel-card">
+                    <div class="form-group">
+                        <div class="switch-row"><label>Log aktiv</label><label class="switch"><input type="checkbox"
+                                    id="teamupdate-enabled"><span class="switch-slider"></span></label></div>
+                    </div>
+                    <div class="form-group"><label for="teamupdate-channel">Log-Kanal</label><select
+                            id="teamupdate-channel"></select></div>
+                    <div class="form-action"><button class="btn btn-primary"
+                            onclick="handleSaveClick('teamupdate')">Speichern</button></div>
+                </div>
+
+                <div class="panel-card">
+                    <h3 style="font-size:1rem; font-weight:700; margin-bottom:4px;">Befehle</h3>
+                    <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:8px;">Aktiviere oder deaktiviere
+                        Befehle und lege fest, wer sie verwenden darf.</p>
+                    <div class="command-list" id="teamupdate-commands">
+                        <div class="command-row" data-command="neuer_teamler">
+                            <div class="command-row-top">
+                                <div class="command-info">
+                                    <label class="switch"><input type="checkbox" id="cmd-enabled-neuer_teamler"
+                                            checked><span class="switch-slider"></span></label>
+                                    <div>
+                                        <div class="command-name">/neuer_teamler</div>
+                                        <div class="command-desc">Neues Teammitglied hinzufügen</div>
+                                    </div>
+                                </div>
+                                <button type="button" class="command-menu-btn"
+                                    onclick="toggleCommandRoles('neuer_teamler')">⋮</button>
+                            </div>
+                            <div class="command-roles hidden" id="cmd-roles-neuer_teamler">
+                                <div class="form-group"><label>Erlaubte Rollen</label>
+                                    <div class="chip-select" id="cmdrole-neuer_teamler"><span class="chip-empty">Lade
+                                            Rollen...</span></div>
+                                </div>
+                                <div class="form-group"><label for="cmd-neuer_teamler-channel">Kanal für die
+                                        Nachricht</label><select id="cmd-neuer_teamler-channel"></select></div>
+                                <div class="form-group"><label>Rollen, die IMMER hinzugefügt werden</label><small
+                                        style="display:block; margin-bottom:6px;">Diese Rollen werden bei jeder Nutzung
+                                        von /neuer_teamler zusätzlich automatisch vergeben.</small>
+                                    <div class="chip-select" id="cmdrole-neuer_teamler-auto"><span
+                                            class="chip-empty">Lade Rollen...</span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="command-row" data-command="uprank">
+                            <div class="command-row-top">
+                                <div class="command-info">
+                                    <label class="switch"><input type="checkbox" id="cmd-enabled-uprank" checked><span
+                                            class="switch-slider"></span></label>
+                                    <div>
+                                        <div class="command-name">/uprank</div>
+                                        <div class="command-desc">Teammitglied befördern</div>
+                                    </div>
+                                </div>
+                                <button type="button" class="command-menu-btn"
+                                    onclick="toggleCommandRoles('uprank')">⋮</button>
+                            </div>
+                            <div class="command-roles hidden" id="cmd-roles-uprank">
+                                <div class="form-group"><label>Erlaubte Rollen</label>
+                                    <div class="chip-select" id="cmdrole-uprank"><span class="chip-empty">Lade
+                                            Rollen...</span></div>
+                                </div>
+                                <div class="form-group"><label for="cmd-uprank-channel">Kanal für die
+                                        Nachricht</label><select id="cmd-uprank-channel"></select></div>
+                            </div>
+                        </div>
+
+                        <div class="command-row" data-command="downrank">
+                            <div class="command-row-top">
+                                <div class="command-info">
+                                    <label class="switch"><input type="checkbox" id="cmd-enabled-downrank" checked><span
+                                            class="switch-slider"></span></label>
+                                    <div>
+                                        <div class="command-name">/downrank</div>
+                                        <div class="command-desc">Teammitglied degradieren</div>
+                                    </div>
+                                </div>
+                                <button type="button" class="command-menu-btn"
+                                    onclick="toggleCommandRoles('downrank')">⋮</button>
+                            </div>
+                            <div class="command-roles hidden" id="cmd-roles-downrank">
+                                <div class="form-group"><label>Erlaubte Rollen</label>
+                                    <div class="chip-select" id="cmdrole-downrank"><span class="chip-empty">Lade
+                                            Rollen...</span></div>
+                                </div>
+                                <div class="form-group"><label for="cmd-downrank-channel">Kanal für die
+                                        Nachricht</label><select id="cmd-downrank-channel"></select></div>
+                            </div>
+                        </div>
+
+                        <div class="command-row" data-command="teamkick">
+                            <div class="command-row-top">
+                                <div class="command-info">
+                                    <label class="switch"><input type="checkbox" id="cmd-enabled-teamkick" checked><span
+                                            class="switch-slider"></span></label>
+                                    <div>
+                                        <div class="command-name">/teamkick</div>
+                                        <div class="command-desc">Teammitglied aus dem Team entfernen</div>
+                                    </div>
+                                </div>
+                                <button type="button" class="command-menu-btn"
+                                    onclick="toggleCommandRoles('teamkick')">⋮</button>
+                            </div>
+                            <div class="command-roles hidden" id="cmd-roles-teamkick">
+                                <div class="form-group"><label>Erlaubte Rollen</label>
+                                    <div class="chip-select" id="cmdrole-teamkick"><span class="chip-empty">Lade
+                                            Rollen...</span></div>
+                                </div>
+                                <div class="form-group"><label for="cmd-teamkick-channel">Kanal für die
+                                        Nachricht</label><select id="cmd-teamkick-channel"></select></div>
+                                <div class="form-group"><label>Rollen, die IMMER entfernt werden</label><small
+                                        style="display:block; margin-bottom:6px;">Diese Rollen werden bei jeder Nutzung
+                                        von /teamkick zusätzlich automatisch entfernt.</small>
+                                    <div class="chip-select" id="cmdrole-teamkick-auto"><span class="chip-empty">Lade
+                                            Rollen...</span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="command-row" data-command="teamwarn">
+                            <div class="command-row-top">
+                                <div class="command-info">
+                                    <label class="switch"><input type="checkbox" id="cmd-enabled-teamwarn" checked><span
+                                            class="switch-slider"></span></label>
+                                    <div>
+                                        <div class="command-name">/teamwarn</div>
+                                        <div class="command-desc">Teammitglied verwarnen</div>
+                                    </div>
+                                </div>
+                                <button type="button" class="command-menu-btn"
+                                    onclick="toggleCommandRoles('teamwarn')">⋮</button>
+                            </div>
+                            <div class="command-roles hidden" id="cmd-roles-teamwarn">
+                                <div class="form-group"><label>Erlaubte Rollen</label>
+                                    <div class="chip-select" id="cmdrole-teamwarn"><span class="chip-empty">Lade
+                                            Rollen...</span></div>
+                                </div>
+                                <div class="form-group"><label for="cmd-teamwarn-channel">Kanal für die
+                                        Nachricht</label><select id="cmd-teamwarn-channel"></select></div>
+                                <div class="form-group">
+                                    <label>Warnstufen (optional)</label>
+                                    <small style="display:block; margin-bottom:6px;">Lege bis zu vier Rollen fest, die
+                                        bei den jeweiligen Warnstufen automatisch vergeben werden.</small>
+                                    <div style="display:flex; flex-direction:column; gap:10px;">
+                                        <div><label for="cmdrole-teamwarn-stage1"
+                                                style="font-size:0.7rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">Warnstufe
+                                                1</label>
+                                            <div class="chip-select" id="cmdrole-teamwarn-stage1"><span
+                                                    class="chip-empty">Lade Rollen...</span></div>
+                                        </div>
+                                        <div><label for="cmdrole-teamwarn-stage2"
+                                                style="font-size:0.7rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">Warnstufe
+                                                2</label>
+                                            <div class="chip-select" id="cmdrole-teamwarn-stage2"><span
+                                                    class="chip-empty">Lade Rollen...</span></div>
+                                        </div>
+                                        <div><label for="cmdrole-teamwarn-stage3"
+                                                style="font-size:0.7rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">Warnstufe
+                                                3</label>
+                                            <div class="chip-select" id="cmdrole-teamwarn-stage3"><span
+                                                    class="chip-empty">Lade Rollen...</span></div>
+                                        </div>
+                                        <div><label for="cmdrole-teamwarn-stage4"
+                                                style="font-size:0.7rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">Warnstufe
+                                                4</label>
+                                            <div class="chip-select" id="cmdrole-teamwarn-stage4"><span
+                                                    class="chip-empty">Lade Rollen...</span></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-action"><button class="btn btn-primary"
+                            onclick="handleSaveClick('teamupdate')">Speichern</button></div>
+                </div>
+            </div>
+
+            
+            <div id="mod-minigames" class="module-page hidden">
+                <h2>🎮 Minigames</h2>
+                <p>Aktiviere kleine Spiele, die eure Mitglieder in einem Kanal spielen können.</p>
+
+                <div class="panel-card">
+                    <div class="form-group">
+                        <div class="switch-row"><label>🔢 Zählen aktiv</label><label class="switch"><input
+                                    type="checkbox" id="minigames-counting-enabled"><span
+                                    class="switch-slider"></span></label></div>
+                    </div>
+                    <div class="form-group"><label for="minigames-counting-channel">Kanal für das
+                            Zählen-Spiel</label><select id="minigames-counting-channel"></select><small>Mitglieder
+                            zählen abwechselnd hoch (1, 2, 3, ...). Die gleiche Person darf nicht zweimal hintereinander
+                            zählen – bei einem Fehler beginnt der Zähler wieder bei 1.</small></div>
+                    <div class="form-action"><button class="btn btn-primary"
+                            onclick="handleSaveClick('minigames')">Speichern</button></div>
+                </div>
+
+                <div class="panel-card">
+                    <div class="form-group">
+                        <div class="switch-row"><label>🏳️ Errate die Flagge aktiv</label><label class="switch"><input
+                                    type="checkbox" id="minigames-flags-enabled"><span
+                                    class="switch-slider"></span></label></div>
+                    </div>
+                    <div class="form-group"><label for="minigames-flags-channel">Kanal für das
+                            Flaggen-Spiel</label><select id="minigames-flags-channel"></select><small>Der Bot postet ein
+                            Embed mit einer Flagge. Mitglieder erraten das Land per Chat-Nachricht. Bei richtiger
+                            Antwort startet automatisch die nächste Runde.</small></div>
+                    <div class="form-group">
+                        <label for="minigames-flags-title">Embed‑Titel</label>
+                        <input type="text" id="minigames-flags-title" placeholder="🏳️ Errate die Flagge!">
+                    </div>
+                    <div class="form-group">
+                        <label>Buttons unter dem Embed</label>
+                        <small style="display:block; margin-bottom:6px;">Lege fest, welche Hilfe-Buttons unter der
+                            Flagge angezeigt werden.</small>
+                        <div class="switch-row"><label>⏭️ Überspringen</label><label class="switch"><input
+                                    type="checkbox" id="minigames-flags-btn-skip" checked><span
+                                    class="switch-slider"></span></label></div>
+                        <div class="switch-row"><label>💡 Tipp</label><label class="switch"><input type="checkbox"
+                                    id="minigames-flags-btn-hint" checked><span class="switch-slider"></span></label>
+                        </div>
+                        <div class="switch-row"><label>🔤 Erster Buchstabe</label><label class="switch"><input
+                                    type="checkbox" id="minigames-flags-btn-letter" checked><span
+                                    class="switch-slider"></span></label></div>
+                    </div>
+                    <div class="form-action"><button class="btn btn-primary"
+                            onclick="handleSaveClick('minigames')">Speichern</button></div>
+                </div>
+
+                <div class="panel-card">
+                    <div class="form-group">
+                        <div class="switch-row"><label>🧩 Emoji-Kombination erraten aktiv</label><label
+                                class="switch"><input type="checkbox" id="minigames-emoji-enabled"><span
+                                    class="switch-slider"></span></label></div>
+                    </div>
+                    <div class="form-group"><label for="minigames-emoji-channel">Kanal für das
+                            Emoji-Spiel</label><select id="minigames-emoji-channel"></select><small>Der Bot postet ein
+                            Embed mit einer Emoji-Kombination (z. B. Film, Beruf, Redewendung). Mitglieder erraten den
+                            Begriff per Chat-Nachricht.</small></div>
+                    <div class="form-group">
+                        <label for="minigames-emoji-title">Embed‑Titel</label>
+                        <input type="text" id="minigames-emoji-title" placeholder="🧩 Errate die Emoji‑Kombination!">
+                    </div>
+                    <div class="form-group">
+                        <label>Buttons unter dem Embed</label>
+                        <small style="display:block; margin-bottom:6px;">Lege fest, welche Hilfe-Buttons unter der
+                            Emoji-Kombination angezeigt werden.</small>
+                        <div class="switch-row"><label>⏭️ Überspringen</label><label class="switch"><input
+                                    type="checkbox" id="minigames-emoji-btn-skip" checked><span
+                                    class="switch-slider"></span></label></div>
+                        <div class="switch-row"><label>💡 Tipp</label><label class="switch"><input type="checkbox"
+                                    id="minigames-emoji-btn-hint" checked><span class="switch-slider"></span></label>
+                        </div>
+                        <div class="switch-row"><label>🔤 Erster Buchstabe</label><label class="switch"><input
+                                    type="checkbox" id="minigames-emoji-btn-letter" checked><span
+                                    class="switch-slider"></span></label></div>
+                    </div>
+                    <div class="form-action"><button class="btn btn-primary"
+                            onclick="handleSaveClick('minigames')">Speichern</button></div>
+                </div>
+            </div>
+
+            
+            <div id="mod-stats" class="module-page hidden">
+                <h2>📈 Statistik-Kanäle</h2>
+                <p>Erstelle Sprachkanäle, die automatisch Server-Statistiken anzeigen (z. B. Mitgliederzahl, Bots,
+                    Rollen, Boosts). Die Kanäle werden in einer Kategorie erstellt und sind für Mitglieder nicht
+                    betretbar.</p>
+                <div class="panel-card">
+                    <div class="form-group">
+                        <div class="switch-row">
+                            <label>Statistik-Kanäle aktiv</label>
+                            <label class="switch"><input type="checkbox" id="stats-enabled"><span
+                                    class="switch-slider"></span></label>
+                        </div>
+                    </div>
+                    <div id="stats-channels-list"></div>
+                    <button type="button" class="add-option-btn" onclick="addStatsChannel()">+ Statistik-Kanal
+                        hinzufügen</button>
+                    <div class="form-action" style="margin-top:14px;">
+                        <span id="stats-save-status" class="hidden status-success"></span>
+                        <button class="btn btn-primary" onclick="handleSaveClick('stats')">💾 Speichern</button>
+                    </div>
+                </div>
+            </div>
+
+            
+            <div id="mod-levels" class="module-page hidden">
+                <h2>⭐ Level-System</h2>
+                <p>Mitglieder bekommen für jede Nachricht (und optional für Zeit im Voice-Chat) XP. Ist genug XP
+                    gesammelt, steigt das Level und eine Nachricht wird in einem Kanal deiner Wahl gesendet. Jedes
+                    weitere Level braucht mehr XP als das davor.</p>
+
+                <div class="panel-card">
+                    <div class="form-group">
+                        <div class="switch-row">
+                            <label>Level-System aktiv</label>
+                            <label class="switch"><input type="checkbox" id="levels-enabled"><span
+                                    class="switch-slider"></span></label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-card">
+                    <div class="tpe-card-title">💬 XP pro Nachricht</div>
+                    <div class="tpe-btn-grid">
+                        <div class="form-group">
+                            <label for="levels-xp-min">Min. XP</label>
+                            <input type="number" id="levels-xp-min" min="1" step="1" value="15">
+                        </div>
+                        <div class="form-group">
+                            <label for="levels-xp-max">Max. XP</label>
+                            <input type="number" id="levels-xp-max" min="1" step="1" value="25">
+                        </div>
+                        <div class="form-group">
+                            <label for="levels-cooldown">Cooldown (Sekunden)</label>
+                            <input type="number" id="levels-cooldown" min="0" step="1" value="60">
+                        </div>
+                    </div>
+                    <small>Pro Nachricht wird eine zufällige XP-Zahl zwischen Min. und Max. vergeben. Der Cooldown
+                        verhindert, dass Mitglieder durch Spam-Nachrichten schneller leveln.</small>
+                </div>
+
+                <div class="panel-card">
+                    <div class="tpe-card-title">📊 XP-Anforderung pro Level</div>
+                    <div class="tpe-btn-grid">
+                        <div class="form-group">
+                            <label for="levels-base-xp">Basis-XP (für Level 1)</label>
+                            <input type="number" id="levels-base-xp" min="1" step="1" value="100">
+                        </div>
+                        <div class="form-group">
+                            <label for="levels-xp-increment">XP-Steigerung pro Level</label>
+                            <input type="number" id="levels-xp-increment" min="0" step="1" value="50">
+                        </div>
+                    </div>
+                    <small>Jedes Level benötigt mehr XP als das vorherige: benötigte XP = Basis-XP + (aktuelles Level ×
+                        Steigerung).</small>
+                </div>
+
+                <div class="panel-card">
+                    <div class="tpe-card-title">🎉 Level-Up Nachricht</div>
+                    <div class="form-group">
+                        <label for="levels-message">Nachrichtentext</label>
+                        <textarea id="levels-message" rows="2"
+                            placeholder="🎉 {user} hat Level {level} erreicht!"></textarea>
+                        <small>Platzhalter: <code>{user}</code>, <code>{level}</code></small>
+                    </div>
+                    <div class="form-group">
+                        <label for="levels-channel">Kanal für Level-Up Nachrichten</label>
+                        <select id="levels-channel"></select>
+                    </div>
+                </div>
+
+                <div class="panel-card">
+                    <div class="form-group">
+                        <div class="switch-row">
+                            <label>🎙️ Voice-XP aktiv</label>
+                            <label class="switch"><input type="checkbox" id="levels-voice-enabled"><span
+                                    class="switch-slider"></span></label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="levels-voice-xp">XP pro Minute im Voice-Chat</label>
+                        <input type="number" id="levels-voice-xp" min="1" step="1" value="10">
+                        <small>Wird nur vergeben, solange ein Mitglied nicht stummgeschaltet/taub ist und sich nicht im
+                            AFK-Kanal befindet.</small>
+                    </div>
+                </div>
+
+                <div class="panel-card">
+                    <div class="tpe-card-title">🛡️ XP-Vergabe per Befehl</div>
+                    <div class="form-group">
+                        <label>Rolle, die XP vergeben darf</label>
+                        <div id="levels-xp-give-role" class="chip-select"><span class="chip-empty">Lade Rollen...</span>
+                        </div>
+                        <small>Mitglieder mit dieser Rolle (sowie Admins) dürfen den Befehl <code>/xp_give</code>
+                            benutzen, um anderen Mitgliedern XP zu geben oder abzuziehen. Erneutes Anklicken einer
+                            ausgewählten Rolle hebt die Auswahl wieder auf.</small>
+                    </div>
+                </div>
+
+                <div class="form-action">
+                    <span id="levels-save-status" class="hidden status-success"></span>
+                    <button class="btn btn-primary" onclick="handleSaveClick('levels')">💾 Speichern</button>
+                </div>
+            </div>
+
+            
+            <div id="mod-verification" class="module-page hidden">
+                <h2>✅ Verifizierungs System</h2>
+                <p>Konfiguriere das Verifizierungs-Panel – inklusive Embed und Button-Text.</p>
+
+                <div class="panel-card">
+                    <div class="form-group">
+                        <div class="switch-row">
+                            <label>Verifizierung aktiv</label>
+                            <label class="switch"><input type="checkbox" id="verification-enabled"><span
+                                    class="switch-slider"></span></label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Verifizierungsmethode</label>
+                        <select id="verification-method">
+                            <option value="button">Button (Ein-Klick)</option>
+                            <option value="math">Mathe-Aufgabe</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Kanal für das Verifizierungs-Panel</label>
+                        <select id="verification-channel"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Rolle nach Verifizierung</label>
+                        <div id="verification-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Rollen nach Verifizierung entfernen (optional)</label>
+                        <small style="display:block; margin-bottom:6px;">Diese Rollen werden dem Mitglied automatisch
+                            entzogen, sobald es sich erfolgreich verifiziert hat (z.B. eine
+                            "Unverifiziert"-Rolle).</small>
+                        <div id="verification-remove-roles" class="chip-select"><span class="chip-empty">Lade
+                                Rollen...</span></div>
+                    </div>
+
+                    <div style="border-top:1px solid var(--border-subtle); margin:1rem 0 0.5rem; padding-top:1rem;">
+                        <div style="font-weight:700; margin-bottom:0.5rem;">📝 Embed anpassen</div>
+                        <div class="form-group">
+                            <label>Titel</label>
+                            <input type="text" id="verification-title" placeholder="🔐 Verifizierung">
+                        </div>
+                        <div class="form-group">
+                            <label>Beschreibung</label>
+                            <textarea id="verification-description" rows="2"
+                                placeholder="Klicke auf den Button, um dich zu verifizieren."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Farbe</label>
+                            <div class="color-row">
+                                <input type="color" id="verification-color" value="#6d5ef8">
+                                <input type="text" id="verification-color-hex" value="#6d5ef8"
+                                    oninput="document.getElementById('verification-color').value=this.value;">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Bild-URL (optional)</label>
+                            <input type="text" id="verification-image" placeholder="https://example.com/bild.png">
+                        </div>
+                        <div class="form-group">
+                            <label>Button-Text</label>
+                            <input type="text" id="verification-button-label" placeholder="Verifizieren">
+                        </div>
+                    </div>
+
+                    <div class="form-action">
+                        <button class="btn btn-primary" onclick="sendVerificationPanel()">📤 Panel senden</button>
+                        <button class="btn btn-secondary" onclick="handleSaveClick('verification')">💾
+                            Speichern</button>
+                    </div>
+                </div>
+            </div>
+
+            
+            <div id="mod-reactionroles" class="module-page hidden">
+                <h2>🎭 Reaction Roles</h2>
+                <p>Erstelle eine Nachricht, auf die Mitglieder mit einem Emoji reagieren können, um automatisch eine
+                    Rolle zu bekommen. Entfernen sie die Reaktion wieder, wird die Rolle auch wieder entfernt.</p>
+
+                <div id="reactionroles-list"></div>
+                <button type="button" class="add-option-btn" onclick="addReactionRolePanel()">+ Neue Reaction-Role
+                    Nachricht</button>
+
+                <div class="form-action" style="margin-top:14px;">
+                    <span id="reactionroles-save-status" class="hidden status-success"></span>
+                    <button class="btn btn-primary" onclick="handleSaveClick('reactionroles')">💾 Speichern</button>
+                </div>
+            </div>
+
+            
+            <div id="mod-antinuke" class="module-page hidden">
+                <h2>🔒 Anti Nuke Schutz<span class="soon-badge">Grundeinrichtung</span></h2>
+                <div class="panel-card">
+                    <div class="form-group">
+                        <div class="switch-row"><label>Anti Nuke aktiv</label><label class="switch"><input
+                                    type="checkbox" id="antinuke-enabled" checked><span
+                                    class="switch-slider"></span></label></div>
+                    </div>
+                    <div class="form-action"><button class="btn btn-primary"
+                            onclick="handleSaveClick('antinuke')">Speichern</button></div>
+                </div>
+            </div>
+
+            
+            <div id="mod-rolenicknames" class="module-page hidden">
+                <h2>🏷️ Rollen-Nicknames</h2>
+                <p>Wähle eine Rolle aus und lege ein Präfix und/oder Suffix fest. Hat ein Mitglied diese Rolle, wird der
+                    Nickname automatisch angepasst – entfernst du die Rolle, wird es automatisch zurückgesetzt.</p>
+
+                <div class="panel-card">
+                    <div class="form-group">
+                        <div class="switch-row">
+                            <label>Rollen-Nicknames aktiv</label>
+                            <label class="switch"><input type="checkbox" id="rolenicknames-enabled"><span
+                                    class="switch-slider"></span></label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Regeln</label>
+                        <div id="rolenick-list"></div>
+                        <button type="button" class="add-option-btn" onclick="addRoleNicknameRow()">+ Regel
+                            hinzufügen</button>
+                    </div>
+
+                    <div class="form-action">
+                        <span id="rolenicknames-save-status" class="hidden status-success"></span>
+                        <button class="btn btn-primary" onclick="handleSaveClick('rolenicknames')">Speichern</button>
+                    </div>
+                </div>
+            </div>
+
+            
+            <div id="mod-shiftsystem" class="module-page hidden">
+                <h2>⏱️ Schicht-System</h2>
+                <p>Mitglieder können mit <code>/shift start</code>, <code>/shift pause</code> und
+                    <code>/shift stop</code> ihre Schicht erfassen. Lege hier fest, welche Rollen Schichten anderer
+                    verwalten dürfen (diese Rollen sehen auch die <code>/shift leaderboard</code>) und welche Rolle
+                    nur die eigene Schicht verwalten darf.</p>
+
+                <div class="panel-card">
+                    <div class="form-group">
+                        <div class="switch-row">
+                            <label>Schicht-System aktiv</label>
+                            <label class="switch"><input type="checkbox" id="shiftsystem-enabled"><span
+                                    class="switch-slider"></span></label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="shiftsystem-log-channel">Log-Kanal (optional)</label>
+                        <select id="shiftsystem-log-channel"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="shiftsystem-title">Log‑Embed‑Titel</label>
+                        <input type="text" id="shiftsystem-title" placeholder="🕒 Schicht">
+                    </div>
+                </div>
+
+                <div class="panel-card">
+                    <div class="form-group">
+                        <label>Rollen, die Schichten anderer verwalten dürfen</label>
+                        <small style="display:block; margin-bottom:6px;">Diese Rollen dürfen /shift start, pause und
+                            stop auch für andere Mitglieder benutzen und sehen die Schicht-Bestenliste
+                            (/shift leaderboard).</small>
+                        <div class="chip-select" id="shiftsystem-manage-others"><span class="chip-empty">Lade
+                                Rollen...</span></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Rolle, die nur die eigene Schicht verwalten darf</label>
+                        <small style="display:block; margin-bottom:6px;">Mitglieder mit dieser Rolle können nur ihre
+                            eigene Schicht starten, pausieren und beenden.</small>
+                        <div class="chip-select" id="shiftsystem-manage-self"><span class="chip-empty">Lade
+                                Rollen...</span></div>
+                    </div>
+                </div>
+
+                <div class="panel-card">
+                    <h3 style="margin-top:0;">Schichtarten</h3>
+                    <p>Lege verschiedene Schichtarten an (z. B. Polizei, Feuerwehr, Rettungsdienst) und wähle pro
+                        Schichtart, welche Rolle(n) sie starten dürfen. Beim <code>/shift start</code> kann dann die
+                        passende Schichtart ausgewählt werden. Bleibt eine Schichtart ohne Rollen, darf sie jeder mit
+                        allgemeiner Schicht-Berechtigung starten.</p>
+                    <div id="shiftsystem-types-list"></div>
+                    <div class="form-action">
+                        <button class="btn btn-secondary" onclick="addShiftType()">➕ Schichtart hinzufügen</button>
+                    </div>
+                </div>
+
+                <div class="panel-card">
+                    <div class="form-action">
+                        <span id="shiftsystem-save-status" class="hidden status-success"></span>
+                        <button class="btn btn-primary" onclick="handleSaveClick('shiftsystem')">💾 Speichern</button>
+                    </div>
+                </div>
+            </div>
+
+            
+            <div id="mod-abmeldesystem" class="module-page hidden">
+                <h2>📤 Abmelde-System</h2>
+                <p>Teammitglieder können sich über einen Button im gewählten Kanal abmelden (Zeitraum + Grund per
+                    Formular) und bekommen dabei automatisch eine "Abgemeldet"-Rolle. Jede Ab- und Anmeldung wird
+                    zusätzlich als Übersicht in einem Log-Kanal gepostet.</p>
+
+                <div class="panel-card">
+                    <div class="form-group">
+                        <div class="switch-row">
+                            <label>Abmelde-System aktiv</label>
+                            <label class="switch"><input type="checkbox" id="abmeldesystem-enabled"><span
+                                    class="switch-slider"></span></label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="abmeldesystem-panel-channel">Kanal für das Abmelde-Panel</label>
+                        <select id="abmeldesystem-panel-channel"></select>
+                        <small style="display:block; margin-top:6px;">Hier wird die Nachricht mit den 2 Buttons
+                            "Abmeldung erstellen" und "Anmelden" gepostet.</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="abmeldesystem-log-channel">Kanal für die Abmeldungs-Übersicht</label>
+                        <select id="abmeldesystem-log-channel"></select>
+                        <small style="display:block; margin-top:6px;">Hier sieht das Team, wer sich von wann bis wann
+                            und aus welchem Grund abgemeldet hat.</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="abmeldesystem-title">Log‑Embed‑Titel</label>
+                        <input type="text" id="abmeldesystem-title" placeholder="📋 Abmeldung">
+                    </div>
+                    <div class="form-group">
+                        <label>Rolle für abgemeldete Mitglieder</label>
+                        <small style="display:block; margin-bottom:6px;">Wird automatisch vergeben, sobald jemand
+                            eine Abmeldung erstellt, und wieder entfernt, sobald er sich anmeldet.</small>
+                        <div class="chip-select" id="abmeldesystem-role"><span class="chip-empty">Lade
+                                Rollen...</span></div>
+                    </div>
+                    <div class="form-action">
+                        <span id="abmeldesystem-save-status" class="hidden status-success"></span>
+                        <button class="btn btn-secondary" onclick="sendAbmeldeEmbed()">📨 Panel senden</button>
+                        <button class="btn btn-primary" onclick="handleSaveClick('abmeldesystem')">💾
+                            Speichern</button>
+                    </div>
+                </div>
+            </div>
+
+            
+            <div id="mod-rp" class="module-page hidden">
+                <h2>🎭 RP Info</h2>
+                <p>Konfiguriere die Nachricht, die der Bot über <code>/rp_start</code> im gewählten Kanal postet
+                    (und über <code>/rp_stop</code> wieder beendet), sowie wer diese Befehle nutzen darf.</p>
+
+                <div class="panel-card">
+                    <div class="form-group"><label>Nachrichtentyp</label><select id="rp-mode"
+                            onchange="updateEmbedPreview('rp')">
+                            <option value="embed">Embed</option>
+                            <option value="text">Einfache Nachricht</option>
+                        </select></div>
+                    <div class="form-group"><label for="rp-channel">Kanal</label><select id="rp-channel"></select>
+                        <small style="display:block; margin-top:6px;">Hier postet der Bot die Nachricht bei
+                            <code>/rp_start</code>.</small>
+                    </div>
+                    <div class="form-group"><label for="rp-title">Embed-Titel</label><input type="text" id="rp-title"
+                            placeholder="🎭 Roleplay gestartet" oninput="updateEmbedPreview('rp')"></div>
+                    <div class="form-group"><label for="rp-text">Nachricht / Beschreibung</label><textarea id="rp-text"
+                            rows="3" placeholder="Das Roleplay wurde von {user} gestartet!"
+                            oninput="updateEmbedPreview('rp')"></textarea><small>Platzhalter: <code>{user}</code>,
+                            <code>{username}</code>, <code>{server}</code></small></div>
+                    <div class="form-group">
+                        <label>Embed-Bild</label>
+                        <div class="image-upload">
+                            <img id="rp-image-preview" class="image-preview" src="" alt="">
+                            <div class="upload-btn-wrap"><label class="btn btn-secondary"
+                                    for="rp-image-input">Bild hochladen</label><input type="file" id="rp-image-input"
+                                    accept="image/*" onchange="handleImageUpload(this,'rp')"></div>
+                            <button class="btn btn-secondary" onclick="clearImage('rp')" type="button">Entfernen</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Embed-Farbe</label>
+                        <div class="color-row"><input type="color" id="rp-color" value="#5865f2"
+                                oninput="syncColor('rp')"><input type="text" id="rp-color-hex" value="#5865f2"
+                                oninput="syncColorHex('rp')"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Wer darf /rp_start und /rp_stop nutzen?</label>
+                        <small style="display:block; margin-bottom:6px;">Nur Mitglieder mit einer dieser Rollen können
+                            die Befehle ausführen.</small>
+                        <div id="rp-allowed-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span>
+                        </div>
+                    </div>
+                    <div class="form-action">
+                        <span id="rp-save-status" class="hidden status-success"></span>
+                        <button class="btn btn-primary" onclick="handleSaveClick('rp')">💾 Speichern</button>
+                    </div>
+                </div>
+                <div
+                    style="margin-top:1rem; background:var(--bg-surface); border-radius:10px; padding:14px; border:1px solid var(--border-subtle);">
+                    <label
+                        style="font-size:0.75rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">📺
+                        Live-Vorschau</label>
+                    <div class="embed-preview" id="rp-preview" style="border-left-color:#5865f2;">
+                        <div class="embed-preview-title" id="rp-preview-title">🎭 Roleplay gestartet</div>
+                        <div class="embed-preview-desc" id="rp-preview-desc">Das Roleplay wurde von {user} gestartet!
+                        </div>
+                        <img class="embed-preview-image hidden" id="rp-preview-image" src="">
+                    </div>
+                </div>
+            </div>
+
+            
+            <div id="mod-bot" class="module-page hidden">
+                <h2>🤖 Bot Control</h2>
+                <p>Sende Nachrichten als Bot, bearbeite bestehende Nachrichten und verwalte deine Bot-Nachrichten.</p>
+
+                <div class="panel-card">
+                    <div class="form-group">
+                        <label for="bot-channel">Kanal auswählen</label>
+                        <select id="bot-channel"></select>
+                    </div>
+                    <button class="btn btn-secondary" onclick="loadBotMessages()" style="margin-top:6px;">📥 Nachrichten
+                        laden</button>
+                </div>
+
+                <div class="panel-card">
+                    <h3 style="font-size:1rem; font-weight:700; margin-bottom:6px;">✏️ Nachricht verfassen</h3>
+                    <div class="form-group">
+                        <label>Text (optional)</label>
+                        <textarea id="bot-content" rows="2" placeholder="Nachrichtentext..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Embed(s) – Titel, Beschreibung, Farbe, Bild-URL</label>
+                        <div id="bot-embeds-list"></div>
+                        <button type="button" class="add-option-btn" onclick="addBotEmbed()">+ Embed hinzufügen</button>
+                    </div>
+                    <div class="form-group">
+                        <label>Buttons – Label, Stil und Aktion</label>
+                        <div id="bot-buttons-list"></div>
+                        <button type="button" class="add-option-btn" onclick="addBotButton()">+ Button
+                            hinzufügen</button>
+                    </div>
+                    <div class="form-action">
+                        <button class="btn btn-primary" onclick="sendBotMessage()">📤 Senden</button>
+                        <button class="btn btn-secondary" onclick="editBotMessage()">✏️ Bearbeiten (Nachricht-ID
+                            unten)</button>
+                    </div>
+                </div>
+
+                <div class="panel-card">
+                    <h3 style="font-size:1rem; font-weight:700; margin-bottom:6px;">📋 Bot-Nachrichten in diesem Kanal
+                    </h3>
+                    <div id="bot-messages-list"><span class="chip-empty">Wähle einen Kanal und lade die
+                            Nachrichten.</span></div>
+                </div>
+            </div>
+
+            
+            <div id="mod-statusembed" class="module-page hidden">
+                <h2>📡 Status-Anzeige</h2>
+                <p>Der Bot postet in einem festgelegten Zeitabstand automatisch eine Nachricht mit seinem aktuellen
+                    Status in einen Kanal deiner Wahl. Optional wird dabei eine Rolle gepingt.</p>
+
+                <div class="panel-card">
+                    <div class="form-group">
+                        <div class="switch-row">
+                            <label>Automatische Status-Anzeige aktiv</label>
+                            <label class="switch"><input type="checkbox" id="statusembed-enabled"><span
+                                    class="switch-slider"></span></label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="statusembed-channel">Kanal</label>
+                        <select id="statusembed-channel"></select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="statusembed-interval">Intervall (Minuten)</label>
+                        <input type="number" id="statusembed-interval" min="1" step="1" value="30">
+                        <small>Alle wie viele Minuten die Status-Nachricht gesendet werden soll.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Rolle pingen (optional)</label>
+                        <div id="statusembed-role" class="chip-select"><span class="chip-empty">Lade Rollen...</span>
+                        </div>
+                        <small>Wähle eine Rolle aus, die bei jeder Status-Nachricht benachrichtigt wird. Erneutes
+                            Anklicken einer ausgewählten Rolle hebt die Auswahl wieder auf.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="statusembed-title">Titel der Nachricht</label>
+                        <input type="text" id="statusembed-title" maxlength="256" placeholder="Status">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="statusembed-color">Farbe</label>
+                        <input type="color" id="statusembed-color" value="#2b2d31">
+                    </div>
+
+                    <div class="form-action">
+                        <span id="statusembed-save-status" class="hidden status-success"></span>
+                        <button class="btn btn-primary" onclick="handleSaveClick('statusembed')">Speichern</button>
+                    </div>
+                </div>
+            </div>
+
+            
+            <div id="mod-applications" class="module-page hidden">
+                <h2>📝 Bewerbungen</h2>
+                <p>Erstelle beliebig viele Bewerbungen (z.B. Team-Bewerbung, Moderator-Bewerbung). Für jede Bewerbung
+                    wird eine Nachricht mit einem "Bewerben"-Button in einem Kanal deiner Wahl gepostet. Klickt jemand
+                    darauf, läuft die Bewerbung komplett über Direktnachrichten (DMs) mit dem Bot ab – die Fragen werden
+                    dort nacheinander gestellt. Die fertige Bewerbung wird anschließend in einen Kanal deiner Wahl
+                    gepostet, wobei optional eine Rolle gepingt wird.</p>
+
+                <div id="applications-list"></div>
+                <button type="button" class="add-option-btn" onclick="addApplicationForm()">+ Bewerbung
+                    hinzufügen</button>
+
+                <div class="form-action" style="margin-top:16px;">
+                    <span id="applications-save-status" class="hidden status-success"></span>
+                    <button class="btn btn-primary" onclick="handleSaveClick('applications')">Alle Bewerbungen
+                        speichern</button>
+                </div>
+            </div>
+
+            
+            <div id="mod-voice_support" class="module-page hidden">
+                <h2>🎤 Voice Support</h2>
+                <p>Richte einen Support-Warteraum ein. Wenn ein Nutzer den Kanal betritt, wird eine Benachrichtigung mit
+                    „Support übernehmen“- und „Supportfall beenden“-Buttons gesendet. Das Embed kann individuell
+                    angepasst werden.</p>
+
+                <div class="panel-card">
+                    <div class="form-group">
+                        <div class="switch-row">
+                            <label>Voice Support aktiv</label>
+                            <label class="switch"><input type="checkbox" id="voice_support-enabled"><span
+                                    class="switch-slider"></span></label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="voice_support-waitingroom">Warteraum (Sprachkanal)</label>
+                        <select id="voice_support-waitingroom"></select>
+                        <small>Wenn ein Nutzer diesen Kanal betritt, wird eine Support-Anfrage gestartet.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="switch-row">
+                            <label>🔊 Sound abspielen, wenn jemand den Warteraum betritt</label>
+                            <label class="switch"><input type="checkbox" id="voice_support-joinsound-enabled"><span
+                                    class="switch-slider"></span></label>
+                        </div>
+                        <small>Der Bot joint automatisch in den Warteraum-Kanal und spielt die hochgeladene
+                            Audiodatei ab, sobald ein Mitglied beitritt. Danach verlässt der Bot den Kanal
+                            wieder.</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Sounddatei</label>
+                        <div class="upload-btn-wrap">
+                            <label class="btn btn-secondary" for="voice_support-joinsound-input">📤 Datei
+                                hochladen</label>
+                            <input type="file" id="voice_support-joinsound-input"
+                                accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac,.flac"
+                                onchange="handleVoiceSupportSoundUpload(this)">
+                        </div>
+                        <div id="voice_support-joinsound-info" class="hidden" style="margin-top:8px;">
+                            <span id="voice_support-joinsound-filename"
+                                style="font-size:0.85rem; color:var(--text-muted);"></span>
+                            <audio id="voice_support-joinsound-preview" controls
+                                style="display:block; width:100%; margin-top:6px;"></audio>
+                            <button class="btn btn-secondary" style="margin-top:6px;"
+                                onclick="clearVoiceSupportSound()">Entfernen</button>
+                        </div>
+                        <small>Erlaubt sind gängige Audioformate (MP3, WAV, OGG), max. 4MB.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="voice_support-notification">Benachrichtigungskanal</label>
+                        <select id="voice_support-notification"></select>
+                        <small>Hier werden die Support-Anfragen mit Buttons gepostet.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Rolle pingen (optional)</label>
+                        <input type="text" class="chip-filter-input" placeholder="🔍 Rolle suchen…"
+                            oninput="filterRoleChips('voice_support-pingrole', this.value)">
+                        <div id="voice_support-pingrole" class="chip-select chip-select-scroll"></div>
+                        <small>Wähle eine Rolle, die bei neuen Support-Anfragen gepingt wird.</small>
+                    </div>
+
+                    <hr style="border-color:var(--border-subtle); margin:1rem 0;">
+
+                    <h3 style="font-size:0.9rem; font-weight:700; margin-bottom:0.5rem;">📝 Embed anpassen</h3>
+                    <div class="form-group">
+                        <label for="voice_support-embed-title">Titel</label>
+                        <input type="text" id="voice_support-embed-title" placeholder="🆕 Support-Anfrage"
+                            oninput="updateVoiceSupportEmbedPreview()">
+                    </div>
+                    <div class="form-group">
+                        <label for="voice_support-embed-desc">Beschreibung</label>
+                        <textarea id="voice_support-embed-desc" rows="3"
+                            placeholder="{user} wartet im Support-Warteraum auf Hilfe."
+                            oninput="updateVoiceSupportEmbedPreview()"></textarea>
+                        <small>Platzhalter: <code>{user}</code>, <code>{username}</code>, <code>{server}</code></small>
+                    </div>
+                    <div class="form-group">
+                        <label>Farbe</label>
+                        <div class="color-row">
+                            <input type="color" id="voice_support-embed-color" value="#5865f2"
+                                oninput="document.getElementById('voice_support-embed-color-hex').value=this.value; updateVoiceSupportEmbedPreview();">
+                            <input type="text" id="voice_support-embed-color-hex" value="#5865f2"
+                                oninput="document.getElementById('voice_support-embed-color').value=this.value; updateVoiceSupportEmbedPreview();">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Bild (optional)</label>
+                        <div class="image-upload">
+                            <img id="voice_support-embed-image-preview" class="image-preview" src="" alt=""
+                                style="display:none;">
+                            <div class="upload-btn-wrap">
+                                <label class="btn btn-secondary" for="voice_support-embed-image-input">📤
+                                    Hochladen</label>
+                                <input type="file" id="voice_support-embed-image-input" accept="image/*"
+                                    onchange="handleVoiceSupportImageUpload(this)">
+                            </div>
+                            <button class="btn btn-secondary" onclick="clearVoiceSupportImage()">Entfernen</button>
+                        </div>
+                    </div>
+                    <div
+                        style="background:var(--bg-surface); border-radius:10px; padding:14px; border:1px solid var(--border-subtle); margin-top:0.5rem;">
+                        <label
+                            style="font-size:0.75rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">📺
+                            Live-Vorschau</label>
+                        <div class="embed-preview" id="voice_support-embed-preview" style="border-left-color:#5865f2;">
+                            <div class="embed-preview-title">🆕 Support-Anfrage</div>
+                            <div class="embed-preview-desc">{user} wartet im Support-Warteraum auf Hilfe.</div>
+                            <img class="embed-preview-image hidden" id="voice_support-embed-preview-image" src="">
+                        </div>
+                    </div>
+
+                    <hr style="border-color:var(--border-subtle); margin:1rem 0;">
+
+                    <div class="form-group">
+                        <label for="voice_support-dutyembed">Kanal für Dienststatus-Embed</label>
+                        <select id="voice_support-dutyembed"></select>
+                        <small>Hier wird die Nachricht mit den „On Duty“ / „Off Duty“-Buttons gesendet.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>On-Duty-Rolle</label>
+                        <div id="voice_support-dutyon" class="chip-select"></div>
+                        <small>Diese Rolle wird beim Klick auf „On Duty“ vergeben.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Off-Duty-Rolle</label>
+                        <div id="voice_support-dutyoff" class="chip-select"></div>
+                        <small>Diese Rolle wird beim Klick auf „Off Duty“ vergeben.</small>
+                    </div>
+
+                    <div class="form-action">
+                        <button class="btn btn-secondary" onclick="sendDutyEmbed()">📤 Dienststatus-Embed
+                            senden</button>
+                        <span id="voice_support-save-status" class="hidden status-success"></span>
+                        <button class="btn btn-primary" onclick="handleSaveClick('voice_support')">💾 Speichern</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="locked-module-popup" class="locked-popup-overlay hidden">
+        <div class="locked-popup-box">
+            <div class="locked-popup-crown">👑</div>
+            <h3>Modul gesperrt</h3>
+            <p>Dieses Modul ist nur für Nutzer mit der entsprechenden Spezial-Rolle freigeschaltet.</p>
+            <div class="locked-popup-hint">Wechsle zu einem anderen Modul, um fortzufahren.</div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <footer>
+        <p>&copy; 2026 APEX BOT SYSTEM. All rights reserved.</p>
+    </footer>
+
+    
+    <script>
+        (function () {
+            var canvas = document.getElementById('starfield');
+            if (!canvas) return;
+            var ctx = canvas.getContext('2d');
+            var stars = [];
+            var shooters = [];
+            var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            var vw, vh, dpr, nextShot = 0;
+
+            function resize() {
+                dpr = Math.min(window.devicePixelRatio || 1, 2);
+                vw = window.innerWidth;
+                vh = window.innerHeight;
+                canvas.width = vw * dpr;
+                canvas.height = vh * dpr;
+                canvas.style.width = vw + 'px';
+                canvas.style.height = vh + 'px';
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                seedStars();
+            }
+
+            function seedStars() {
+                var count = Math.round((vw * vh) / 8500);
+                stars = [];
+                for (var i = 0; i < count; i++) {
+                    stars.push({
+                        x: Math.random() * vw,
+                        y: Math.random() * vh,
+                        r: Math.random() * 1.2 + 0.4,
+                        base: Math.random() * 0.5 + 0.25,
+                        speed: Math.random() * 0.02 + 0.006,
+                        phase: Math.random() * Math.PI * 2
+                    });
+                }
+            }
+
+            function spawnShooter() {
+                var startX = Math.random() * vw * 0.6 + vw * 0.2;
+                var angle = (Math.random() * 18 + 48) * Math.PI / 180;
+                var speed = Math.random() * 5 + 10;
+                shooters.push({
+                    x: startX,
+                    y: -10,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 1
+                });
+            }
+
+            function frame(t) {
+                ctx.clearRect(0, 0, vw, vh);
+                for (var i = 0; i < stars.length; i++) {
+                    var s = stars[i];
+                    var a = s.base;
+                    if (!reduced) {
+                        s.phase += s.speed;
+                        a = s.base + Math.sin(s.phase) * 0.3;
+                        if (a < 0.05) a = 0.05;
+                        if (a > 1) a = 1;
+                    }
+                    ctx.beginPath();
+                    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(255,255,255,' + a.toFixed(3) + ')';
+                    ctx.fill();
+                }
+                if (!reduced) {
+                    if (t > nextShot) {
+                        spawnShooter();
+                        nextShot = t + (Math.random() * 5000 + 3500);
+                    }
+                    for (var j = shooters.length - 1; j >= 0; j--) {
+                        var sh = shooters[j];
+                        sh.x += sh.vx;
+                        sh.y += sh.vy;
+                        sh.life -= 0.014;
+                        var tx = sh.x - sh.vx * 9;
+                        var ty = sh.y - sh.vy * 9;
+                        var life = Math.max(sh.life, 0);
+                        var grad = ctx.createLinearGradient(sh.x, sh.y, tx, ty);
+                        grad.addColorStop(0, 'rgba(255,255,255,' + life + ')');
+                        grad.addColorStop(1, 'rgba(255,255,255,0)');
+                        ctx.strokeStyle = grad;
+                        ctx.lineWidth = 1.6;
+                        ctx.lineCap = 'round';
+                        ctx.beginPath();
+                        ctx.moveTo(sh.x, sh.y);
+                        ctx.lineTo(tx, ty);
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.arc(sh.x, sh.y, 1.3, 0, Math.PI * 2);
+                        ctx.fillStyle = 'rgba(255,255,255,' + life + ')';
+                        ctx.shadowBlur = 6;
+                        ctx.shadowColor = '#fff';
+                        ctx.fill();
+                        ctx.shadowBlur = 0;
+                        if (sh.life <= 0 || sh.x > vw + 50 || sh.y > vh + 50) {
+                            shooters.splice(j, 1);
+                        }
+                    }
+                }
+                requestAnimationFrame(frame);
+            }
+
+            window.addEventListener('resize', resize);
+            resize();
+            requestAnimationFrame(frame);
+        })();
+
+        function toggleMobileMenu() {
+            const sidebar = document.getElementById('mobile-sidebar');
+            const overlay = document.getElementById('menu-overlay-bg');
+            const btn = document.getElementById('hamburger-btn');
+            if (!sidebar) return;
+            sidebar.classList.toggle('open');
+            if (overlay) overlay.classList.toggle('open');
+            if (btn) btn.classList.toggle('active');
+        }
+        function closeMobileMenu() {
+            const sidebar = document.getElementById('mobile-sidebar');
+            const overlay = document.getElementById('menu-overlay-bg');
+            const btn = document.getElementById('hamburger-btn');
+            if (sidebar) sidebar.classList.remove('open');
+            if (overlay) overlay.classList.remove('open');
+            if (btn) btn.classList.remove('active');
+        }
+        function toggleOverlayMenu() {
+            const sidebar = document.getElementById('mobile-sidebar');
+            const btn = document.getElementById('hamburger-overlay-btn');
+            if (!sidebar) return;
+            sidebar.classList.toggle('open');
+            if (btn) btn.classList.toggle('active');
+        }
+        function closeOverlayMenu() {
+            const sidebar = document.getElementById('mobile-sidebar');
+            const btn = document.getElementById('hamburger-overlay-btn');
+            if (sidebar) sidebar.classList.remove('open');
+            if (btn) btn.classList.remove('active');
+        }
+        document.addEventListener('click', function (e) {
+            const sidebar = document.getElementById('mobile-sidebar');
+            const btnMain = document.getElementById('hamburger-btn');
+            const btnOverlay = document.getElementById('hamburger-overlay-btn');
+            const overlayContainer = document.getElementById('manage-overlay');
+            if (!sidebar) return;
+            if (sidebar.classList.contains('open') && !overlayContainer.classList.contains('hidden') === false) {
+                if (!sidebar.contains(e.target) && !btnMain?.contains(e.target)) closeMobileMenu();
+            }
+            if (overlayContainer.classList.contains('hidden') === false) {
+                if (sidebar.classList.contains('open')) {
+                    if (!sidebar.contains(e.target) && !btnOverlay?.contains(e.target)) closeOverlayMenu();
+                }
+            }
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') { closeOverlayMenu(); closeMobileMenu(); }
+        });
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.module-page').forEach(page => page.classList.add('hidden'));
+            const activeBtn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+            const activePage = document.getElementById(`mod-${tabName}`);
+            if (activeBtn) activeBtn.classList.add('active');
+            if (activePage) activePage.classList.remove('hidden');
+            if (tabName === 'tickets' && typeof renderTicketOverview === 'function') {
+                setTimeout(renderTicketOverview, 50);
+            }
+            if (tabName === 'bot' && typeof renderBotChannelSelect === 'function') {
+                setTimeout(renderBotChannelSelect, 50);
+            }
+            if (tabName === 'voice_support' && typeof renderVoiceSupportSelects === 'function') {
+                setTimeout(renderVoiceSupportSelects, 50);
+            }
+        }
+        function switchSubtab(module, sub) {
+            const container = document.getElementById(`mod-${module}`);
+            container.querySelectorAll('.subtab-btn').forEach(b => b.classList.remove('active'));
+            container.querySelectorAll('.subpage').forEach(p => p.classList.add('hidden'));
+            const activeBtn = container.querySelector(`[data-sub="${sub}"]`);
+            const activePage = document.getElementById(`${module}-${sub}-page`);
+            if (activeBtn) activeBtn.classList.add('active');
+            if (activePage) activePage.classList.remove('hidden');
+        }
+
+        function showToast(message, type) {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+            const toast = document.createElement('div');
+            toast.className = `toast ${type || 'success'}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        async function handleSaveClick(module) {
+            if (typeof saveModuleSettings === 'function') {
+                await saveModuleSettings(module);
+            } else {
+                showToast('Fehler: dashboard.js wurde nicht geladen', 'error');
+            }
+        }
+
+        
+        function syncColor(prefix) { }
+        function syncColorHex(prefix) { }
+        function handleImageUpload(input, prefix) { }
+        function clearImage(prefix) { }
+        async function saveModuleSettings(module) {
+            showToast('Fehler: dashboard.js wurde nicht geladen - nichts gespeichert!', 'error');
+        }
+    </script>
+
+    <script src="/dashboard.js"></script>
+</body>
+
+</html>

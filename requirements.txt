@@ -1,0 +1,12 @@
+disnake
+flask
+Flask>=3.0.0
+requests>=2.31.0
+discord.py
+gunicorn>=21.2.0
+motor
+pymongo
+python-dotenv
+discord
+PyNaCl>=1.5.0
+davey
