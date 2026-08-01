@@ -188,7 +188,7 @@ async def ttl_cache_cleanup_loop():
         except Exception as e:
             logger.error(f"[CACHE] Fehler bei der Cache-Bereinigung: {e}")
 
-_CONFIG_CACHE_TTL = 8
+_CONFIG_CACHE_TTL = 600
 _config_cache = TTLCache(ttl=_CONFIG_CACHE_TTL, name="guild_config")
 
 # Eigener Thread-Pool für alle normalen DB-Aufrufe (find_one, insert_one, usw.).
