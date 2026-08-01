@@ -3219,13 +3219,7 @@ async def serverliste(interaction: discord.Interaction):
 
     await interaction.response.defer(ephemeral=True)
 
-    embed = discord.Embed(
-        title="📋 Serverliste",
-        description=f"Der Bot ist aktuell auf **{len(bot.guilds)}** Server(n).",
-        color=0xffffff,
-        timestamp=datetime.now(timezone.utc)
-    )
-
+    guild_fields = []
     for guild in bot.guilds:
         joined_at = guild.me.joined_at
         if joined_at:
@@ -3246,13 +3240,34 @@ async def serverliste(interaction: discord.Interaction):
 
         link_text = f"[Server-Link]({invite_link})" if invite_link else "Kein Invite verfügbar"
 
-        embed.add_field(
-            name=f"{guild.name} ({guild.id})",
-            value=f"👥 Mitglieder: {guild.member_count}\n🕒 Auf dem Server seit: {since_text}\n🔗 {link_text}",
-            inline=False
-        )
+        guild_fields.append((
+            f"{guild.name} ({guild.id})",
+            f"👥 Mitglieder: {guild.member_count}\n🕒 Auf dem Server seit: {since_text}\n🔗 {link_text}"
+        ))
 
-    await interaction.followup.send(embed=embed, ephemeral=True)
+    # Discord erlaubt max. 25 Felder pro Embed und max. 10 Embeds pro Nachricht
+    FIELDS_PER_EMBED = 25
+    MAX_EMBEDS_PER_MESSAGE = 10
+    chunks = [guild_fields[i:i + FIELDS_PER_EMBED] for i in range(0, len(guild_fields), FIELDS_PER_EMBED)]
+
+    embeds = []
+    for idx, chunk in enumerate(chunks, start=1):
+        embed = discord.Embed(
+            title=f"📋 Serverliste ({idx}/{len(chunks)})" if len(chunks) > 1 else "📋 Serverliste",
+            description=f"Der Bot ist aktuell auf **{len(bot.guilds)}** Server(n).",
+            color=0xffffff,
+            timestamp=datetime.now(timezone.utc)
+        )
+        for name, value in chunk:
+            embed.add_field(name=name, value=value, inline=False)
+        embeds.append(embed)
+
+    for i in range(0, len(embeds), MAX_EMBEDS_PER_MESSAGE):
+        batch = embeds[i:i + MAX_EMBEDS_PER_MESSAGE]
+        if i == 0:
+            await interaction.followup.send(embeds=batch, ephemeral=True)
+        else:
+            await interaction.followup.send(embeds=batch, ephemeral=True)
 
 @bot.tree.command(name="rp_start", description="Startet das Roleplay und postet die konfigurierte RP-Info-Nachricht.")
 async def rp_start(interaction: discord.Interaction):
