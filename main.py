@@ -2038,6 +2038,19 @@ async def on_ready():
     logger.info(f"✅ Bot ist online als {bot.user} (ID: {bot.user.id})")
     logger.info(f"📊 Bot ist auf {len(bot.guilds)} Servern")
 
+    # DIAGNOSE: loggt eine Warnung, sobald IRGENDEIN Callback/Task den Event-Loop
+    # länger als 0.3s blockiert. Zeigt im Log exakt Datei+Zeile des blockierenden
+    # Codes ("Executing <Task ...> took X.XXX seconds"). Kann nach dem Debuggen
+    # wieder entfernt werden.
+    try:
+        _loop = asyncio.get_running_loop()
+        _loop.slow_callback_duration = 0.3
+        _loop.set_debug(True)
+        logging.getLogger("asyncio").setLevel(logging.WARNING)
+        logger.info("🔍 Event-Loop-Debug aktiviert (blockierende Callbacks >0.3s werden geloggt)")
+    except Exception as e:
+        logger.error(f"[DEBUG] Konnte Loop-Debug nicht aktivieren: {e}")
+
     if _bot_ready_once:
         logger.info("on_ready erneut ausgelöst (Reconnect) – Init wird übersprungen.")
         return
