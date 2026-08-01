@@ -32,6 +32,7 @@ import base64
 import tempfile
 import shutil
 from collections import defaultdict, deque
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 from pymongo import MongoClient, ReturnDocument
@@ -190,8 +191,16 @@ async def ttl_cache_cleanup_loop():
 _CONFIG_CACHE_TTL = 8
 _config_cache = TTLCache(ttl=_CONFIG_CACHE_TTL, name="guild_config")
 
+# Eigener Thread-Pool für alle normalen DB-Aufrufe (find_one, insert_one, usw.).
+# Getrennt vom Change-Stream-Pool und mit mehr Workern als das asyncio-Default
+# (min(32, cpu_count()+4) – auf kleinen Render-Instanzen mit 1 CPU oft nur 5),
+# damit z. B. Voice-XP-Updates für viele Server, Ping-Checks und Slash-Commands
+# nicht aufeinander warten müssen.
+_db_call_executor = ThreadPoolExecutor(max_workers=20, thread_name_prefix="mongo-db-call")
+
 async def db_call(func, *args, **kwargs):
-    return await asyncio.to_thread(func, *args, **kwargs)
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(_db_call_executor, lambda: func(*args, **kwargs))
 
 async def get_config(guild_id):
     if guild_configs is None:
@@ -249,6 +258,14 @@ async def _clear_full_config_cache():
     _config_cache.clear()
     logger.info("[CACHE] Kompletter Konfigurations-Cache wurde geleert (Dashboard-Löschung erkannt).")
 
+# Eigener, dedizierter Thread-Pool NUR für den Change-Stream-Watcher.
+# Wichtig: der Watcher blockiert seinen Thread dauerhaft (solange der Stream offen ist).
+# Würde man dafür den gemeinsamen asyncio.to_thread-Pool nutzen, würde ein Worker
+# permanent belegt und für alle anderen db_call(...)-Aufrufe (Ping, Level-System,
+# Giveaways, usw.) blieben nur noch wenige/keine Threads übrig – das führt zu
+# Timeouts und "hängenden" Interactions, obwohl die DB selbst erreichbar ist.
+_watch_stream_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="mongo-watch")
+
 async def guild_config_watch_loop():
     if guild_configs is None:
         logger.warning("[CACHE] Keine MongoDB-Verbindung – Live-Cache-Invalidierung ist deaktiviert.")
@@ -256,7 +273,7 @@ async def guild_config_watch_loop():
     loop = asyncio.get_event_loop()
     while True:
         try:
-            await asyncio.to_thread(_watch_guild_configs_sync, loop)
+            await loop.run_in_executor(_watch_stream_executor, _watch_guild_configs_sync, loop)
         except asyncio.CancelledError:
             raise
         except Exception as e:
