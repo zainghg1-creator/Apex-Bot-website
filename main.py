@@ -4388,7 +4388,12 @@ async def on_interaction(interaction: discord.Interaction):
                 b = random.randint(1, 10)
                 answer = a + b
                 modal = VerifyMathModal(a, b, answer, interaction.guild_id, role_id)
-                await interaction.response.send_modal(modal)
+                try:
+                    await interaction.response.send_modal(modal)
+                except discord.NotFound:
+                    logger.warning(f"[ON_INTERACTION] Mathe-Modal abgelaufen (10062) für {interaction.user}. Cold Start?")
+                except Exception as e:
+                    logger.error(f"[ON_INTERACTION] Fehler beim Mathe-Modal: {e}")
             return
 
         if custom_id.startswith('act_'):
@@ -4491,7 +4496,7 @@ async def on_interaction(interaction: discord.Interaction):
                 await interaction.response.send_message(f"❌ Ein Fehler ist aufgetreten: {e}", ephemeral=True)
             return
 
-        if custom_id.startswith('app_accept_') or custom_id.startswith('app_reject_'):
+            if custom_id.startswith('app_accept_') or custom_id.startswith('app_reject_'):
             action = 'accepted' if custom_id.startswith('app_accept_') else 'rejected'
             parts = custom_id.split('_')
             app_id = '_'.join(parts[2:]) if len(parts) > 2 else ''
@@ -4519,7 +4524,12 @@ async def on_interaction(interaction: discord.Interaction):
                 if not is_admin and not has_role:
                     await interaction.response.send_message("❌ Du hast keine Berechtigung, über diese Bewerbung zu entscheiden.", ephemeral=True)
                     return
-                await interaction.response.send_modal(ApplicationDecisionModal(app_id, action))
+                try:
+                    await interaction.response.send_modal(ApplicationDecisionModal(app_id, action))
+                except discord.NotFound:
+                    logger.warning(f"[ON_INTERACTION] Bewerbungs-Modal abgelaufen (10062) für {interaction.user}. Cold Start?")
+                except Exception as e:
+                    logger.error(f"[ON_INTERACTION] Fehler beim Bewerbungs-Modal: {e}")
             except Exception as e:
                 logger.error(f"[BEWERBUNG] Fehler bei der Bearbeitung der Bewerbung {app_id}: {e}")
                 await interaction.response.send_message(f"❌ Fehler: {e}", ephemeral=True)
