@@ -2399,6 +2399,72 @@ window.closeEditView = function() {
   editingIndex = null;
 };
 
+window.saveEditView = async function() {
+  const saveStatus = document.getElementById('edit-save-status');
+  const saveBtn = document.querySelector('.tpe-footer .btn-primary');
+  if (saveBtn) saveBtn.disabled = true;
+  if (saveStatus) {
+    saveStatus.classList.remove('hidden', 'status-error');
+    saveStatus.classList.add('status-success');
+    saveStatus.textContent = '⏳ Speichern...';
+  }
+  try {
+    const panelPayload = {
+      panelChannelId: document.getElementById('edit-panel-channel')?.value || '',
+      title: document.getElementById('edit-panel-title')?.value || '',
+      description: document.getElementById('edit-panel-desc')?.value || '',
+      color: document.getElementById('edit-panel-color')?.value || '#ffffff',
+      image: document.getElementById('edit-image-input')?.dataset.value || '',
+      creationMessage: document.getElementById('edit-create-msg')?.value || '',
+      enabled: document.getElementById('edit-panel-enabled')?.checked ?? true,
+      panelName: document.getElementById('edit-panel-name')?.value || '',
+      supportRoles: getEditSelectedRoles('edit-support-roles') || [],
+      logChannelId: document.getElementById('edit-log-channel')?.value || '',
+      overflowEnabled: document.getElementById('edit-overflow-enabled')?.checked ?? false,
+      overflowCategories: getSelectedOptions('edit-ticket-overflow') || [],
+      threadMode: document.getElementById('edit-thread-mode')?.value || 'none',
+      saveTranscripts: document.getElementById('edit-save-transcripts')?.checked ?? false,
+      saveImages: document.getElementById('edit-save-images')?.checked ?? false,
+      privateTranscripts: document.getElementById('edit-private-transcripts')?.checked ?? false,
+      channelNameTemplate: document.getElementById('edit-channel-template')?.value || '{panel.name}-{ticket.creator.username}',
+      allowedRoles: getEditSelectedRoles('edit-allowed-roles') || [],
+      deniedRoles: getEditSelectedRoles('edit-denied-roles') || [],
+      maxTickets: parseInt(document.getElementById('edit-max-tickets')?.value) || 1,
+      claimEnabled: document.getElementById('edit-claim-enabled')?.checked ?? false,
+      buttons: collectButtons() || [],
+      options: collectOptions() || []
+    };
+
+    const config = await apiFetch(`/guild/${state.activeGuildId}/config`);
+    if (!config.tickets) config.tickets = { options: [] };
+    if (!config.tickets.options) config.tickets.options = [];
+
+    if (editingIndex === null || editingIndex === undefined) {
+      config.tickets.options.push(panelPayload);
+      editingIndex = config.tickets.options.length - 1;
+    } else {
+      config.tickets.options[editingIndex] = panelPayload;
+    }
+
+    await apiFetch(`/guild/${state.activeGuildId}/config/tickets`, { method: 'POST', body: JSON.stringify(config.tickets) });
+    invalidateTicketCache();
+
+    if (saveStatus) { saveStatus.textContent = '✅ Gespeichert!'; }
+    showToast('Ticket-Panel gespeichert.', 'success');
+    closeEditView();
+    renderTicketOverview();
+  } catch (err) {
+    if (saveStatus) {
+      saveStatus.classList.remove('status-success');
+      saveStatus.classList.add('status-error');
+      saveStatus.textContent = `❌ Fehler: ${err.message}`;
+    }
+    showToast(`Fehler beim Speichern: ${err.message}`, 'error');
+  } finally {
+    if (saveBtn) saveBtn.disabled = false;
+  }
+};
+
 
 
 
