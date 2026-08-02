@@ -3849,10 +3849,17 @@ async def uprank(
         zusatzunterschrift_1, zusatzunterschrift_2, zusatzunterschrift_3, zusatzunterschrift_4, zusatzunterschrift_5
     )
     async def execute_fn(tu_cfg, cmd_cfg, signers):
+        # Alte Hauptrolle entfernen
+        try:
+            await wer.remove_roles(von, reason=f"/uprank von {interaction.user}: {grund}")
+        except discord.Forbidden:
+            logger.warning(f"[TEAMUPDATE] Keine Berechtigung, Rolle {von} von {wer} zu entfernen.")
+        # Neue Hauptrolle hinzufügen
         try:
             await wer.add_roles(zu, reason=f"/uprank von {interaction.user}: {grund}")
         except discord.Forbidden:
             logger.warning(f"[TEAMUPDATE] Keine Berechtigung, Rolle {zu} an {wer} zu vergeben.")
+        # Nebenrollen behandeln
         if alte_nebenrolle is not None:
             try:
                 await wer.remove_roles(alte_nebenrolle, reason=f"/uprank von {interaction.user}: {grund}")
