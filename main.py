@@ -1674,7 +1674,7 @@ async def status_loop():
                 f"⏰ {time_str} Uhr",
                 f"🚀 v2.4",
                 f"🔧 /help",
-                f"💬 discord.gg/3eghXPKD4K",
+                f"💬 discord.gg/apexbot",
                 f"🌐 Dashboard",
                 f"🛡️ {guild_count} Communities geschützt",
                 f"🤖 Gestartet: {now.strftime('%H:%M')} Uhr",
@@ -4207,7 +4207,7 @@ async def invite(interaction: discord.Interaction):
     invite_url = "https://discord.com/api/oauth2/authorize?client_id=1525613011262377994&scope=bot%20applications.commands&permissions=8"
     embed = discord.Embed(title="Lade den APEX Bot ein", description="Lade dir hier den **APEX Bot** auf deinen Server ein!", color=0xffffff, timestamp=datetime.now(BERLIN_TZ))
     embed.add_field(name="Lade den Bot ein:", value=f"[Invite Link]({invite_url})", inline=False)
-    embed.add_field(name="Support Server:", value="[Support Server](https://discord.gg/3eghXPKD4K)", inline=False)
+    embed.add_field(name="Support Server:", value="[Support Server](https://discord.gg/apexbot)", inline=False)
     view = discord.ui.View()
     view.add_item(discord.ui.Button(label="APEX Bot Einladen", url=invite_url, style=discord.ButtonStyle.link))
     await interaction.response.send_message(embed=embed, view=view)
