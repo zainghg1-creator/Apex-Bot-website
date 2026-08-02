@@ -378,7 +378,7 @@ async function loadRolesAndChannels(guildId) {
 }
 
 function renderAllSelects() {
-  const selectIds = ['join-channel', 'leave-channel', 'teamliste-channel', 'automod-log-channel', 'teamupdate-channel', 'verification-channel', 'minigames-counting-channel', 'minigames-flags-channel', 'minigames-emoji-channel', 'levels-channel', 'statusembed-channel', 'rp-channel'];
+  const selectIds = ['join-channel', 'leave-channel', 'teamliste-channel', 'teamliste-roblox-channel', 'automod-log-channel', 'teamupdate-channel', 'verification-channel', 'minigames-counting-channel', 'minigames-flags-channel', 'minigames-emoji-channel', 'levels-channel', 'statusembed-channel', 'rp-channel'];
   selectIds.forEach(id => renderChannelSelect(id, 0));
   TEAMUPDATE_COMMANDS.forEach(cmd => renderChannelSelect(`cmd-${cmd}-channel`, 0));
 }
@@ -864,6 +864,9 @@ function applyTeamlisteConfig(cfg) {
   setSelectValue('teamliste-channel', cfg.channelId || '');
   setValue('teamliste-title', cfg.title || '');
   renderRoleChips('teamliste-roles', cfg.roles || []);
+  setChecked('teamliste-numbers', cfg.showNumbers ?? false);
+  setChecked('teamliste-status', cfg.showStatus ?? false);
+  setSelectValue('teamliste-roblox-channel', cfg.robloxChannelId || '');
 }
 
 
@@ -1468,7 +1471,10 @@ async function saveModuleSettings(moduleName) {
         payload = {
           channelId: document.getElementById('teamliste-channel').value,
           roles: getSelectedRoleIds('teamliste-roles'),
-          title: document.getElementById('teamliste-title').value
+          title: document.getElementById('teamliste-title').value,
+          showNumbers: document.getElementById('teamliste-numbers').checked,
+          showStatus: document.getElementById('teamliste-status').checked,
+          robloxChannelId: document.getElementById('teamliste-roblox-channel').value
         };
         break;
       case 'automod':
