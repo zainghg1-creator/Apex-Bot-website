@@ -866,6 +866,7 @@ function applyTeamlisteConfig(cfg) {
   renderRoleChips('teamliste-roles', cfg.roles || []);
   setChecked('teamliste-numbers', cfg.showNumbers ?? false);
   setChecked('teamliste-status', cfg.showStatus ?? false);
+  setChecked('teamliste-roblox-enabled', cfg.robloxEnabled ?? false);
   setSelectValue('teamliste-roblox-channel', cfg.robloxChannelId || '');
 }
 
@@ -1504,6 +1505,7 @@ async function saveModuleSettings(moduleName) {
           title: document.getElementById('teamliste-title').value,
           showNumbers: document.getElementById('teamliste-numbers').checked,
           showStatus: document.getElementById('teamliste-status').checked,
+          robloxEnabled: document.getElementById('teamliste-roblox-enabled').checked,
           robloxChannelId: document.getElementById('teamliste-roblox-channel').value
         };
         break;
