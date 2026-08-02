@@ -538,7 +538,7 @@ async def build_teamliste_embed(guild: discord.Guild) -> discord.Embed:
     show_numbers = team_cfg.get("showNumbers", False)
     show_status = team_cfg.get("showStatus", False)
     roblox_channel_id = team_cfg.get("robloxChannelId")
-    roblox_names = await get_roblox_names_map(guild.id) if roblox_channel_id else {}
+    roblox_names = await get_roblox_names_map(guild.id) if team_cfg.get("robloxEnabled") and roblox_channel_id else {}
     embed = discord.Embed(title=title, color=0xffffff)
     role_ids = team_cfg.get("roles", [])
     if not role_ids:
@@ -621,7 +621,7 @@ async def handle_roblox_name_message(message: discord.Message) -> bool:
     config = await get_config(message.guild.id)
     team_cfg = config.get("teamliste", {})
     channel_id = team_cfg.get("robloxChannelId")
-    if not channel_id or str(message.channel.id) != str(channel_id):
+    if not team_cfg.get("robloxEnabled") or not channel_id or str(message.channel.id) != str(channel_id):
         return False
     roblox_name = message.content.strip()
     if not roblox_name:
