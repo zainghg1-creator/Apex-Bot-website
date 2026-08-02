@@ -986,6 +986,36 @@ function applyLevelsConfig(cfg) {
   setChecked('levels-voice-enabled', voice.enabled ?? false);
   setValue('levels-voice-xp', voice.xpPerMinute ?? 10);
   renderRoleChips('levels-xp-give-role', cfg.xpGiveRoleId ? [cfg.xpGiveRoleId] : [], true);
+  const rewardsList = document.getElementById('levels-role-rewards-list');
+  if (rewardsList) rewardsList.innerHTML = '';
+  (cfg.roleRewards || []).forEach(r => addLevelRoleReward(r));
+}
+
+window.addLevelRoleReward = function(data = null) {
+  const list = document.getElementById('levels-role-rewards-list');
+  if (!list) return;
+  const row = document.createElement('div');
+  row.className = 'option-row level-role-reward-row';
+  row.style.cssText = 'display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px;';
+  row.innerHTML = `
+    <label style="margin:0; font-size:0.8rem; white-space:nowrap;">Ab Level</label>
+    <input type="number" class="level-role-reward-level" min="1" step="1" value="${data && data.level ? data.level : 1}" style="width:90px;">
+    <select class="level-role-reward-role" style="flex:1; min-width:140px;"></select>
+    <button type="button" class="option-remove" onclick="this.parentElement.remove()">✕</button>
+  `;
+  list.appendChild(row);
+  const select = row.querySelector('.level-role-reward-role');
+  select.innerHTML = state.guildRoles.length
+    ? state.guildRoles.map(r => `<option value="${r.id}">@${escapeHtml(r.name)}</option>`).join('')
+    : `<option value="">Keine Rollen gefunden</option>`;
+  if (data && data.roleId) select.value = data.roleId;
+};
+
+function collectLevelRoleRewards() {
+  return Array.from(document.querySelectorAll('#levels-role-rewards-list .level-role-reward-row')).map(row => ({
+    level: parseInt(row.querySelector('.level-role-reward-level')?.value) || 1,
+    roleId: row.querySelector('.level-role-reward-role')?.value || ''
+  })).filter(r => r.roleId).sort((a, b) => a.level - b.level);
 }
 
 function toggleCommandRoles(cmd) {
@@ -1597,7 +1627,8 @@ async function saveModuleSettings(moduleName) {
             enabled: document.getElementById('levels-voice-enabled')?.checked ?? false,
             xpPerMinute: parseInt(document.getElementById('levels-voice-xp')?.value) || 10
           },
-          xpGiveRoleId: getSelectedRoleIds('levels-xp-give-role')[0] || null
+          xpGiveRoleId: getSelectedRoleIds('levels-xp-give-role')[0] || null,
+          roleRewards: collectLevelRoleRewards()
         };
         break;
       case 'statusembed':
