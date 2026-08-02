@@ -1731,9 +1731,16 @@ async def send_status_embed(guild, cfg):
     except ValueError:
         color_int = 0x2B2D31
     embed = discord.Embed(title=title, color=color_int, timestamp=datetime.now(timezone.utc))
+    
     embed.add_field(name="Ping", value=f"{ping_ms} ms", inline=True)
     embed.add_field(name="Server", value=str(len(bot.guilds)), inline=True)
+    
+    # NEU: Gesamtanzahl aller Mitglieder über alle Server
+    total_members = sum(g.member_count for g in bot.guilds)
+    embed.add_field(name="Mitglieder", value=f"{total_members:,}", inline=True)   # mit Tausendertrennung
+    
     embed.add_field(name="Laufzeit", value=uptime_str, inline=True)
+    
     content = None
     allowed_mentions = discord.AllowedMentions.none()
     role_id = cfg.get("roleId")
