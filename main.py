@@ -372,8 +372,11 @@ async def apply_role_nickname(member: discord.Member):
         return
     member_role_ids = {str(r.id) for r in member.roles}
     matching = [e for e in entries if e["roleId"] in member_role_ids]
-    current_name = member.nick or member.name
-    base_name = strip_role_nickname_affixes(current_name, entries).strip() or member.name
+    # default_display: der Name, den Discord ohne gesetzten Server-Nickname anzeigen würde
+    # (also der globale Anzeigename, nicht das @username-Handle).
+    default_display = member.global_name or member.name
+    current_name = member.display_name
+    base_name = strip_role_nickname_affixes(current_name, entries).strip() or default_display
     if matching:
         def role_position(entry):
             role = member.guild.get_role(int(entry["roleId"]))
@@ -383,10 +386,10 @@ async def apply_role_nickname(member: discord.Member):
     else:
         new_name = base_name
     new_name = new_name[:32]
-    if new_name == (member.nick or member.name):
+    if new_name == member.display_name:
         return
     try:
-        await member.edit(nick=None if new_name == member.name else new_name)
+        await member.edit(nick=None if new_name == default_display else new_name)
         logger.info(f"[ROLENICKNAMES] Nickname von {member} → '{new_name}'")
     except discord.Forbidden:
         logger.warning(f"[ROLENICKNAMES] Keine Berechtigung, Nickname von {member} zu ändern.")
@@ -720,6 +723,7 @@ class TicketDropdown(discord.ui.Select):
             save_images = panel.get("saveImages", False)
             private_transcripts = panel.get("privateTranscripts", False)
             claim_enabled = panel.get("claimEnabled", False)
+            claim_lock_enabled = panel.get("claimLockEnabled", False)
             buttons_cfg = panel.get("buttons", []) or []
             thread_mode = panel.get("threadMode", "none")
             overflow_enabled = panel.get("overflowEnabled", False)
@@ -736,12 +740,12 @@ class TicketDropdown(discord.ui.Select):
             max_tickets = panel.get("maxTickets", 1) or 1
             existing_tickets = [
                 c for c in guild.text_channels
-                if c.name.startswith(f"ticket-{user.name.lower()}-")
+                if c.name.startswith(f"ticket-{user.display_name.lower()}-")
                 and c.permissions_for(user).view_channel
             ]
             existing_threads = [
                 t for t in guild.threads
-                if t.name.startswith(f"ticket-{user.name.lower()}-") and not t.archived
+                if t.name.startswith(f"ticket-{user.display_name.lower()}-") and not t.archived
             ]
             if len(existing_tickets) + len(existing_threads) >= max_tickets:
                 await interaction.followup.send(f"❌ Du hast bereits die maximale Anzahl offener Tickets erreicht ({max_tickets}).", ephemeral=True)
@@ -756,7 +760,7 @@ class TicketDropdown(discord.ui.Select):
             option_support_roles = (selected_option or {}).get("supportRoles", []) or []
             fallback_support_roles = panel.get("supportRoles", []) or []
             support_role_ids = option_support_roles or fallback_support_roles
-            channel_name = f"ticket-{user.name.lower()}-{random.randint(100,999)}"
+            channel_name = f"ticket-{user.display_name.lower()}-{random.randint(100,999)}"
 
             if thread_mode in ("thread", "private"):
                 parent_channel_id = panel.get("panelChannelId")
@@ -769,7 +773,7 @@ class TicketDropdown(discord.ui.Select):
                     ticket_channel = await parent_channel.create_thread(
                         name=channel_name,
                         type=thread_type,
-                        reason=f"Ticket erstellt von {user.name}"
+                        reason=f"Ticket erstellt von {user.display_name}"
                     )
                 except discord.Forbidden:
                     await interaction.followup.send("❌ Der Bot hat keine Berechtigung, Threads zu erstellen.", ephemeral=True)
@@ -813,7 +817,7 @@ class TicketDropdown(discord.ui.Select):
                     channel_name,
                     category=category,
                     overwrites=overwrites,
-                    reason=f"Ticket erstellt von {user.name}"
+                    reason=f"Ticket erstellt von {user.display_name}"
                 )
 
             embed = discord.Embed(
@@ -831,7 +835,8 @@ class TicketDropdown(discord.ui.Select):
                 ticket_channel, user, save_transcripts, log_channel_id,
                 claim_enabled=claim_enabled, buttons_cfg=buttons_cfg,
                 save_images=save_images, private_transcripts=private_transcripts,
-                support_role_ids=support_role_ids, team_role_ids=team_roles
+                support_role_ids=support_role_ids, team_role_ids=team_roles,
+                claim_lock_enabled=claim_lock_enabled
             )
             await ticket_channel.send(ping_message)
             ticket_message = await ticket_channel.send(embed=embed, view=view)
@@ -845,6 +850,7 @@ class TicketDropdown(discord.ui.Select):
                         "saveTranscripts": save_transcripts,
                         "logChannelId": log_channel_id,
                         "claimEnabled": claim_enabled,
+                        "claimLockEnabled": claim_lock_enabled,
                         "buttonsCfg": buttons_cfg,
                         "saveImages": save_images,
                         "privateTranscripts": private_transcripts,
@@ -866,7 +872,7 @@ class TicketDropdown(discord.ui.Select):
                             timestamp=datetime.now(BERLIN_TZ)
                         )
                         await log_channel.send(embed=log_embed)
-                        logger.info(f"[TICKET] Log gesendet: Ticket geöffnet von {user.name}")
+                        logger.info(f"[TICKET] Log gesendet: Ticket geöffnet von {user.display_name}")
                     except Exception as e:
                         logger.error(f"[TICKET] Fehler beim Log-Senden: {e}")
             await interaction.followup.send(f"✅ Ticket wurde erstellt: {ticket_channel.mention}", ephemeral=True)
@@ -877,10 +883,46 @@ class TicketDropdown(discord.ui.Select):
             await interaction.followup.send(f"❌ Fehler beim Erstellen des Tickets: {str(e)}", ephemeral=True)
             logger.error(f"[TICKET] Fehler: {e}")
 
+class TicketAddUserSelect(discord.ui.UserSelect):
+    def __init__(self, parent_view: "TicketCloseView"):
+        self.parent_view = parent_view
+        super().__init__(placeholder="Wähle bis zu 5 Personen aus...", min_values=1, max_values=5)
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        channel = self.parent_view.channel
+        added, failed = [], []
+        for member in self.values:
+            try:
+                if isinstance(channel, discord.Thread):
+                    await channel.add_user(member)
+                else:
+                    await channel.set_permissions(member, read_messages=True, send_messages=True, attach_files=True, embed_links=True)
+                added.append(member.mention)
+            except Exception as e:
+                logger.error(f"[TICKET] Konnte {member} nicht hinzufügen: {e}")
+                failed.append(member.mention)
+        if added:
+            await channel.send(f"➕ {', '.join(added)} wurde{'n' if len(added) > 1 else ''} von {interaction.user.mention} zum Ticket hinzugefügt.")
+        msg = ""
+        if added:
+            msg += f"✅ Hinzugefügt: {', '.join(added)}\n"
+        if failed:
+            msg += f"❌ Fehlgeschlagen: {', '.join(failed)}"
+        await interaction.followup.send(msg or "ℹ️ Niemand ausgewählt.", ephemeral=True)
+
+
+class TicketAddUserView(discord.ui.View):
+    def __init__(self, parent_view: "TicketCloseView"):
+        super().__init__(timeout=180)
+        self.add_item(TicketAddUserSelect(parent_view))
+
+
 class TicketCloseView(discord.ui.View):
     def __init__(self, channel, creator: discord.User, save_transcripts: bool = False, log_channel_id: int = None,
                  claim_enabled: bool = False, buttons_cfg: list = None, save_images: bool = False,
-                 private_transcripts: bool = False, support_role_ids: list = None, team_role_ids: list = None):
+                 private_transcripts: bool = False, support_role_ids: list = None, team_role_ids: list = None,
+                 claim_lock_enabled: bool = False):
         super().__init__(timeout=None)
         self.channel = channel
         self.creator = creator
@@ -890,6 +932,7 @@ class TicketCloseView(discord.ui.View):
         self.private_transcripts = private_transcripts
         self.support_role_ids = set(support_role_ids or [])
         self.team_role_ids = set(team_role_ids or [])
+        self.claim_lock_enabled = claim_lock_enabled
         self.transcript_manager = TranscriptManager(bot)
         self.claimed_by = None
         self.claim_button = None
@@ -927,15 +970,36 @@ class TicketCloseView(discord.ui.View):
             self.claim_button.callback = self.claim_callback
             self.add_item(self.claim_button)
 
+        self.add_user_button = discord.ui.Button(
+            label="Person hinzufügen",
+            emoji="➕",
+            style=discord.ButtonStyle.secondary,
+            custom_id=f"add_user_{channel.id}"
+        )
+        self.add_user_button.callback = self.add_user_callback
+        self.add_item(self.add_user_button)
+
+    def _is_privileged(self, user) -> bool:
+        member_role_ids = {str(r.id) for r in user.roles} if isinstance(user, discord.Member) else set()
+        return bool(
+            (getattr(user, "guild_permissions", None) and user.guild_permissions.administrator)
+            or member_role_ids & self.support_role_ids
+            or member_role_ids & self.team_role_ids
+        )
+
+    def _can_manage(self, user):
+        """Prüft, ob der User dieses Ticket bearbeiten darf (schließen, Personen hinzufügen, etc.).
+        Wenn das Claim-Lock aktiv ist und das Ticket bereits beansprucht wurde, darf nur noch
+        der Beanspruchende (oder ein Administrator) das Ticket bearbeiten."""
+        if getattr(user, "guild_permissions", None) and user.guild_permissions.administrator:
+            return True, ""
+        if self.claim_lock_enabled and self.claimed_by and user.id != self.claimed_by:
+            return False, f"❌ Dieses Ticket wurde beansprucht. Nur <@{self.claimed_by}> kann es aktuell bearbeiten."
+        return True, ""
+
     async def claim_callback(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
-        member_role_ids = {str(r.id) for r in interaction.user.roles} if isinstance(interaction.user, discord.Member) else set()
-        is_privileged = (
-            interaction.user.guild_permissions.administrator
-            or bool(member_role_ids & self.support_role_ids)
-            or bool(member_role_ids & self.team_role_ids)
-        )
-        if not is_privileged:
+        if not self._is_privileged(interaction.user):
             await interaction.followup.send("❌ Nur Team-/Support-Mitglieder können Tickets beanspruchen.", ephemeral=True)
             return
         if self.claimed_by:
@@ -958,10 +1022,34 @@ class TicketCloseView(discord.ui.View):
             await self.channel.edit(topic=f"Beansprucht von {interaction.user.display_name}")
         except Exception:
             pass
-        await self.channel.send(f"🙋 Ticket wurde von {interaction.user.mention} beansprucht.")
+        if self.claim_lock_enabled and isinstance(self.channel, discord.TextChannel):
+            try:
+                for role_id in (self.support_role_ids | self.team_role_ids):
+                    role = self.channel.guild.get_role(int(role_id))
+                    if role:
+                        await self.channel.set_permissions(role, send_messages=False, reason="Ticket-Claim-Lock aktiv")
+                await self.channel.set_permissions(interaction.user, read_messages=True, send_messages=True, attach_files=True, embed_links=True, reason="Beanspruchendes Mitglied")
+            except Exception as e:
+                logger.error(f"[TICKET] Konnte Claim-Lock-Berechtigungen nicht setzen: {e}")
+        lock_note = " 🔒 Nur diese Person kann das Ticket jetzt bearbeiten." if self.claim_lock_enabled else ""
+        await self.channel.send(f"🙋 Ticket wurde von {interaction.user.mention} beansprucht.{lock_note}")
         await interaction.followup.send("✅ Du hast dieses Ticket beansprucht.", ephemeral=True)
 
+    async def add_user_callback(self, interaction: discord.Interaction):
+        if not self._is_privileged(interaction.user) and interaction.user.id != getattr(self.creator, "id", None):
+            await interaction.response.send_message("❌ Du hast keine Berechtigung, Personen zu diesem Ticket hinzuzufügen.", ephemeral=True)
+            return
+        allowed, reason = self._can_manage(interaction.user)
+        if not allowed:
+            await interaction.response.send_message(reason, ephemeral=True)
+            return
+        await interaction.response.send_message("Wähle die Person(en) aus, die hinzugefügt werden sollen:", view=TicketAddUserView(self), ephemeral=True)
+
     async def close_callback(self, interaction: discord.Interaction):
+        allowed, reason = self._can_manage(interaction.user)
+        if not allowed:
+            await interaction.response.send_message(reason, ephemeral=True)
+            return
         await interaction.response.defer(ephemeral=True)
         try:
             transcript_path = None
@@ -996,7 +1084,7 @@ class TicketCloseView(discord.ui.View):
                         else:
                             log_embed.add_field(name="📄 Transkript", value="Siehe angehängte Datei", inline=False)
                     await log_channel.send(embed=log_embed)
-                    logger.info(f"[TICKET] Log gesendet: Ticket geschlossen von {interaction.user.name}")
+                    logger.info(f"[TICKET] Log gesendet: Ticket geschlossen von {interaction.user.display_name}")
                 except Exception as e:
                     logger.error(f"[TICKET] Fehler beim Log-Senden: {e}")
             channel_name = self.channel.name
@@ -1005,7 +1093,7 @@ class TicketCloseView(discord.ui.View):
                     await db_call(tickets_collection.delete_one, {"_id": str(self.channel.id)})
                 except Exception as e:
                     logger.error(f"[TICKET] Konnte Ticket-Metadaten nicht löschen: {e}")
-            await self.channel.delete(reason=f"Ticket geschlossen von {interaction.user.name}")
+            await self.channel.delete(reason=f"Ticket geschlossen von {interaction.user.display_name}")
             await interaction.followup.send(
                 f"✅ Ticket `{channel_name}` wurde geschlossen!" +
                 (" 📄 Transkript wurde gespeichert." if transcript_path else ""),
@@ -1018,6 +1106,10 @@ class TicketCloseView(discord.ui.View):
             logger.error(f"[TICKET] Fehler beim Schließen: {e}")
 
     async def transcript_callback(self, interaction: discord.Interaction):
+        allowed, reason = self._can_manage(interaction.user)
+        if not allowed:
+            await interaction.response.send_message(reason, ephemeral=True)
+            return
         await interaction.response.defer(ephemeral=True)
         try:
             transcript_path = await self.transcript_manager.create_transcript(self.channel, save_images=self.save_images)
@@ -1060,7 +1152,8 @@ async def rebuild_ticket_view(doc: dict) -> "TicketCloseView | None":
         save_images=doc.get("saveImages", False),
         private_transcripts=doc.get("privateTranscripts", False),
         support_role_ids=doc.get("supportRoleIds", []),
-        team_role_ids=doc.get("teamRoleIds", [])
+        team_role_ids=doc.get("teamRoleIds", []),
+        claim_lock_enabled=doc.get("claimLockEnabled", False)
     )
     claimed_by = doc.get("claimedBy")
     if claimed_by and view.claim_button:
@@ -2188,8 +2281,8 @@ async def on_member_join(member):
     channel = member.guild.get_channel(int(welcome_config.get("channelId", 0)))
     if not channel:
         return
-    text = welcome_config.get("text", "Willkommen {user}!").replace("{user}", member.mention).replace("{username}", member.name).replace("{server}", member.guild.name).replace("{membercount}", str(member.guild.member_count))
-    title = welcome_config.get("title", f"Willkommen auf {member.guild.name}!").replace("{user}", member.mention).replace("{username}", member.name).replace("{server}", member.guild.name).replace("{membercount}", str(member.guild.member_count))
+    text = welcome_config.get("text", "Willkommen {user}!").replace("{user}", member.mention).replace("{username}", member.display_name).replace("{server}", member.guild.name).replace("{membercount}", str(member.guild.member_count))
+    title = welcome_config.get("title", f"Willkommen auf {member.guild.name}!").replace("{user}", member.mention).replace("{username}", member.display_name).replace("{server}", member.guild.name).replace("{membercount}", str(member.guild.member_count))
     color_hex = welcome_config.get("color", "#ffffff")
     try:
         color = int(color_hex.lstrip('#'), 16)
@@ -2229,8 +2322,8 @@ async def on_member_remove(member):
     channel = member.guild.get_channel(int(leave_config.get("channelId", 0)))
     if not channel:
         return
-    text = leave_config.get("text", f"{member.name} hat den Server verlassen.").replace("{user}", member.name).replace("{username}", member.name).replace("{server}", member.guild.name).replace("{membercount}", str(member.guild.member_count))
-    title = leave_config.get("title", "Auf Wiedersehen 👋").replace("{user}", member.name).replace("{username}", member.name).replace("{server}", member.guild.name).replace("{membercount}", str(member.guild.member_count))
+    text = leave_config.get("text", f"{member.display_name} hat den Server verlassen.").replace("{user}", member.display_name).replace("{username}", member.display_name).replace("{server}", member.guild.name).replace("{membercount}", str(member.guild.member_count))
+    title = leave_config.get("title", "Auf Wiedersehen 👋").replace("{user}", member.display_name).replace("{username}", member.display_name).replace("{server}", member.guild.name).replace("{membercount}", str(member.guild.member_count))
     color_hex = leave_config.get("color", "#ffffff")
     try:
         color = int(color_hex.lstrip('#'), 16)
@@ -3092,7 +3185,7 @@ async def check_level_up(guild: discord.Guild, member: discord.Member, doc: dict
     if not channel:
         return
     template = lvl_cfg.get("levelUpMessage") or "🎉 {user} hat **Level {level}** erreicht!"
-    text = template.replace("{user}", member.mention).replace("{username}", member.name).replace("{level}", str(level))
+    text = template.replace("{user}", member.mention).replace("{username}", member.display_name).replace("{level}", str(level))
     try:
         await channel.send(text)
         logger.info(f"[LEVELS] {member} ist jetzt Level {level} in {guild.name}")
@@ -3993,8 +4086,8 @@ async def test_welcome(interaction: discord.Interaction):
     if not channel:
         await interaction.followup.send("❌ Kanal nicht gefunden!")
         return
-    text = welcome_config.get("text", "Willkommen {user}!").replace("{user}", interaction.user.mention).replace("{username}", interaction.user.name).replace("{server}", interaction.guild.name).replace("{membercount}", str(interaction.guild.member_count))
-    title = welcome_config.get("title", f"Willkommen auf {interaction.guild.name}!").replace("{user}", interaction.user.mention).replace("{username}", interaction.user.name).replace("{server}", interaction.guild.name).replace("{membercount}", str(interaction.guild.member_count))
+    text = welcome_config.get("text", "Willkommen {user}!").replace("{user}", interaction.user.mention).replace("{username}", interaction.user.display_name).replace("{server}", interaction.guild.name).replace("{membercount}", str(interaction.guild.member_count))
+    title = welcome_config.get("title", f"Willkommen auf {interaction.guild.name}!").replace("{user}", interaction.user.mention).replace("{username}", interaction.user.display_name).replace("{server}", interaction.guild.name).replace("{membercount}", str(interaction.guild.member_count))
     color_hex = welcome_config.get("color", "#ffffff")
     try:
         color = int(color_hex.lstrip('#'), 16)
