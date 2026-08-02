@@ -2991,11 +2991,17 @@
                                     type="checkbox" id="teamliste-status"><span class="switch-slider"></span></label>
                         </div>
                     </div>
+                    <div class="form-group">
+                        <div class="switch-row"><label>Roblox-Namen anzeigen</label><label class="switch"><input
+                                    type="checkbox" id="teamliste-roblox-enabled"><span
+                                    class="switch-slider"></span></label></div>
+                    </div>
                     <div class="form-group"><label for="teamliste-roblox-channel">Roblox-Namen-Kanal</label><select
                             id="teamliste-roblox-channel"></select>
                         <small style="display:block; margin-top:6px;">Schreibt jemand in diesem Kanal seinen
                             Roblox-Namen, reagiert der Bot mit ✅, löscht die Nachricht und zeigt den Namen danach
-                            hinter dem Mitglied in der Teamliste an.</small>
+                            hinter dem Mitglied in der Teamliste an. Ist der Schalter oben aus, passiert im Kanal
+                            nichts und es wird auch kein Roblox-Name in der Teamliste angezeigt.</small>
                     </div>
                     <div class="form-action"><button class="btn btn-primary"
                             onclick="handleSaveClick('teamliste')">Speichern</button></div>
