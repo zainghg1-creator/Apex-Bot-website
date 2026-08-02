@@ -3032,6 +3032,39 @@ async def add_level_xp(guild_id, user_id, amount: int):
         logger.error(f"[LEVELS] Fehler beim Hinzufügen von XP: {e}")
         return None
 
+async def apply_level_role_rewards(guild: discord.Guild, member: discord.Member, level: int, lvl_cfg: dict):
+    role_rewards = lvl_cfg.get("roleRewards", [])
+    if not role_rewards:
+        return
+    member_role_ids = {r.id for r in member.roles}
+    roles_to_add = []
+    for reward in role_rewards:
+        try:
+            reward_level = int(reward.get("level", 0))
+        except (TypeError, ValueError):
+            continue
+        role_id = reward.get("roleId")
+        if not role_id or level < reward_level:
+            continue
+        try:
+            role_id_int = int(role_id)
+        except (TypeError, ValueError):
+            continue
+        if role_id_int in member_role_ids:
+            continue
+        role = guild.get_role(role_id_int)
+        if role:
+            roles_to_add.append(role)
+    if not roles_to_add:
+        return
+    try:
+        await member.add_roles(*roles_to_add, reason="[LEVELS] Level-Rolle erreicht")
+        logger.info(f"[LEVELS] {member} hat Level-Rolle(n) {[r.name for r in roles_to_add]} erhalten (Level {level}).")
+    except discord.Forbidden:
+        logger.warning(f"[LEVELS] Keine Berechtigung, Level-Rolle(n) an {member} zu vergeben.")
+    except Exception as e:
+        logger.warning(f"[LEVELS] Fehler beim Vergeben der Level-Rolle(n): {e}")
+
 async def check_level_up(guild: discord.Guild, member: discord.Member, doc: dict, lvl_cfg: dict, fallback_channel=None):
     if not doc:
         return
@@ -3053,6 +3086,7 @@ async def check_level_up(guild: discord.Guild, member: discord.Member, doc: dict
     except Exception as e:
         logger.error(f"[LEVELS] Fehler beim Speichern des Levels: {e}")
         return
+    await apply_level_role_rewards(guild, member, level, lvl_cfg)
     channel_id = lvl_cfg.get("channelId")
     channel = guild.get_channel(int(channel_id)) if channel_id else fallback_channel
     if not channel:
@@ -3202,6 +3236,7 @@ async def level_set(interaction: discord.Interaction, user: discord.Member, leve
 
     # Optional: Level‑Up‑Nachricht ausgeben, wenn das neue Level höher ist als das alte (wird aber nicht benötigt)
     # Wir können trotzdem eine Bestätigung senden.
+    await apply_level_role_rewards(guild, user, level, lvl_cfg)
     await interaction.followup.send(
         f"✅ Level von {user.mention} wurde auf **{level}** gesetzt (XP auf 0 zurückgesetzt)."
     )
