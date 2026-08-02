@@ -3901,10 +3901,19 @@ async def downrank(
         zusatzunterschrift_1, zusatzunterschrift_2, zusatzunterschrift_3, zusatzunterschrift_4, zusatzunterschrift_5
     )
     async def execute_fn(tu_cfg, cmd_cfg, signers):
+        # Alte Hauptrolle entfernen
+        try:
+            await wer.remove_roles(von, reason=f"/downrank von {interaction.user}: {grund}")
+        except discord.Forbidden:
+            logger.warning(f"[TEAMUPDATE] Keine Berechtigung, Rolle {von} von {wer} zu entfernen.")
+
+        # Neue Hauptrolle hinzufügen
         try:
             await wer.add_roles(zu, reason=f"/downrank von {interaction.user}: {grund}")
         except discord.Forbidden:
             logger.warning(f"[TEAMUPDATE] Keine Berechtigung, Rolle {zu} an {wer} zu vergeben.")
+
+        # Nebenrollen behandeln
         if alte_nebenrolle is not None:
             try:
                 await wer.remove_roles(alte_nebenrolle, reason=f"/downrank von {interaction.user}: {grund}")
@@ -3915,6 +3924,7 @@ async def downrank(
                 await wer.add_roles(neue_nebenrolle, reason=f"/downrank von {interaction.user}: {grund}")
             except discord.Forbidden:
                 logger.warning(f"[TEAMUPDATE] Keine Berechtigung, Nebenrolle {neue_nebenrolle} an {wer} zu vergeben.")
+
         content = f"# ⬇️ | Downrank | ⬇️\n"
         content += f"**Wer: {wer.mention}**\n"
         content += f"**Von: {von.mention}**\n"
@@ -3924,6 +3934,7 @@ async def downrank(
         if signers:
             content += "\nNebenunterschrift: " + " ".join(s.mention for s in signers)
         await send_teamupdate_log(interaction.guild, tu_cfg, cmd_cfg, content)
+
     await validate_and_execute_teamupdate(
         interaction, "downrank", "Degradierung", extra_signers, execute_fn, target_member=wer
     )
