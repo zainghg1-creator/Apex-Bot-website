@@ -84,6 +84,7 @@ if MONGODB_URI:
         quiz_stats_collection = db["quiz_stats"]
         logouts_collection = db["logouts"]
         tickets_collection = db["tickets"]
+        roblox_names_collection = db["roblox_names"]
         logger.info("✅ MongoDB erfolgreich verbunden")
     except Exception as e:
         logger.error(f"❌ MongoDB Verbindungsfehler: {e}")
@@ -102,6 +103,7 @@ if MONGODB_URI:
         quiz_stats_collection = None
         logouts_collection = None
         tickets_collection = None
+        roblox_names_collection = None
 else:
     logger.warning("⚠️ Keine MONGODB_URI gefunden – laufe ohne DB")
     db = None
@@ -119,6 +121,7 @@ else:
     quiz_stats_collection = None
     logouts_collection = None
     tickets_collection = None
+    roblox_names_collection = None
 
 class TTLCache:
     def __init__(self, ttl: float = 30, name: str = "cache"):
@@ -253,6 +256,7 @@ intents.invites = True
 intents.message_content = True
 intents.guilds = True
 intents.voice_states = True
+intents.presences = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 invites_cache = {}
@@ -483,23 +487,84 @@ class TranscriptManager:
             logger.error(f"[TRANSCRIPT] Fehler beim Speichern in DB: {e}")
             return False
 
+async def get_roblox_name(guild_id, user_id):
+    if roblox_names_collection is None:
+        return None
+    try:
+        doc = await db_call(roblox_names_collection.find_one, {"guildId": str(guild_id), "userId": str(user_id)})
+        return doc.get("robloxName") if doc else None
+    except Exception as e:
+        logger.error(f"[ROBLOX] Fehler beim Laden des Roblox-Namens: {e}")
+        return None
+
+def _find_roblox_names_sync(guild_id):
+    return list(roblox_names_collection.find({"guildId": str(guild_id)}))
+
+async def get_roblox_names_map(guild_id):
+    if roblox_names_collection is None:
+        return {}
+    try:
+        docs = await db_call(_find_roblox_names_sync, guild_id)
+        return {doc.get("userId"): doc.get("robloxName") for doc in docs}
+    except Exception as e:
+        logger.error(f"[ROBLOX] Fehler beim Laden der Roblox-Namen: {e}")
+        return {}
+
+async def set_roblox_name(guild_id, user_id, roblox_name):
+    if roblox_names_collection is None:
+        return
+    try:
+        await db_call(
+            roblox_names_collection.update_one,
+            {"guildId": str(guild_id), "userId": str(user_id)},
+            {"$set": {"robloxName": roblox_name}},
+            upsert=True,
+        )
+    except Exception as e:
+        logger.error(f"[ROBLOX] Fehler beim Speichern des Roblox-Namens: {e}")
+
+STATUS_LABELS = {
+    discord.Status.online: "🟢 Online",
+    discord.Status.idle: "🌙 Abwesend",
+    discord.Status.dnd: "⛔ Nicht stören",
+    discord.Status.offline: "⚫ Offline",
+    discord.Status.invisible: "⚫ Offline",
+}
+
 async def build_teamliste_embed(guild: discord.Guild) -> discord.Embed:
     config = await get_config(guild.id)
     team_cfg = config.get("teamliste", {})
     title = team_cfg.get("title") or "🌟 Teamliste"
+    show_numbers = team_cfg.get("showNumbers", False)
+    show_status = team_cfg.get("showStatus", False)
+    roblox_channel_id = team_cfg.get("robloxChannelId")
+    roblox_names = await get_roblox_names_map(guild.id) if roblox_channel_id else {}
     embed = discord.Embed(title=title, color=0xffffff)
     role_ids = team_cfg.get("roles", [])
     if not role_ids:
         embed.description = "❌ **Keine Rollen konfiguriert!**\n\nBitte lege die Teamliste im Dashboard fest."
         return embed
     lines = []
+    counter = 1
     for role_id in role_ids:
         role = guild.get_role(int(role_id))
         if not role:
             continue
         members = [m for m in role.members if not m.bot]
         if members:
-            member_list = "\n".join([f"• {m.mention}" for m in members])
+            member_lines = []
+            for m in members:
+                prefix = f"{counter}." if show_numbers else "•"
+                if show_numbers:
+                    counter += 1
+                parts = [prefix, m.mention]
+                if show_status:
+                    parts.append(STATUS_LABELS.get(m.status, "⚫ Offline"))
+                roblox_name = roblox_names.get(str(m.id))
+                if roblox_name:
+                    parts.append(f"(Roblox: {roblox_name})")
+                member_lines.append(" ".join(parts))
+            member_list = "\n".join(member_lines)
         else:
             member_list = "*Kein Mitglied mit dieser Rolle gefunden*"
         lines.append(f"**{role.mention} ({len(members)})**")
@@ -550,6 +615,31 @@ async def update_teamliste(guild: discord.Guild):
             {"$set": {"teamlisteMeta": {"messageId": str(sent.id), "channelId": str(channel.id)}}},
             upsert=True,
         )
+
+async def handle_roblox_name_message(message: discord.Message) -> bool:
+    """Verarbeitet Nachrichten im Roblox-Namen-Kanal der Teamliste. Gibt True zurück, wenn die Nachricht verarbeitet wurde."""
+    config = await get_config(message.guild.id)
+    team_cfg = config.get("teamliste", {})
+    channel_id = team_cfg.get("robloxChannelId")
+    if not channel_id or str(message.channel.id) != str(channel_id):
+        return False
+    roblox_name = message.content.strip()
+    if not roblox_name:
+        return False
+    await set_roblox_name(message.guild.id, message.author.id, roblox_name)
+    try:
+        await message.add_reaction("✅")
+    except discord.Forbidden:
+        pass
+    try:
+        await message.delete()
+    except (discord.Forbidden, discord.NotFound):
+        pass
+    try:
+        await update_teamliste(message.guild)
+    except Exception as e:
+        logger.error(f"[ROBLOX] Fehler beim Aktualisieren der Teamliste: {e}")
+    return True
 
 def _category_has_room(category) -> bool:
     return category is None or len(category.channels) < 50
@@ -2069,6 +2159,7 @@ async def on_ready():
             logger.error(f"[STARTUP] Fehler bei {guild.name}: {e}")
 
     bot.loop.create_task(stats_update_loop())
+    bot.loop.create_task(teamliste_status_loop())
     bot.loop.create_task(voice_xp_loop())
     bot.loop.create_task(status_embed_loop())
     bot.loop.create_task(application_registration_loop())
@@ -3130,6 +3221,11 @@ async def on_message(message: discord.Message):
     if deleted:
         return
     try:
+        if await handle_roblox_name_message(message):
+            return
+    except Exception as e:
+        logger.error(f"[ROBLOX] Fehler bei der Verarbeitung des Roblox-Namens: {e}")
+    try:
         await handle_counting_message(message)
     except Exception as e:
         logger.error(f"[MINIGAMES] Fehler im Zählen-Spiel: {e}")
@@ -4026,7 +4122,7 @@ async def ping(interaction: discord.Interaction):
         logger.warning(f"[PING] Interaktion abgelaufen (10062) für {interaction.user}. Render Cold Start?")
         return
 
-    global db, guild_configs, giveaways_collection, team_warns_collection, counting_collection, levels_collection, button_actions, applications_collection, minigame_rounds_collection, transcripts_collection, shifts_collection, shift_stats_collection, quiz_stats_collection, logouts_collection, tickets_collection
+    global db, guild_configs, giveaways_collection, team_warns_collection, counting_collection, levels_collection, button_actions, applications_collection, minigame_rounds_collection, transcripts_collection, shifts_collection, shift_stats_collection, quiz_stats_collection, logouts_collection, tickets_collection, roblox_names_collection
     
     try:
         if db is None and MONGODB_URI:
@@ -4055,6 +4151,7 @@ async def ping(interaction: discord.Interaction):
             quiz_stats_collection = db["quiz_stats"]
             logouts_collection = db["logouts"]
             tickets_collection = db["tickets"]
+            roblox_names_collection = db["roblox_names"]
             
             logger.info("[PING] NOTFALL-Reconnect inkl. Collections erfolgreich! ✅")
     except Exception as e:
@@ -4522,6 +4619,20 @@ async def stats_update_loop():
             except Exception as e:
                 logger.error(f"[STATS] Fehler bei {guild.name}: {e}")
         await asyncio.sleep(30)
+
+async def teamliste_status_loop():
+    """Aktualisiert die Teamliste regelmäßig, damit der Online/Offline-Status aktuell bleibt."""
+    await bot.wait_until_ready()
+    while not bot.is_closed():
+        for guild in bot.guilds:
+            try:
+                config = await get_config(guild.id)
+                team_cfg = config.get("teamliste", {})
+                if team_cfg.get("showStatus") and team_cfg.get("channelId"):
+                    await update_teamliste(guild)
+            except Exception as e:
+                logger.error(f"[TEAMLISTE] Fehler beim Status-Update bei {guild.name}: {e}")
+        await asyncio.sleep(60)
 
 @bot.event
 async def on_guild_join(guild):
