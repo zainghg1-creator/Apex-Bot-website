@@ -1493,6 +1493,7 @@ async function saveModuleSettings(moduleName) {
           deniedRoles: getEditSelectedRoles('edit-denied-roles') || [],
           maxTickets: parseInt(document.getElementById('edit-max-tickets')?.value) || 1,
           claimEnabled: document.getElementById('edit-claim-enabled')?.checked ?? false,
+          claimLockEnabled: document.getElementById('edit-claim-lock-enabled')?.checked ?? false,
           buttons: collectButtons() || [],
           options: collectOptions() || []
         };
@@ -2032,11 +2033,13 @@ async function renderTicketOverview() {
 
     const activeCount = panels.filter(p => p.enabled !== false).length;
     const optionTotal = panels.reduce((sum, p) => sum + (p.options || []).length, 0);
+    const duplicateCount = findDuplicateTicketPanels(panels).length;
     const statsHtml = `
       <div class="ticket-stats">
         <div class="ticket-stat accent"><div class="num">${panels.length}</div><div class="lbl">Panels</div></div>
         <div class="ticket-stat ok"><div class="num">${activeCount}</div><div class="lbl">Aktiv</div></div>
         <div class="ticket-stat"><div class="num">${optionTotal}</div><div class="lbl">Kategorien</div></div>
+        ${duplicateCount ? `<div class="ticket-stat" style="--ticket-accent:#ef4444;"><div class="num">${duplicateCount}</div><div class="lbl">Duplikate</div></div>` : ''}
       </div>
     `;
 
@@ -2057,13 +2060,25 @@ async function renderTicketOverview() {
         <button class="btn btn-primary" ${sendablePanels.length ? '' : 'disabled'} onclick="sendPanelToChannel(document.getElementById('send-channel-select').value, parseInt(document.getElementById('send-panel-select').value))">
           📤 Abschicken
         </button>
+        ${duplicateCount ? `<button class="btn btn-danger" onclick="dedupeTicketPanels()">🧹 ${duplicateCount} Duplikat${duplicateCount !== 1 ? 'e' : ''} entfernen</button>` : ''}
       </div>
     `;
 
     let html = statsHtml + toolbarHtml;
     html += `<div class="ticket-grid">`;
 
-    panels.forEach((panel, index) => {
+    // Anzeige alphabetisch sortiert (aktive Panels zuerst), Original-Index für Bearbeiten/Löschen bleibt erhalten
+    const displayOrder = panels
+      .map((p, i) => ({ p, i }))
+      .sort((a, b) => {
+        const activeDiff = (b.p.enabled !== false ? 1 : 0) - (a.p.enabled !== false ? 1 : 0);
+        if (activeDiff !== 0) return activeDiff;
+        const nameA = (a.p.panelName || a.p.label || 'Unbenannt').toLowerCase();
+        const nameB = (b.p.panelName || b.p.label || 'Unbenannt').toLowerCase();
+        return nameA.localeCompare(nameB, 'de');
+      });
+
+    displayOrder.forEach(({ p: panel, i: index }) => {
       const emoji = panel.emoji || '🎫';
       const label = panel.panelName || panel.label || 'Unbenannt';
       const categoryName = state.guildChannels.find(c => c.id === panel.categoryId)?.name || 'Keine Kategorie';
@@ -2108,6 +2123,51 @@ async function renderTicketOverview() {
     ticketGrid.innerHTML = `<div class="state-box error">Fehler: ${err.message}</div>`;
   }
 }
+
+function ticketPanelDupeKey(panel) {
+  // Zwei Panels gelten als Duplikat, wenn Name + Panel-Kanal + Kategorie übereinstimmen.
+  return [
+    (panel.panelName || panel.label || '').trim().toLowerCase(),
+    panel.panelChannelId || '',
+    panel.categoryId || ''
+  ].join('::');
+}
+
+function findDuplicateTicketPanels(panels) {
+  const seen = new Map();
+  const duplicateIndexes = [];
+  panels.forEach((panel, index) => {
+    const key = ticketPanelDupeKey(panel);
+    if (!key.replace(/:/g, '')) return; // leere/unbenannte Panels nicht als Duplikat werten
+    if (seen.has(key)) {
+      duplicateIndexes.push(index);
+    } else {
+      seen.set(key, index);
+    }
+  });
+  return duplicateIndexes;
+}
+
+window.dedupeTicketPanels = async function() {
+  if (!state.activeGuildId) return;
+  try {
+    const config = await apiFetch(`/guild/${state.activeGuildId}/config`);
+    const panels = (config.tickets && config.tickets.options) || [];
+    const duplicateIndexes = new Set(findDuplicateTicketPanels(panels));
+    if (duplicateIndexes.size === 0) {
+      showToast('Keine Duplikate gefunden.', 'success');
+      return;
+    }
+    if (!confirm(`${duplicateIndexes.size} doppelte(s) Ticket-Panel(s) werden entfernt. Fortfahren?`)) return;
+    config.tickets.options = panels.filter((_, i) => !duplicateIndexes.has(i));
+    await apiFetch(`/guild/${state.activeGuildId}/config/tickets`, { method: 'POST', body: JSON.stringify(config.tickets) });
+    invalidateTicketCache();
+    showToast(`${duplicateIndexes.size} Duplikat(e) entfernt.`, 'success');
+    renderTicketOverview();
+  } catch (err) {
+    showToast(`Fehler beim Bereinigen: ${err.message}`, 'error');
+  }
+};
 
 window.deleteTicketOption = async function(index) {
   if (!confirm('Möchtest du dieses Panel wirklich löschen?')) return;
@@ -2410,6 +2470,11 @@ async function showEditView(index) {
             </div>
             <label class="switch"><input type="checkbox" id="edit-claim-enabled" ${data.claimEnabled ? 'checked' : ''}><span class="switch-slider"></span></label>
           </div>
+          <div class="switch-row" style="margin-top:12px;">
+            <label style="font-size:0.85rem;">Nur Beanspruchende Person kann bearbeiten</label>
+            <label class="switch"><input type="checkbox" id="edit-claim-lock-enabled" ${data.claimLockEnabled ? 'checked' : ''}><span class="switch-slider"></span></label>
+          </div>
+          <small style="display:block;margin-top:-4px;">Wenn aktiv, kann nach dem Beanspruchen nur noch diese Person das Ticket schließen, Transkripte erstellen oder Personen hinzufügen (Admins ausgenommen).</small>
         </div>
 
       </div>
@@ -2529,6 +2594,7 @@ window.saveEditView = async function() {
       deniedRoles: getEditSelectedRoles('edit-denied-roles') || [],
       maxTickets: parseInt(document.getElementById('edit-max-tickets')?.value) || 1,
       claimEnabled: document.getElementById('edit-claim-enabled')?.checked ?? false,
+      claimLockEnabled: document.getElementById('edit-claim-lock-enabled')?.checked ?? false,
       buttons: collectButtons() || [],
       options: collectOptions() || []
     };
