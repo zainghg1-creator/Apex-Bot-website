@@ -2981,6 +2981,22 @@
                         <div id="teamliste-roles" class="chip-select"><span class="chip-empty">Lade Rollen...</span>
                         </div>
                     </div>
+                    <div class="form-group">
+                        <div class="switch-row"><label>Team-Nummern anzeigen (1., 2., 3. ... vor jedem Namen)</label><label
+                                class="switch"><input type="checkbox" id="teamliste-numbers"><span
+                                    class="switch-slider"></span></label></div>
+                    </div>
+                    <div class="form-group">
+                        <div class="switch-row"><label>Online/Offline-Status anzeigen</label><label class="switch"><input
+                                    type="checkbox" id="teamliste-status"><span class="switch-slider"></span></label>
+                        </div>
+                    </div>
+                    <div class="form-group"><label for="teamliste-roblox-channel">Roblox-Namen-Kanal</label><select
+                            id="teamliste-roblox-channel"></select>
+                        <small style="display:block; margin-top:6px;">Schreibt jemand in diesem Kanal seinen
+                            Roblox-Namen, reagiert der Bot mit ✅, löscht die Nachricht und zeigt den Namen danach
+                            hinter dem Mitglied in der Teamliste an.</small>
+                    </div>
                     <div class="form-action"><button class="btn btn-primary"
                             onclick="handleSaveClick('teamliste')">Speichern</button></div>
                 </div>
