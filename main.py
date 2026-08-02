@@ -2078,7 +2078,7 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
         except Exception as e:
             logger.error(f"[VOICE-SUPPORT] Fehler beim Senden der Support-Nachricht: {e}")
 
-@bot.tree.command(name="send-duty-embed", description="Sendet die Duty-Toggle-Nachricht in den konfigurierten Kanal.")
+@bot.tree.command(name="send-duty-embed", description="Sendet die Duty-Umschaltnachricht in den konfigurierten Kanal.")
 @app_commands.default_permissions(administrator=True)
 async def send_duty_embed(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
@@ -3253,7 +3253,7 @@ async def get_levels_config(guild_id):
     config = await get_config(guild_id)
     return config.get("levels", {})
 
-@bot.tree.command(name="xp_give", description="Vergibt (oder entzieht) einem Mitglied XP im Level-System.")
+@bot.tree.command(name="xp_give", description="Vergibt oder entzieht einem Mitglied XP im Level-System.")
 @app_commands.describe(user="Mitglied, das XP erhalten soll", amount="Anzahl XP (negative Zahl entzieht XP)")
 async def xp_give(interaction: discord.Interaction, user: discord.Member, amount: int):
     await interaction.response.defer(ephemeral=True)
@@ -3297,7 +3297,7 @@ async def xp_give(interaction: discord.Interaction, user: discord.Member, amount
     logger.info(f"[LEVELS] {interaction.user} hat {amount} XP an {user} in {guild.name} angepasst.")
 
 # --- NEUER BEFEHL: level_set ---
-@bot.tree.command(name="level_set", description="Setzt das Level eines Mitglieds (XP werden auf 0 gesetzt).")
+@bot.tree.command(name="level_set", description="Legt das Level eines Mitglieds fest; die XP werden dabei auf 0 zurückgesetzt.")
 @app_commands.describe(user="Mitglied, dessen Level gesetzt werden soll", level="Neues Level (mindestens 0)")
 async def level_set(interaction: discord.Interaction, user: discord.Member, level: int):
     await interaction.response.defer(ephemeral=True)
@@ -3465,7 +3465,7 @@ async def on_raw_reaction_remove(payload: discord.RawReactionActionEvent):
         logger.warning(f"[REACTIONROLES] Fehler beim Entfernen der Rolle: {e}")
 
 
-@bot.tree.command(name="teamliste", description="Zeigt die aktuelle Teamliste für diesen Server an.")
+@bot.tree.command(name="teamliste", description="Zeigt die aktuelle Teamliste dieses Servers an.")
 async def teamliste(interaction: discord.Interaction):
     await interaction.response.defer()
     embed = await build_teamliste_embed(interaction.guild)
@@ -3488,7 +3488,7 @@ def _rp_has_permission(member: discord.Member, rp_cfg: dict) -> bool:
     member_role_ids = {str(r.id) for r in member.roles}
     return any(rid in member_role_ids for rid in role_ids)
 
-@bot.tree.command(name="serverliste", description="Zeigt alle Server an, auf denen der Bot ist.")
+@bot.tree.command(name="serverliste", description="Listet alle Server auf, auf denen der Bot aktiv ist.")
 async def serverliste(interaction: discord.Interaction):
     if interaction.user.id != 1086731728468578477:
         await interaction.response.send_message("❌ Du bist nicht berechtigt, diesen Befehl zu benutzen.", ephemeral=True)
@@ -3557,7 +3557,7 @@ async def serverliste(interaction: discord.Interaction):
         else:
             await interaction.followup.send(embeds=batch, ephemeral=True)
 
-@bot.tree.command(name="rp_start", description="Startet das Roleplay und postet die konfigurierte RP-Info-Nachricht.")
+@bot.tree.command(name="rp_start", description="Startet das Roleplay und postet die konfigurierte RP-Infonachricht.")
 async def rp_start(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
     guild = interaction.guild
@@ -3760,7 +3760,7 @@ async def validate_and_execute_teamupdate(interaction: discord.Interaction, cmd_
     await execute_fn(tu_cfg, cmd_cfg, valid_signers)
     await interaction.followup.send(f"✅ **{action_label}** wurde ausgeführt.")
 
-@bot.tree.command(name="neuer_teamler", description="Fügt ein neues Teammitglied hinzu.")
+@bot.tree.command(name="neuer_teamler", description="Nimmt ein neues Mitglied in das Team auf.")
 @app_commands.describe(
     wer="Das neue Teammitglied",
     zu="Die zu vergebende Rolle",
@@ -4010,7 +4010,7 @@ async def teamkick(
         interaction, "teamkick", "Teamentfernung", extra_signers, execute_fn, target_member=wer
     )
 
-@bot.tree.command(name="teamwarn", description="Verwarnt ein Teammitglied.")
+@bot.tree.command(name="teamwarn", description="Spricht eine Verwarnung gegenüber einem Teammitglied aus.")
 @app_commands.describe(
     wer="Das Teammitglied",
     grund="Grund der Verwarnung",
@@ -4068,13 +4068,13 @@ async def teamwarn(
         interaction, "teamwarn", "Verwarnung", extra_signers, execute_fn, target_member=wer
     )
 
-@bot.tree.command(name="reload-ticket-panel", description="Sendet das Ticket-Panel neu in den konfigurierten Kanal.")
+@bot.tree.command(name="reload-ticket-panel", description="Sendet das Ticket-Panel erneut in den konfigurierten Kanal.")
 async def reload_ticket_panel(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
     await send_ticket_panel(interaction.guild)
     await interaction.followup.send("✅ Ticket-Panel wurde neu geladen!")
 
-@bot.tree.command(name="reload-config", description="Erzwingt, dass der Bot die Server-Konfiguration sofort neu aus der Datenbank lädt.")
+@bot.tree.command(name="reload-config", description="Lädt die Server-Konfiguration umgehend neu aus der Datenbank.")
 @app_commands.checks.has_permissions(administrator=True)
 async def reload_config(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
@@ -4083,7 +4083,7 @@ async def reload_config(interaction: discord.Interaction):
         "✅ Konfigurations-Cache wurde geleert – Änderungen im Dashboard wirken jetzt sofort statt erst nach ein paar Sekunden."
     )
 
-@bot.tree.command(name="show-config", description="Zeigt die aktuelle Willkommens-Konfiguration für diesen Server an.")
+@bot.tree.command(name="show-config", description="Zeigt die aktuelle Willkommens-Konfiguration dieses Servers an.")
 async def show_config(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
     config = await get_config(interaction.guild.id)
@@ -4099,7 +4099,7 @@ async def show_config(interaction: discord.Interaction):
     embed.add_field(name="Rollen", value=", ".join([f"<@&{r}>" for r in join.get("roles", [])]) or "❌ Keine", inline=False)
     await interaction.followup.send(embed=embed)
 
-@bot.tree.command(name="test-welcome", description="Testet die Willkommensnachricht.")
+@bot.tree.command(name="test-welcome", description="Sendet eine Testnachricht der Willkommensnachricht.")
 async def test_welcome(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
     config = await get_config(interaction.guild.id)
@@ -4137,7 +4137,7 @@ async def test_welcome(interaction: discord.Interaction):
         await channel.send(embed=embed)
     await interaction.followup.send(f"✅ Test-Nachricht in {channel.mention} gesendet!")
 
-@bot.tree.command(name="giveaway", description="Erstelle ein Giveaway.")
+@bot.tree.command(name="giveaway", description="Erstellt ein neues Giveaway.")
 @app_commands.describe(
     preis="Was wird verlost?",
     gewinner="Anzahl der Gewinner",
@@ -4202,7 +4202,7 @@ async def giveaway(
     await db_call(giveaways_collection.update_one, {"_id": giveaway_id}, {"$set": {"message_id": str(message.id)}})
     asyncio.create_task(schedule_giveaway_end(giveaway_id, end_time))
 
-@bot.tree.command(name="invite", description="Lädt den APEX Bot auf deinen Server ein!")
+@bot.tree.command(name="invite", description="Lädt den APEX Bot auf deinen Server ein.")
 async def invite(interaction: discord.Interaction):
     invite_url = "https://discord.com/api/oauth2/authorize?client_id=1525613011262377994&scope=bot%20applications.commands&permissions=8"
     embed = discord.Embed(title="Lade den APEX Bot ein", description="Lade dir hier den **APEX Bot** auf deinen Server ein!", color=0xffffff, timestamp=datetime.now(BERLIN_TZ))
@@ -4212,7 +4212,7 @@ async def invite(interaction: discord.Interaction):
     view.add_item(discord.ui.Button(label="APEX Bot Einladen", url=invite_url, style=discord.ButtonStyle.link))
     await interaction.response.send_message(embed=embed, view=view)
 
-@bot.tree.command(name="invite-tracker", description="Zeigt die Rangliste der Einladungen an!")
+@bot.tree.command(name="invite-tracker", description="Zeigt die Rangliste der Einladungen an.")
 async def invite_tracker(interaction: discord.Interaction):
     await interaction.response.defer()
     guild_data = invite_counts.get(interaction.guild_id, {})
@@ -4227,7 +4227,7 @@ async def invite_tracker(interaction: discord.Interaction):
     embed = discord.Embed(title="📦 Invite Tracker", description="\n".join(description_lines), color=0xffffff, timestamp=datetime.now(BERLIN_TZ))
     await interaction.followup.send(embed=embed)
 
-@bot.tree.command(name="help", description="Zeigt alle Befehle an.")
+@bot.tree.command(name="help", description="Zeigt eine Übersicht aller verfügbaren Befehle.")
 async def help_command(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
     embed = discord.Embed(title="🤖 APEX Bot - Befehle", description="Alle verfügbaren Slash Commands:", color=0xffffff, timestamp=datetime.now(BERLIN_TZ))
@@ -4235,7 +4235,7 @@ async def help_command(interaction: discord.Interaction):
         embed.add_field(name=cmd, value=" ", inline=False)
     await interaction.followup.send(embed=embed)
 
-@bot.tree.command(name="leaderboard", description="Zeigt die Bestenliste für ein Quiz-Spiel.")
+@bot.tree.command(name="leaderboard", description="Zeigt die Bestenliste eines Quiz-Spiels an.")
 @app_commands.describe(game="Wähle das Quiz-Spiel aus", limit="Anzahl der Einträge (max. 20)")
 async def leaderboard(
     interaction: discord.Interaction,
@@ -4379,7 +4379,7 @@ def detect_hosting_platform() -> str:
         return "Deta"
     return "Lokal / Unbekannt"
 
-@bot.tree.command(name="hostinfo", description="Zeigt Informationen über die Hosting-Plattform und Systemumgebung.")
+@bot.tree.command(name="hostinfo", description="Zeigt Informationen zur Hosting-Plattform und Systemumgebung an.")
 @app_commands.default_permissions(administrator=True)
 async def hostinfo(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
@@ -5024,7 +5024,7 @@ async def shift_type_autocomplete(interaction: discord.Interaction, current: str
         choices.append(app_commands.Choice(name=name, value=t.get("id", name)))
     return choices[:25]
 
-@bot.tree.command(name="shift_start", description="Starte eine neue Schicht.")
+@bot.tree.command(name="shift_start", description="Startet eine neue Schicht.")
 @app_commands.describe(user="Für wen die Schicht gestartet werden soll (nur Manager)", schichtart="Welche Schichtart (falls konfiguriert)")
 @app_commands.autocomplete(schichtart=shift_type_autocomplete)
 async def shift_start(interaction: discord.Interaction, user: discord.Member = None, schichtart: str = None):
@@ -5063,7 +5063,7 @@ async def shift_start(interaction: discord.Interaction, user: discord.Member = N
     await interaction.followup.send(msg)
     await log_shift_event(guild, f"Schicht{type_suffix} gestartet von {target.display_name}", msg)
 
-@bot.tree.command(name="shift_pause", description="Pausiere deine aktive Schicht.")
+@bot.tree.command(name="shift_pause", description="Pausiert die aktive Schicht.")
 @app_commands.describe(user="Für wen die Schicht pausiert werden soll (nur Manager)")
 async def shift_pause(interaction: discord.Interaction, user: discord.Member = None):
     await interaction.response.defer()
@@ -5094,7 +5094,7 @@ async def shift_pause(interaction: discord.Interaction, user: discord.Member = N
     await interaction.followup.send(msg)
     await log_shift_event(guild, f"Schicht pausiert von {target.display_name}", msg)
 
-@bot.tree.command(name="shift_stop", description="Beende deine aktive Schicht.")
+@bot.tree.command(name="shift_stop", description="Beendet die aktive Schicht.")
 @app_commands.describe(user="Für wen die Schicht beendet werden soll (nur Manager)")
 async def shift_stop(interaction: discord.Interaction, user: discord.Member = None):
     await interaction.response.defer()
@@ -5127,7 +5127,7 @@ async def shift_stop(interaction: discord.Interaction, user: discord.Member = No
     await interaction.followup.send(msg)
     await log_shift_event(guild, f"Schicht beendet von {target.display_name}", msg)
 
-@bot.tree.command(name="shift_status", description="Zeige den aktuellen Schichtstatus.")
+@bot.tree.command(name="shift_status", description="Zeigt den aktuellen Schichtstatus an.")
 @app_commands.describe(user="Nutzer, dessen Status angezeigt werden soll (optional)")
 async def shift_status(interaction: discord.Interaction, user: discord.Member = None):
     await interaction.response.defer(ephemeral=True)
@@ -5168,7 +5168,7 @@ async def shift_status(interaction: discord.Interaction, user: discord.Member = 
         embed.add_field(name="Bisherige Gesamtzeit (alle Schichten)", value=total_str, inline=False)
     await interaction.followup.send(embed=embed)
 
-@bot.tree.command(name="shift_leaderboard", description="Zeige die Bestenliste der Schichtzeiten.")
+@bot.tree.command(name="shift_leaderboard", description="Zeigt die Bestenliste der Schichtzeiten an.")
 async def shift_leaderboard(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
     guild = interaction.guild
