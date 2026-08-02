@@ -3071,6 +3071,52 @@ async def xp_give(interaction: discord.Interaction, user: discord.Member, amount
     )
     logger.info(f"[LEVELS] {interaction.user} hat {amount} XP an {user} in {guild.name} angepasst.")
 
+# --- NEUER BEFEHL: level_set ---
+@bot.tree.command(name="level_set", description="Setzt das Level eines Mitglieds (XP werden auf 0 gesetzt).")
+@app_commands.describe(user="Mitglied, dessen Level gesetzt werden soll", level="Neues Level (mindestens 0)")
+async def level_set(interaction: discord.Interaction, user: discord.Member, level: int):
+    await interaction.response.defer(ephemeral=True)
+    guild = interaction.guild
+    lvl_cfg = await get_levels_config(guild.id)
+    give_role_id = lvl_cfg.get("xpGiveRoleId")
+    is_admin = interaction.user.guild_permissions.administrator
+    user_role_ids = {str(r.id) for r in interaction.user.roles}
+    has_role = bool(give_role_id) and give_role_id in user_role_ids
+    if not (is_admin or has_role):
+        await interaction.followup.send("❌ Du hast keine Berechtigung, diesen Befehl zu nutzen.")
+        return
+    if user.bot:
+        await interaction.followup.send("❌ Bots haben kein Level.")
+        return
+    if level < 0:
+        await interaction.followup.send("❌ Das Level darf nicht negativ sein.")
+        return
+    if levels_collection is None:
+        await interaction.followup.send("❌ Datenbank nicht verfügbar.")
+        return
+
+    # Dokument aktualisieren: Level setzen, XP auf 0
+    try:
+        doc = await db_call(
+            levels_collection.find_one_and_update,
+            {"guildId": str(guild.id), "userId": str(user.id)},
+            {"$set": {"level": level, "xp": 0}},
+            upsert=True,
+            return_document=ReturnDocument.AFTER
+        )
+    except Exception as e:
+        logger.error(f"[LEVELS] Fehler beim Setzen des Levels: {e}")
+        await interaction.followup.send("❌ Fehler beim Speichern in der Datenbank.")
+        return
+
+    # Optional: Level‑Up‑Nachricht ausgeben, wenn das neue Level höher ist als das alte (wird aber nicht benötigt)
+    # Wir können trotzdem eine Bestätigung senden.
+    await interaction.followup.send(
+        f"✅ Level von {user.mention} wurde auf **{level}** gesetzt (XP auf 0 zurückgesetzt)."
+    )
+    logger.info(f"[LEVELS] {interaction.user} hat Level von {user} auf {level} in {guild.name} gesetzt.")
+# --- Ende NEUER BEFEHL ---
+
 @bot.event
 async def on_message(message: discord.Message):
     if message.author.bot or message.guild is None:
@@ -3936,7 +3982,7 @@ async def invite_tracker(interaction: discord.Interaction):
 async def help_command(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
     embed = discord.Embed(title="🤖 APEX Bot - Befehle", description="Alle verfügbaren Slash Commands:", color=0xffffff, timestamp=datetime.now(BERLIN_TZ))
-    for cmd in ["/invite", "/invite-tracker", "/support", "/dashboard", "/help", "/giveaway", "/show-config", "/test-welcome", "/teamliste", "/reload-ticket-panel", "/reload-config", "/neuerteamler", "/uprank", "/downrank", "/teamkick", "/teamwarn", "/update-stats", "/leaderboard", "/rp_start", "/rp_stop"]:
+    for cmd in ["/invite", "/invite-tracker", "/support", "/dashboard", "/help", "/giveaway", "/show-config", "/test-welcome", "/teamliste", "/reload-ticket-panel", "/reload-config", "/neuerteamler", "/uprank", "/downrank", "/teamkick", "/teamwarn", "/update-stats", "/leaderboard", "/rp_start", "/rp_stop", "/level_set"]:
         embed.add_field(name=cmd, value=" ", inline=False)
     await interaction.followup.send(embed=embed)
 
