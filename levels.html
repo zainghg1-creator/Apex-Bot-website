@@ -1,0 +1,77 @@
+<h2>⭐ Level-System</h2>
+<p>Mitglieder bekommen für jede Nachricht (und optional für Zeit im Voice-Chat) XP. Ist genug XP gesammelt, steigt das Level und eine Nachricht wird in einem Kanal deiner Wahl gesendet. Jedes weitere Level braucht mehr XP als das davor.</p>
+
+<div class="panel-card">
+    <div class="form-group">
+        <div class="switch-row">
+            <label>Level-System aktiv</label>
+            <label class="switch"><input type="checkbox" id="levels-enabled"><span class="switch-slider"></span></label>
+        </div>
+    </div>
+</div>
+
+<div class="panel-card">
+    <div class="tpe-card-title">💬 XP pro Nachricht</div>
+    <div class="tpe-btn-grid">
+        <div class="form-group">
+            <label for="levels-xp-min">Min. XP</label>
+            <input type="number" id="levels-xp-min" min="1" step="1" value="15">
+        </div>
+        <div class="form-group">
+            <label for="levels-xp-max">Max. XP</label>
+            <input type="number" id="levels-xp-max" min="1" step="1" value="25">
+        </div>
+        <div class="form-group">
+            <label for="levels-cooldown">Cooldown (Sekunden)</label>
+            <input type="number" id="levels-cooldown" min="0" step="1" value="60">
+        </div>
+    </div>
+    <small>Pro Nachricht wird eine zufällige XP-Zahl zwischen Min. und Max. vergeben. Der Cooldown verhindert, dass Mitglieder durch Spam-Nachrichten schneller leveln.</small>
+</div>
+
+<div class="panel-card">
+    <div class="tpe-card-title">📊 XP-Anforderung pro Level</div>
+    <div class="tpe-btn-grid">
+        <div class="form-group">
+            <label for="levels-base-xp">Basis-XP (für Level 1)</label>
+            <input type="number" id="levels-base-xp" min="1" step="1" value="100">
+        </div>
+        <div class="form-group">
+            <label for="levels-xp-increment">XP-Steigerung pro Level</label>
+            <input type="number" id="levels-xp-increment" min="0" step="1" value="50">
+        </div>
+    </div>
+    <small>Jedes Level benötigt mehr XP als das vorherige: benötigte XP = Basis-XP + (aktuelles Level × Steigerung).</small>
+</div>
+
+<div class="panel-card">
+    <div class="tpe-card-title">🎉 Level-Up Nachricht</div>
+    <div class="form-group">
+        <label for="levels-message">Nachrichtentext</label>
+        <textarea id="levels-message" rows="2" placeholder="🎉 {user} hat Level {level} erreicht!"></textarea>
+        <small>Platzhalter: <code>{user}</code>, <code>{level}</code></small>
+    </div>
+    <div class="form-group">
+        <label for="levels-channel">Kanal für Level-Up Nachrichten</label>
+        <select id="levels-channel"></select>
+    </div>
+</div>
+
+<div class="panel-card">
+    <div class="form-group">
+        <div class="switch-row">
+            <label>🎙️ Voice-XP aktiv</label>
+            <label class="switch"><input type="checkbox" id="levels-voice-enabled"><span class="switch-slider"></span></label>
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="levels-voice-xp">XP pro Minute im Voice-Chat</label>
+        <input type="number" id="levels-voice-xp" min="1" step="1" value="10">
+        <small>Wird nur vergeben, solange ein Mitglied nicht stummgeschaltet/taub ist und sich nicht im AFK-Kanal befindet.</small>
+    </div>
+</div>
+
+<div class="form-action">
+    <span id="levels-save-status" class="hidden status-success"></span>
+    <button class="btn btn-primary" onclick="handleSaveClick('levels')">💾 Speichern</button>
+</div>

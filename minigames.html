@@ -1,0 +1,40 @@
+<h2>🎮 Minigames</h2>
+<p>Aktiviere kleine Spiele, die eure Mitglieder in einem Kanal spielen können.</p>
+
+<div class="panel-card">
+    <div class="form-group">
+        <div class="switch-row"><label>🔢 Zählen aktiv</label><label class="switch"><input type="checkbox" id="minigames-counting-enabled"><span class="switch-slider"></span></label></div>
+    </div>
+    <div class="form-group"><label for="minigames-counting-channel">Kanal für das Zählen-Spiel</label><select id="minigames-counting-channel"></select><small>Mitglieder zählen abwechselnd hoch (1, 2, 3, ...). Die gleiche Person darf nicht zweimal hintereinander zählen – bei einem Fehler beginnt der Zähler wieder bei 1.</small></div>
+    <div class="form-action"><button class="btn btn-primary" onclick="handleSaveClick('minigames')">Speichern</button></div>
+</div>
+
+<div class="panel-card">
+    <div class="form-group">
+        <div class="switch-row"><label>🏳️ Errate die Flagge aktiv</label><label class="switch"><input type="checkbox" id="minigames-flags-enabled"><span class="switch-slider"></span></label></div>
+    </div>
+    <div class="form-group"><label for="minigames-flags-channel">Kanal für das Flaggen-Spiel</label><select id="minigames-flags-channel"></select><small>Der Bot postet ein Embed mit einer Flagge. Mitglieder erraten das Land per Chat-Nachricht. Bei richtiger Antwort startet automatisch die nächste Runde.</small></div>
+    <div class="form-group">
+        <label>Buttons unter dem Embed</label>
+        <small style="display:block; margin-bottom:6px;">Lege fest, welche Hilfe-Buttons unter der Flagge angezeigt werden.</small>
+        <div class="switch-row"><label>⏭️ Überspringen</label><label class="switch"><input type="checkbox" id="minigames-flags-btn-skip" checked><span class="switch-slider"></span></label></div>
+        <div class="switch-row"><label>💡 Tipp</label><label class="switch"><input type="checkbox" id="minigames-flags-btn-hint" checked><span class="switch-slider"></span></label></div>
+        <div class="switch-row"><label>🔤 Erster Buchstabe</label><label class="switch"><input type="checkbox" id="minigames-flags-btn-letter" checked><span class="switch-slider"></span></label></div>
+    </div>
+    <div class="form-action"><button class="btn btn-primary" onclick="handleSaveClick('minigames')">Speichern</button></div>
+</div>
+
+<div class="panel-card">
+    <div class="form-group">
+        <div class="switch-row"><label>🧩 Emoji-Kombination erraten aktiv</label><label class="switch"><input type="checkbox" id="minigames-emoji-enabled"><span class="switch-slider"></span></label></div>
+    </div>
+    <div class="form-group"><label for="minigames-emoji-channel">Kanal für das Emoji-Spiel</label><select id="minigames-emoji-channel"></select><small>Der Bot postet ein Embed mit einer Emoji-Kombination (z. B. Film, Beruf, Redewendung). Mitglieder erraten den Begriff per Chat-Nachricht.</small></div>
+    <div class="form-group">
+        <label>Buttons unter dem Embed</label>
+        <small style="display:block; margin-bottom:6px;">Lege fest, welche Hilfe-Buttons unter der Emoji-Kombination angezeigt werden.</small>
+        <div class="switch-row"><label>⏭️ Überspringen</label><label class="switch"><input type="checkbox" id="minigames-emoji-btn-skip" checked><span class="switch-slider"></span></label></div>
+        <div class="switch-row"><label>💡 Tipp</label><label class="switch"><input type="checkbox" id="minigames-emoji-btn-hint" checked><span class="switch-slider"></span></label></div>
+        <div class="switch-row"><label>🔤 Erster Buchstabe</label><label class="switch"><input type="checkbox" id="minigames-emoji-btn-letter" checked><span class="switch-slider"></span></label></div>
+    </div>
+    <div class="form-action"><button class="btn btn-primary" onclick="handleSaveClick('minigames')">Speichern</button></div>
+</div>
