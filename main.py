@@ -1865,15 +1865,19 @@ class SupportEndButton(discord.ui.Button):
         await interaction.followup.send("✅ Supportfall beendet.", ephemeral=True)
 
 class DutyOnButton(discord.ui.Button):
-    def __init__(self, guild_id: str, on_role_id: str, off_role_id: str = None):
+    def __init__(self, guild_id: str):
+        # Wichtig: KEINE Rollen-IDs in die custom_id einbacken!
+        # Diese custom_id muss über Bot-Neustarts hinweg und auch nach
+        # Config-Änderungen (Rollen im Dashboard geändert) stabil bleiben,
+        # sonst findet on_ready beim Neu-Registrieren der persistenten View
+        # keine passende custom_id mehr -> Klick auf den Button bekommt nie
+        # eine Antwort -> "hat nicht rechtzeitig reagiert".
         super().__init__(
             label="🟢 On Duty",
             style=discord.ButtonStyle.success,
-            custom_id=f"vs_duty_on_{guild_id}_{on_role_id}_{off_role_id or 0}"
+            custom_id=f"vs_duty_on_{guild_id}"
         )
         self.guild_id = guild_id
-        self.role_id = on_role_id
-        self.off_role_id = off_role_id
 
     async def callback(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
@@ -1881,13 +1885,18 @@ class DutyOnButton(discord.ui.Button):
         if str(guild.id) != self.guild_id:
             await interaction.followup.send("❌ Falscher Server.", ephemeral=True)
             return
-        role = guild.get_role(int(self.role_id))
+        config = await get_config(guild.id)
+        vs_cfg = config.get("voice_support", {})
+        on_role_id = vs_cfg.get("dutyOnRoleId")
+        off_role_id = vs_cfg.get("dutyOffRoleId")
+        if not on_role_id:
+            await interaction.followup.send("❌ On-Duty-Rolle ist nicht konfiguriert.", ephemeral=True)
+            return
+        role = guild.get_role(int(on_role_id))
         if not role:
             await interaction.followup.send("❌ On-Duty-Rolle nicht gefunden.", ephemeral=True)
             return
-        off_role = None
-        if self.off_role_id and self.off_role_id != "0":
-            off_role = guild.get_role(int(self.off_role_id))
+        off_role = guild.get_role(int(off_role_id)) if off_role_id else None
         member = interaction.user
         if role in member.roles and (not off_role or off_role not in member.roles):
             await interaction.followup.send("ℹ️ Du bist bereits On Duty.", ephemeral=True)
@@ -1902,15 +1911,14 @@ class DutyOnButton(discord.ui.Button):
             await interaction.followup.send("❌ Ich habe keine Berechtigung, die Rollen zu ändern.", ephemeral=True)
 
 class DutyOffButton(discord.ui.Button):
-    def __init__(self, guild_id: str, off_role_id: str, on_role_id: str = None):
+    def __init__(self, guild_id: str):
+        # Siehe Kommentar in DutyOnButton – custom_id bewusst ohne Rollen-IDs.
         super().__init__(
             label="🔴 Off Duty",
             style=discord.ButtonStyle.danger,
-            custom_id=f"vs_duty_off_{guild_id}_{off_role_id}_{on_role_id or 0}"
+            custom_id=f"vs_duty_off_{guild_id}"
         )
         self.guild_id = guild_id
-        self.role_id = off_role_id
-        self.on_role_id = on_role_id
 
     async def callback(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
@@ -1918,13 +1926,18 @@ class DutyOffButton(discord.ui.Button):
         if str(guild.id) != self.guild_id:
             await interaction.followup.send("❌ Falscher Server.", ephemeral=True)
             return
-        role = guild.get_role(int(self.role_id))
+        config = await get_config(guild.id)
+        vs_cfg = config.get("voice_support", {})
+        off_role_id = vs_cfg.get("dutyOffRoleId")
+        on_role_id = vs_cfg.get("dutyOnRoleId")
+        if not off_role_id:
+            await interaction.followup.send("❌ Off-Duty-Rolle ist nicht konfiguriert.", ephemeral=True)
+            return
+        role = guild.get_role(int(off_role_id))
         if not role:
             await interaction.followup.send("❌ Off-Duty-Rolle nicht gefunden.", ephemeral=True)
             return
-        on_role = None
-        if self.on_role_id and self.on_role_id != "0":
-            on_role = guild.get_role(int(self.on_role_id))
+        on_role = guild.get_role(int(on_role_id)) if on_role_id else None
         member = interaction.user
         if role in member.roles and (not on_role or on_role not in member.roles):
             await interaction.followup.send("ℹ️ Du bist bereits Off Duty.", ephemeral=True)
@@ -2107,8 +2120,8 @@ async def send_duty_embed(interaction: discord.Interaction):
         timestamp=datetime.now(timezone.utc)
     )
     view = discord.ui.View(timeout=None)
-    view.add_item(DutyOnButton(str(interaction.guild.id), duty_on_role_id, duty_off_role_id))
-    view.add_item(DutyOffButton(str(interaction.guild.id), duty_off_role_id, duty_on_role_id))
+    view.add_item(DutyOnButton(str(interaction.guild.id)))
+    view.add_item(DutyOffButton(str(interaction.guild.id)))
     try:
         msg = await channel.send(embed=embed, view=view)
         bot.add_view(view)
@@ -2234,16 +2247,13 @@ async def on_ready():
             config = await get_config(guild.id)
             vs_cfg = config.get("voice_support", {})
             if vs_cfg.get("enabled", False):
-                duty_on_role_id = vs_cfg.get("dutyOnRoleId")
-                duty_off_role_id = vs_cfg.get("dutyOffRoleId")
-                if duty_on_role_id:
-                    view = discord.ui.View(timeout=None)
-                    view.add_item(DutyOnButton(str(guild.id), duty_on_role_id, duty_off_role_id))
-                    bot.add_view(view)
-                if duty_off_role_id:
-                    view = discord.ui.View(timeout=None)
-                    view.add_item(DutyOffButton(str(guild.id), duty_off_role_id, duty_on_role_id))
-                    bot.add_view(view)
+                # custom_id enthält keine Rollen-IDs mehr -> eine einzige,
+                # dauerhaft stabile View reicht aus, unabhängig davon, ob/wie
+                # sich dutyOnRoleId/dutyOffRoleId später ändern.
+                view = discord.ui.View(timeout=None)
+                view.add_item(DutyOnButton(str(guild.id)))
+                view.add_item(DutyOffButton(str(guild.id)))
+                bot.add_view(view)
         except Exception as e:
             logger.error(f"[VOICE-SUPPORT] Fehler beim Registrieren der Duty-Views für {guild.name}: {e}")
 
