@@ -3117,8 +3117,6 @@
                         <div class="switch-row"><label>Log aktiv</label><label class="switch"><input type="checkbox"
                                     id="teamupdate-enabled"><span class="switch-slider"></span></label></div>
                     </div>
-                    <div class="form-group"><label for="teamupdate-channel">Log-Kanal</label><select
-                            id="teamupdate-channel"></select></div>
                     <div class="form-action"><button class="btn btn-primary"
                             onclick="handleSaveClick('teamupdate')">Speichern</button></div>
                 </div>
@@ -3762,41 +3760,112 @@
             
             <div id="mod-rp" class="module-page hidden">
                 <h2>🎭 RP Info</h2>
-                <p>Konfiguriere die Nachricht, die der Bot über <code>/rp_start</code> im gewählten Kanal postet
-                    (und über <code>/rp_stop</code> wieder beendet), sowie wer diese Befehle nutzen darf.</p>
+                <p>Konfiguriere getrennt, was der Bot bei <code>/rp_start</code> und bei <code>/rp_stop</code> postet
+                    (eigener Kanal & eigene Nachricht je Befehl), sowie wer diese Befehle nutzen darf.</p>
 
                 <div class="panel-card">
-                    <div class="form-group"><label>Nachrichtentyp</label><select id="rp-mode"
-                            onchange="updateEmbedPreview('rp')">
+                    <h3 style="font-size:1rem; font-weight:700; margin-bottom:4px;">🟢 RP Start</h3>
+                    <div class="form-group"><label>Nachrichtentyp</label><select id="rp-start-mode"
+                            onchange="updateEmbedPreview('rp-start')">
                             <option value="embed">Embed</option>
                             <option value="text">Einfache Nachricht</option>
                         </select></div>
-                    <div class="form-group"><label for="rp-channel">Kanal</label><select id="rp-channel"></select>
+                    <div class="form-group"><label for="rp-start-channel">Kanal</label><select
+                            id="rp-start-channel"></select>
                         <small style="display:block; margin-top:6px;">Hier postet der Bot die Nachricht bei
                             <code>/rp_start</code>.</small>
                     </div>
-                    <div class="form-group"><label for="rp-title">Embed-Titel</label><input type="text" id="rp-title"
-                            placeholder="🎭 Roleplay gestartet" oninput="updateEmbedPreview('rp')"></div>
-                    <div class="form-group"><label for="rp-text">Nachricht / Beschreibung</label><textarea id="rp-text"
-                            rows="3" placeholder="Das Roleplay wurde von {user} gestartet!"
-                            oninput="updateEmbedPreview('rp')"></textarea><small>Platzhalter: <code>{user}</code>,
+                    <div class="form-group"><label for="rp-start-title">Embed-Titel</label><input type="text"
+                            id="rp-start-title" placeholder="🎭 Roleplay gestartet"
+                            oninput="updateEmbedPreview('rp-start')"></div>
+                    <div class="form-group"><label for="rp-start-text">Nachricht / Beschreibung</label><textarea
+                            id="rp-start-text" rows="3" placeholder="Das Roleplay wurde von {user} gestartet!"
+                            oninput="updateEmbedPreview('rp-start')"></textarea><small>Platzhalter: <code>{user}</code>,
                             <code>{username}</code>, <code>{server}</code></small></div>
                     <div class="form-group">
                         <label>Embed-Bild</label>
                         <div class="image-upload">
-                            <img id="rp-image-preview" class="image-preview" src="" alt="">
+                            <img id="rp-start-image-preview" class="image-preview" src="" alt="">
                             <div class="upload-btn-wrap"><label class="btn btn-secondary"
-                                    for="rp-image-input">Bild hochladen</label><input type="file" id="rp-image-input"
-                                    accept="image/*" onchange="handleImageUpload(this,'rp')"></div>
-                            <button class="btn btn-secondary" onclick="clearImage('rp')" type="button">Entfernen</button>
+                                    for="rp-start-image-input">Bild hochladen</label><input type="file"
+                                    id="rp-start-image-input" accept="image/*"
+                                    onchange="handleImageUpload(this,'rp-start')"></div>
+                            <button class="btn btn-secondary" onclick="clearImage('rp-start')"
+                                type="button">Entfernen</button>
                         </div>
                     </div>
                     <div class="form-group">
                         <label>Embed-Farbe</label>
-                        <div class="color-row"><input type="color" id="rp-color" value="#5865f2"
-                                oninput="syncColor('rp')"><input type="text" id="rp-color-hex" value="#5865f2"
-                                oninput="syncColorHex('rp')"></div>
+                        <div class="color-row"><input type="color" id="rp-start-color" value="#5865f2"
+                                oninput="syncColor('rp-start')"><input type="text" id="rp-start-color-hex"
+                                value="#5865f2" oninput="syncColorHex('rp-start')"></div>
                     </div>
+                    <div
+                        style="margin-top:0.5rem; background:var(--bg-surface); border-radius:10px; padding:14px; border:1px solid var(--border-subtle);">
+                        <label
+                            style="font-size:0.75rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">📺
+                            Live-Vorschau</label>
+                        <div class="embed-preview" id="rp-start-preview" style="border-left-color:#5865f2;">
+                            <div class="embed-preview-title" id="rp-start-preview-title">🎭 Roleplay gestartet</div>
+                            <div class="embed-preview-desc" id="rp-start-preview-desc">Das Roleplay wurde von {user}
+                                gestartet!</div>
+                            <img class="embed-preview-image hidden" id="rp-start-preview-image" src="">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-card" style="margin-top:1rem;">
+                    <h3 style="font-size:1rem; font-weight:700; margin-bottom:4px;">🔴 RP Stop</h3>
+                    <div class="form-group"><label>Nachrichtentyp</label><select id="rp-stop-mode"
+                            onchange="updateEmbedPreview('rp-stop')">
+                            <option value="embed">Embed</option>
+                            <option value="text">Einfache Nachricht</option>
+                        </select></div>
+                    <div class="form-group"><label for="rp-stop-channel">Kanal</label><select
+                            id="rp-stop-channel"></select>
+                        <small style="display:block; margin-top:6px;">Hier postet der Bot die Nachricht bei
+                            <code>/rp_stop</code>.</small>
+                    </div>
+                    <div class="form-group"><label for="rp-stop-title">Embed-Titel</label><input type="text"
+                            id="rp-stop-title" placeholder="🔴 Roleplay beendet"
+                            oninput="updateEmbedPreview('rp-stop')"></div>
+                    <div class="form-group"><label for="rp-stop-text">Nachricht / Beschreibung</label><textarea
+                            id="rp-stop-text" rows="3" placeholder="Das Roleplay wurde von {user} beendet!"
+                            oninput="updateEmbedPreview('rp-stop')"></textarea><small>Platzhalter: <code>{user}</code>,
+                            <code>{username}</code>, <code>{server}</code></small></div>
+                    <div class="form-group">
+                        <label>Embed-Bild</label>
+                        <div class="image-upload">
+                            <img id="rp-stop-image-preview" class="image-preview" src="" alt="">
+                            <div class="upload-btn-wrap"><label class="btn btn-secondary"
+                                    for="rp-stop-image-input">Bild hochladen</label><input type="file"
+                                    id="rp-stop-image-input" accept="image/*"
+                                    onchange="handleImageUpload(this,'rp-stop')"></div>
+                            <button class="btn btn-secondary" onclick="clearImage('rp-stop')"
+                                type="button">Entfernen</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Embed-Farbe</label>
+                        <div class="color-row"><input type="color" id="rp-stop-color" value="#ed4245"
+                                oninput="syncColor('rp-stop')"><input type="text" id="rp-stop-color-hex"
+                                value="#ed4245" oninput="syncColorHex('rp-stop')"></div>
+                    </div>
+                    <div
+                        style="margin-top:0.5rem; background:var(--bg-surface); border-radius:10px; padding:14px; border:1px solid var(--border-subtle);">
+                        <label
+                            style="font-size:0.75rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">📺
+                            Live-Vorschau</label>
+                        <div class="embed-preview" id="rp-stop-preview" style="border-left-color:#ed4245;">
+                            <div class="embed-preview-title" id="rp-stop-preview-title">🔴 Roleplay beendet</div>
+                            <div class="embed-preview-desc" id="rp-stop-preview-desc">Das Roleplay wurde von {user}
+                                beendet!</div>
+                            <img class="embed-preview-image hidden" id="rp-stop-preview-image" src="">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-card" style="margin-top:1rem;">
                     <div class="form-group">
                         <label>Wer darf /rp_start und /rp_stop nutzen?</label>
                         <small style="display:block; margin-bottom:6px;">Nur Mitglieder mit einer dieser Rollen können
@@ -3807,18 +3876,6 @@
                     <div class="form-action">
                         <span id="rp-save-status" class="hidden status-success"></span>
                         <button class="btn btn-primary" onclick="handleSaveClick('rp')">💾 Speichern</button>
-                    </div>
-                </div>
-                <div
-                    style="margin-top:1rem; background:var(--bg-surface); border-radius:10px; padding:14px; border:1px solid var(--border-subtle);">
-                    <label
-                        style="font-size:0.75rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">📺
-                        Live-Vorschau</label>
-                    <div class="embed-preview" id="rp-preview" style="border-left-color:#5865f2;">
-                        <div class="embed-preview-title" id="rp-preview-title">🎭 Roleplay gestartet</div>
-                        <div class="embed-preview-desc" id="rp-preview-desc">Das Roleplay wurde von {user} gestartet!
-                        </div>
-                        <img class="embed-preview-image hidden" id="rp-preview-image" src="">
                     </div>
                 </div>
             </div>
