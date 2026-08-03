@@ -24,8 +24,12 @@
       "dest": "/public/tabs/$1"
     },
     {
-      "src": "/(.*)",
+      "src": "/(.*\\.(js|css|html|png|jpg|svg|ico|json))",
       "dest": "/public/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/server.js"
     }
   ]
 }
