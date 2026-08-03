@@ -25,14 +25,14 @@ const DOM = {
     manageOverlay: document.getElementById('manage-overlay'),
     activeGuildName: document.getElementById('active-guild-name'),
     activeGuildIcon: document.getElementById('active-guild-icon'),
-    overviewMembers: document.getElementById('overview-members'),
-    overviewBoosts: document.getElementById('overview-boosts'),
-    overviewBots: document.getElementById('overview-bots'),
-    overviewChannels: document.getElementById('overview-channels'),
-    overviewRoles: document.getElementById('overview-roles'),
-    overviewCreated: document.getElementById('overview-created'),
-    overviewOwnerName: document.getElementById('overview-owner-name'),
-    overviewOwnerAvatar: document.getElementById('overview-owner-avatar'),
+    get overviewMembers() { return document.getElementById('overview-members'); },
+    get overviewBoosts() { return document.getElementById('overview-boosts'); },
+    get overviewBots() { return document.getElementById('overview-bots'); },
+    get overviewChannels() { return document.getElementById('overview-channels'); },
+    get overviewRoles() { return document.getElementById('overview-roles'); },
+    get overviewCreated() { return document.getElementById('overview-created'); },
+    get overviewOwnerName() { return document.getElementById('overview-owner-name'); },
+    get overviewOwnerAvatar() { return document.getElementById('overview-owner-avatar'); },
     toastContainer: document.getElementById('toast-container')
 };
 
@@ -225,6 +225,7 @@ async function openManagement(guildId, name, iconUrl) {
     DOM.activeGuildIcon.alt = `${name} Icon`;
     DOM.manageOverlay.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
+    await switchTab('overview');
     DOM.overviewMembers.textContent = '...';
     DOM.overviewBoosts.textContent = '...';
     DOM.overviewBots.textContent = '...';
