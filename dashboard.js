@@ -378,7 +378,7 @@ async function loadRolesAndChannels(guildId) {
 }
 
 function renderAllSelects() {
-  const selectIds = ['join-channel', 'leave-channel', 'teamliste-channel', 'teamliste-roblox-channel', 'automod-log-channel', 'teamupdate-channel', 'verification-channel', 'minigames-counting-channel', 'minigames-flags-channel', 'minigames-emoji-channel', 'levels-channel', 'statusembed-channel', 'rp-channel'];
+  const selectIds = ['join-channel', 'leave-channel', 'teamliste-channel', 'teamliste-roblox-channel', 'automod-log-channel', 'verification-channel', 'minigames-counting-channel', 'minigames-flags-channel', 'minigames-emoji-channel', 'levels-channel', 'statusembed-channel', 'rp-channel'];
   selectIds.forEach(id => renderChannelSelect(id, 0));
   TEAMUPDATE_COMMANDS.forEach(cmd => renderChannelSelect(`cmd-${cmd}-channel`, 0));
 }
@@ -926,7 +926,6 @@ function collectAutomodUserIds() {
 
 function applyTeamupdateConfig(cfg) {
   setChecked('teamupdate-enabled', cfg.enabled ?? false);
-  setSelectValue('teamupdate-channel', cfg.channelId || '');
   const commands = cfg.commands || {};
   TEAMUPDATE_COMMANDS.forEach(cmd => {
     const c = commands[cmd] || {};
@@ -1537,7 +1536,6 @@ async function saveModuleSettings(moduleName) {
       case 'teamupdate':
         payload = {
           enabled: document.getElementById('teamupdate-enabled').checked,
-          channelId: document.getElementById('teamupdate-channel').value,
           commands: Object.fromEntries(TEAMUPDATE_COMMANDS.map(cmd => {
             const entry = {
               enabled: document.getElementById(`cmd-enabled-${cmd}`)?.checked ?? true,
