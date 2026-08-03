@@ -38,7 +38,8 @@ const ALLOWED_MODULES = ['welcome', 'tickets', 'teamliste', 'automod', 'teamupda
 const app = express();
 app.set('trust proxy', 1);
 
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(__dirname));
+app.use('/tabs', express.static(path.join(__dirname, 'tabs')));
 app.use(express.json({ limit: '20mb' }));
 
 app.use(cookieSession({
