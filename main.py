@@ -4728,6 +4728,8 @@ async def update_stats_channel_id(guild_id, entry_id, channel_id):
     except Exception as e:
         logger.error(f"[STATS] Fehler beim Aktualisieren der Kanal-ID: {e}")
 
+_stats_channel_last_edit: dict = {}
+
 async def update_stats_channels(guild):
     config = await get_config(guild.id)
     stats_cfg = config.get("stats", {})
@@ -4777,8 +4779,15 @@ async def update_stats_channels(guild):
                     continue
             else:
                 if channel.name != channel_name:
+                    # Discord erlaubt max. 2 Umbenennungen pro Kanal alle 10 Minuten.
+                    # Zusätzliche Absicherung gegen 429-Rate-Limit-Spam, egal wie
+                    # oft/häufig update_stats_channels() aufgerufen wird.
+                    last_edit = _stats_channel_last_edit.get(channel.id, 0)
+                    if time.monotonic() - last_edit < 300:
+                        continue
                     try:
                         await channel.edit(name=channel_name, reason="Statistik aktualisiert")
+                        _stats_channel_last_edit[channel.id] = time.monotonic()
                     except discord.Forbidden:
                         logger.warning(f"[STATS] Keine Berechtigung, Kanalnamen in {guild.name} zu ändern.")
                     except discord.HTTPException as e:
@@ -4803,6 +4812,13 @@ async def update_stats_channels(guild):
             logger.warning(f"[STATS] Fehler beim Setzen der Berechtigungen: {e}")
 
 async def stats_update_loop():
+    # WICHTIG: Discord erlaubt nur 2 Kanal-Umbenennungen pro 10 Minuten
+    # pro Kanal. Bei 30s-Takt wurde dieses Limit sofort gerissen ->
+    # dauerhafte 429-Rate-Limits (siehe bot.log: "PATCH .../channels/...
+    # responded with 429. Retrying in 249s"), die die gesamte
+    # Discord-API-Anbindung des Bots verzögert haben – dadurch kamen u.a.
+    # auch Button-Interaktionen (z.B. Duty) nicht mehr rechtzeitig durch.
+    # Daher: deutlich saltenere Update-Frequenz, konform mit dem Rename-Limit.
     await bot.wait_until_ready()
     while not bot.is_closed():
         for guild in bot.guilds:
@@ -4810,7 +4826,7 @@ async def stats_update_loop():
                 await update_stats_channels(guild)
             except Exception as e:
                 logger.error(f"[STATS] Fehler bei {guild.name}: {e}")
-        await asyncio.sleep(30)
+        await asyncio.sleep(600)
 
 async def teamliste_status_loop():
     """Aktualisiert die Teamliste regelmäßig, damit der Online/Offline-Status aktuell bleibt."""
