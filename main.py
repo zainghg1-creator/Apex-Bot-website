@@ -3568,18 +3568,19 @@ async def rp_start(interaction: discord.Interaction):
         await interaction.followup.send("❌ Du hast keine Berechtigung, diesen Befehl zu nutzen.", ephemeral=True)
         return
 
-    channel_id = rp_cfg.get("channelId")
+    start_cfg = rp_cfg.get("start", {}) or {}
+    channel_id = start_cfg.get("channelId") or rp_cfg.get("channelId")
     if not channel_id:
-        await interaction.followup.send("❌ Es wurde kein Kanal für RP-Nachrichten konfiguriert (Dashboard → RP Info).", ephemeral=True)
+        await interaction.followup.send("❌ Es wurde kein Kanal für die RP-Start-Nachricht konfiguriert (Dashboard → RP Info → Start).", ephemeral=True)
         return
     channel = guild.get_channel(int(channel_id))
     if not channel:
-        await interaction.followup.send("❌ Der konfigurierte Kanal wurde nicht gefunden.", ephemeral=True)
+        await interaction.followup.send("❌ Der konfigurierte Start-Kanal wurde nicht gefunden.", ephemeral=True)
         return
 
-    title = _rp_format_placeholders(rp_cfg.get("title") or "🎭 Roleplay gestartet", interaction.user, guild)
-    text = _rp_format_placeholders(rp_cfg.get("text") or "Das Roleplay wurde gestartet!", interaction.user, guild)
-    mode = rp_cfg.get("mode", "embed")
+    title = _rp_format_placeholders(start_cfg.get("title") or rp_cfg.get("title") or "🎭 Roleplay gestartet", interaction.user, guild)
+    text = _rp_format_placeholders(start_cfg.get("text") or rp_cfg.get("text") or "Das Roleplay wurde gestartet!", interaction.user, guild)
+    mode = start_cfg.get("mode") or rp_cfg.get("mode", "embed")
 
     try:
         if mode == "text":
@@ -3587,11 +3588,11 @@ async def rp_start(interaction: discord.Interaction):
             sent = await channel.send(content)
         else:
             try:
-                color_int = int((rp_cfg.get("color") or "#5865f2").lstrip("#"), 16)
+                color_int = int((start_cfg.get("color") or rp_cfg.get("color") or "#5865f2").lstrip("#"), 16)
             except ValueError:
                 color_int = 0x5865F2
             embed = discord.Embed(title=title, description=text, color=color_int)
-            image = rp_cfg.get("image")
+            image = start_cfg.get("image") or rp_cfg.get("image")
             if image and image.startswith("http"):
                 embed.set_image(url=image)
             embed.timestamp = datetime.now(BERLIN_TZ)
@@ -3634,10 +3635,11 @@ async def rp_stop(interaction: discord.Interaction):
         await interaction.followup.send("ℹ️ Es läuft aktuell kein Roleplay.", ephemeral=True)
         return
 
-    channel = guild.get_channel(int(meta["channelId"])) if meta.get("channelId") else None
-    if channel:
+    # Alte Start-Nachricht im Start-Kanal optional als "beendet" markieren
+    old_channel = guild.get_channel(int(meta["channelId"])) if meta.get("channelId") else None
+    if old_channel:
         try:
-            message = await channel.fetch_message(int(meta["messageId"]))
+            message = await old_channel.fetch_message(int(meta["messageId"]))
             if message.embeds:
                 embed = message.embeds[0]
                 embed.title = f"🔴 {embed.title} (beendet)" if embed.title else "🔴 Roleplay beendet"
@@ -3647,10 +3649,37 @@ async def rp_stop(interaction: discord.Interaction):
                 await message.edit(content=f"{message.content}\n\n🔴 **Roleplay beendet.**")
         except (discord.NotFound, discord.Forbidden, discord.HTTPException):
             pass
+
+    # Eigene RP-Stop-Nachricht im eigens konfigurierten Kanal senden
+    stop_cfg = rp_cfg.get("stop", {}) or {}
+    stop_channel_id = stop_cfg.get("channelId") or meta.get("channelId")
+    stop_channel = guild.get_channel(int(stop_channel_id)) if stop_channel_id else None
+
+    if stop_channel:
+        title = _rp_format_placeholders(stop_cfg.get("title") or "🔴 Roleplay beendet", interaction.user, guild)
+        text = _rp_format_placeholders(stop_cfg.get("text") or "Das Roleplay wurde beendet!", interaction.user, guild)
+        mode = stop_cfg.get("mode", "embed")
         try:
-            await channel.send(f"🔴 Das Roleplay wurde von {interaction.user.mention} beendet.")
+            if mode == "text":
+                content = f"**{title}**\n{text}" if title else text
+                await stop_channel.send(content)
+            else:
+                try:
+                    color_int = int((stop_cfg.get("color") or "#ed4245").lstrip("#"), 16)
+                except ValueError:
+                    color_int = 0xED4245
+                embed = discord.Embed(title=title, description=text, color=color_int)
+                image = stop_cfg.get("image")
+                if image and image.startswith("http"):
+                    embed.set_image(url=image)
+                embed.timestamp = datetime.now(BERLIN_TZ)
+                await stop_channel.send(embed=embed)
         except discord.Forbidden:
             pass
+        except Exception as e:
+            logger.error(f"[RP] Fehler beim Senden der RP-Stop-Nachricht: {e}")
+    else:
+        await interaction.followup.send("⚠️ Es wurde kein Kanal für die RP-Stop-Nachricht konfiguriert (Dashboard → RP Info → Stop). Roleplay wird trotzdem beendet.", ephemeral=True)
 
     await db_call(
         guild_configs.update_one,
