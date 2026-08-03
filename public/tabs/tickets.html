@@ -1,0 +1,15 @@
+<h2>🎫 Ticket System</h2>
+<p>Verwalte deine Ticket-Panels.</p>
+
+<div id="ticket-overview-container">
+    <div id="ticket-overview-grid">
+        <div class="state-box"><span class="loading-spinner"></span> Lade Ticket-Panels...</div>
+    </div>
+</div>
+
+<div id="ticket-edit-container" class="edit-view hidden">
+    <a href="#" onclick="closeEditView(); return false;"
+        style="display:inline-flex; align-items:center; gap:4px; color:var(--text-muted); text-decoration:none; font-weight:600; font-size:0.8rem; margin-bottom:1rem; transition:color 0.2s;">← Zurück zur Übersicht</a>
+    <div id="edit-panel-header" style="margin-bottom:16px;"></div>
+    <div id="ticket-edit-content"></div>
+</div>
