@@ -1,0 +1,134 @@
+<h2>📝 Teamupdate Log<span class="soon-badge">Grundeinrichtung</span></h2>
+<div class="panel-card">
+    <div class="form-group">
+        <div class="switch-row"><label>Log aktiv</label><label class="switch"><input type="checkbox" id="teamupdate-enabled"><span class="switch-slider"></span></label></div>
+    </div>
+    <div class="form-group"><label for="teamupdate-channel">Log-Kanal</label><select id="teamupdate-channel"></select></div>
+    <div class="form-action"><button class="btn btn-primary" onclick="handleSaveClick('teamupdate')">Speichern</button></div>
+</div>
+
+<div class="panel-card">
+    <h3 style="font-size:1rem; font-weight:700; margin-bottom:4px;">Befehle</h3>
+    <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:8px;">Aktiviere oder deaktiviere Befehle und lege fest, wer sie verwenden darf.</p>
+    <div class="command-list" id="teamupdate-commands">
+        <div class="command-row" data-command="neuer_teamler">
+            <div class="command-row-top">
+                <div class="command-info">
+                    <label class="switch"><input type="checkbox" id="cmd-enabled-neuer_teamler" checked><span class="switch-slider"></span></label>
+                    <div>
+                        <div class="command-name">/neuer_teamler</div>
+                        <div class="command-desc">Neues Teammitglied hinzufügen</div>
+                    </div>
+                </div>
+                <button type="button" class="command-menu-btn" onclick="toggleCommandRoles('neuer_teamler')">⋮</button>
+            </div>
+            <div class="command-roles hidden" id="cmd-roles-neuer_teamler">
+                <div class="form-group"><label>Erlaubte Rollen</label>
+                    <div class="chip-select" id="cmdrole-neuer_teamler"><span class="chip-empty">Lade Rollen...</span></div>
+                </div>
+                <div class="form-group"><label for="cmd-neuer_teamler-channel">Kanal für die Nachricht</label><select id="cmd-neuer_teamler-channel"></select></div>
+                <div class="form-group"><label>Rollen, die IMMER hinzugefügt werden</label><small style="display:block; margin-bottom:6px;">Diese Rollen werden bei jeder Nutzung von /neuer_teamler zusätzlich automatisch vergeben.</small>
+                    <div class="chip-select" id="cmdrole-neuer_teamler-auto"><span class="chip-empty">Lade Rollen...</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="command-row" data-command="uprank">
+            <div class="command-row-top">
+                <div class="command-info">
+                    <label class="switch"><input type="checkbox" id="cmd-enabled-uprank" checked><span class="switch-slider"></span></label>
+                    <div>
+                        <div class="command-name">/uprank</div>
+                        <div class="command-desc">Teammitglied befördern</div>
+                    </div>
+                </div>
+                <button type="button" class="command-menu-btn" onclick="toggleCommandRoles('uprank')">⋮</button>
+            </div>
+            <div class="command-roles hidden" id="cmd-roles-uprank">
+                <div class="form-group"><label>Erlaubte Rollen</label>
+                    <div class="chip-select" id="cmdrole-uprank"><span class="chip-empty">Lade Rollen...</span></div>
+                </div>
+                <div class="form-group"><label for="cmd-uprank-channel">Kanal für die Nachricht</label><select id="cmd-uprank-channel"></select></div>
+            </div>
+        </div>
+
+        <div class="command-row" data-command="downrank">
+            <div class="command-row-top">
+                <div class="command-info">
+                    <label class="switch"><input type="checkbox" id="cmd-enabled-downrank" checked><span class="switch-slider"></span></label>
+                    <div>
+                        <div class="command-name">/downrank</div>
+                        <div class="command-desc">Teammitglied degradieren</div>
+                    </div>
+                </div>
+                <button type="button" class="command-menu-btn" onclick="toggleCommandRoles('downrank')">⋮</button>
+            </div>
+            <div class="command-roles hidden" id="cmd-roles-downrank">
+                <div class="form-group"><label>Erlaubte Rollen</label>
+                    <div class="chip-select" id="cmdrole-downrank"><span class="chip-empty">Lade Rollen...</span></div>
+                </div>
+                <div class="form-group"><label for="cmd-downrank-channel">Kanal für die Nachricht</label><select id="cmd-downrank-channel"></select></div>
+            </div>
+        </div>
+
+        <div class="command-row" data-command="teamkick">
+            <div class="command-row-top">
+                <div class="command-info">
+                    <label class="switch"><input type="checkbox" id="cmd-enabled-teamkick" checked><span class="switch-slider"></span></label>
+                    <div>
+                        <div class="command-name">/teamkick</div>
+                        <div class="command-desc">Teammitglied aus dem Team entfernen</div>
+                    </div>
+                </div>
+                <button type="button" class="command-menu-btn" onclick="toggleCommandRoles('teamkick')">⋮</button>
+            </div>
+            <div class="command-roles hidden" id="cmd-roles-teamkick">
+                <div class="form-group"><label>Erlaubte Rollen</label>
+                    <div class="chip-select" id="cmdrole-teamkick"><span class="chip-empty">Lade Rollen...</span></div>
+                </div>
+                <div class="form-group"><label for="cmd-teamkick-channel">Kanal für die Nachricht</label><select id="cmd-teamkick-channel"></select></div>
+                <div class="form-group"><label>Rollen, die IMMER entfernt werden</label><small style="display:block; margin-bottom:6px;">Diese Rollen werden bei jeder Nutzung von /teamkick zusätzlich automatisch entfernt.</small>
+                    <div class="chip-select" id="cmdrole-teamkick-auto"><span class="chip-empty">Lade Rollen...</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="command-row" data-command="teamwarn">
+            <div class="command-row-top">
+                <div class="command-info">
+                    <label class="switch"><input type="checkbox" id="cmd-enabled-teamwarn" checked><span class="switch-slider"></span></label>
+                    <div>
+                        <div class="command-name">/teamwarn</div>
+                        <div class="command-desc">Teammitglied verwarnen</div>
+                    </div>
+                </div>
+                <button type="button" class="command-menu-btn" onclick="toggleCommandRoles('teamwarn')">⋮</button>
+            </div>
+            <div class="command-roles hidden" id="cmd-roles-teamwarn">
+                <div class="form-group"><label>Erlaubte Rollen</label>
+                    <div class="chip-select" id="cmdrole-teamwarn"><span class="chip-empty">Lade Rollen...</span></div>
+                </div>
+                <div class="form-group"><label for="cmd-teamwarn-channel">Kanal für die Nachricht</label><select id="cmd-teamwarn-channel"></select></div>
+                <div class="form-group">
+                    <label>Warnstufen (optional)</label>
+                    <small style="display:block; margin-bottom:6px;">Lege bis zu vier Rollen fest, die bei den jeweiligen Warnstufen automatisch vergeben werden.</small>
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        <div><label for="cmdrole-teamwarn-stage1" style="font-size:0.7rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">Warnstufe 1</label>
+                            <div class="chip-select" id="cmdrole-teamwarn-stage1"><span class="chip-empty">Lade Rollen...</span></div>
+                        </div>
+                        <div><label for="cmdrole-teamwarn-stage2" style="font-size:0.7rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">Warnstufe 2</label>
+                            <div class="chip-select" id="cmdrole-teamwarn-stage2"><span class="chip-empty">Lade Rollen...</span></div>
+                        </div>
+                        <div><label for="cmdrole-teamwarn-stage3" style="font-size:0.7rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">Warnstufe 3</label>
+                            <div class="chip-select" id="cmdrole-teamwarn-stage3"><span class="chip-empty">Lade Rollen...</span></div>
+                        </div>
+                        <div><label for="cmdrole-teamwarn-stage4" style="font-size:0.7rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">Warnstufe 4</label>
+                            <div class="chip-select" id="cmdrole-teamwarn-stage4"><span class="chip-empty">Lade Rollen...</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="form-action"><button class="btn btn-primary" onclick="handleSaveClick('teamupdate')">Speichern</button></div>
+</div>

@@ -1,0 +1,16 @@
+<h2>📈 Statistik Kanäle</h2>
+<p>Erstelle Sprachkanäle, die automatisch Server-Statistiken anzeigen (z. B. Mitgliederzahl, Bots, Rollen, Boosts). Die Kanäle werden in einer Kategorie erstellt und sind für Mitglieder nicht betretbar.</p>
+<div class="panel-card">
+    <div class="form-group">
+        <div class="switch-row">
+            <label>Statistik-Kanäle aktiv</label>
+            <label class="switch"><input type="checkbox" id="stats-enabled"><span class="switch-slider"></span></label>
+        </div>
+    </div>
+    <div id="stats-channels-list"></div>
+    <button type="button" class="add-option-btn" onclick="addStatsChannel()">+ Statistik-Kanal hinzufügen</button>
+    <div class="form-action" style="margin-top:14px;">
+        <span id="stats-save-status" class="hidden status-success"></span>
+        <button class="btn btn-primary" onclick="handleSaveClick('stats')">💾 Speichern</button>
+    </div>
+</div>
