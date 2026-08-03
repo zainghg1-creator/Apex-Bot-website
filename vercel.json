@@ -3,16 +3,23 @@
   "builds": [
     {
       "src": "server.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": [
-          "*.html",
-          "*.css",
-          "*.js",
-          "tabs/*.html",
-          "tabs/**/*"
-        ]
-      }
+      "use": "@vercel/node"
+    },
+    {
+      "src": "*.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "*.css",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "*.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "tabs/**",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
@@ -23,6 +30,14 @@
     {
       "src": "/auth/(.*)",
       "dest": "/server.js"
+    },
+    {
+      "src": "/tabs/(.*)",
+      "dest": "/tabs/$1"
+    },
+    {
+      "src": "/(.*\\.(html|css|js))",
+      "dest": "/$1"
     },
     {
       "src": "/(.*)",
