@@ -9,7 +9,8 @@
           "*.html",
           "*.css",
           "*.js",
-          "tabs/**"
+          "tabs/*.html",
+          "tabs/**/*"
         ]
       }
     }
