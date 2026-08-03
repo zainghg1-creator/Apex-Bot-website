@@ -394,15 +394,41 @@ function getSelectedChannelIds(containerId) {
 }
 
 // ============================================================
-// TABS & SUBTABS
+// TABS & SUBTABS (DYNAMISCHES LADEN)
 // ============================================================
-function switchTab(tabName) {
+async function switchTab(tabName) {
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.module-page').forEach(page => page.classList.add('hidden'));
+
     const activeBtn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
-    const activePage = document.getElementById(`mod-${tabName}`);
     if (activeBtn) activeBtn.classList.add('active');
-    if (activePage) activePage.classList.remove('hidden');
+
+    const container = document.getElementById(`mod-${tabName}`);
+    if (!container) return;
+
+    // 🔥 HIER IST DAS DYNAMISCHE LADEN
+    if (!container.dataset.loaded) {
+        container.innerHTML = '<div class="state-box">Lade Modul...</div>';
+        try {
+            const resp = await fetch(`/tabs/${tabName}.html`);
+            if (resp.ok) {
+                container.innerHTML = await resp.text();
+                container.dataset.loaded = 'true';
+                
+                // Nach dem Laden: Selektoren neu befüllen
+                if (typeof renderAllSelects === 'function') renderAllSelects();
+                if (typeof renderVoiceSupportSelects === 'function') renderVoiceSupportSelects();
+            } else {
+                container.innerHTML = '<div class="state-box">Fehler beim Laden des Moduls.</div>';
+            }
+        } catch (e) {
+            container.innerHTML = '<div class="state-box">Verbindungsfehler.</div>';
+        }
+    }
+
+    container.classList.remove('hidden');
+
+    // Spezielle Aktionen nach dem Laden
     if (tabName === 'tickets' && state.activeGuildId) {
         setTimeout(() => renderTicketOverview(), 50);
     }
@@ -413,18 +439,6 @@ function switchTab(tabName) {
         renderVoiceSupportSelects();
     }
 }
-
-function switchSubtab(moduleName, subName) {
-    const container = document.getElementById(`mod-${moduleName}`);
-    if (!container) return;
-    container.querySelectorAll('.subtab-btn').forEach(btn => btn.classList.remove('active'));
-    container.querySelectorAll('.subpage').forEach(page => page.classList.add('hidden'));
-    const activeBtn = container.querySelector(`[data-sub="${subName}"]`);
-    const activePage = document.getElementById(`${moduleName}-${subName}-page`);
-    if (activeBtn) activeBtn.classList.add('active');
-    if (activePage) activePage.classList.remove('hidden');
-}
-
 // ============================================================
 // COLOR SYNC
 // ============================================================
