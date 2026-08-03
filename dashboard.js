@@ -378,7 +378,7 @@ async function loadRolesAndChannels(guildId) {
 }
 
 function renderAllSelects() {
-  const selectIds = ['join-channel', 'leave-channel', 'teamliste-channel', 'teamliste-roblox-channel', 'automod-log-channel', 'verification-channel', 'minigames-counting-channel', 'minigames-flags-channel', 'minigames-emoji-channel', 'levels-channel', 'statusembed-channel', 'rp-channel'];
+  const selectIds = ['join-channel', 'leave-channel', 'teamliste-channel', 'teamliste-roblox-channel', 'automod-log-channel', 'verification-channel', 'minigames-counting-channel', 'minigames-flags-channel', 'minigames-emoji-channel', 'levels-channel', 'statusembed-channel', 'rp-start-channel', 'rp-stop-channel'];
   selectIds.forEach(id => renderChannelSelect(id, 0));
   TEAMUPDATE_COMMANDS.forEach(cmd => renderChannelSelect(`cmd-${cmd}-channel`, 0));
 }
@@ -694,14 +694,26 @@ async function loadAllModuleSettings(guildId) {
 
 
 function applyRpConfig(cfg) {
-  setSelectValue('rp-mode', cfg.mode || 'embed');
-  setSelectValue('rp-channel', cfg.channelId || '');
-  setValue('rp-title', cfg.title || '');
-  setValue('rp-text', cfg.text || '');
-  setColor('rp', cfg.color || '#5865f2');
-  setImage('rp', cfg.image);
+  const start = cfg.start || { mode: cfg.mode, channelId: cfg.channelId, title: cfg.title, text: cfg.text, color: cfg.color, image: cfg.image };
+  const stop = cfg.stop || {};
+
+  setSelectValue('rp-start-mode', start.mode || 'embed');
+  setSelectValue('rp-start-channel', start.channelId || '');
+  setValue('rp-start-title', start.title || '');
+  setValue('rp-start-text', start.text || '');
+  setColor('rp-start', start.color || '#5865f2');
+  setImage('rp-start', start.image);
+  updateEmbedPreview('rp-start');
+
+  setSelectValue('rp-stop-mode', stop.mode || 'embed');
+  setSelectValue('rp-stop-channel', stop.channelId || '');
+  setValue('rp-stop-title', stop.title || '');
+  setValue('rp-stop-text', stop.text || '');
+  setColor('rp-stop', stop.color || '#ed4245');
+  setImage('rp-stop', stop.image);
+  updateEmbedPreview('rp-stop');
+
   renderRoleChips('rp-allowed-roles', cfg.allowedRoles || []);
-  updateEmbedPreview('rp');
 }
 
 
@@ -1667,12 +1679,22 @@ async function saveModuleSettings(moduleName) {
         break;
       case 'rp':
         payload = {
-          mode: document.getElementById('rp-mode')?.value || 'embed',
-          channelId: document.getElementById('rp-channel')?.value || '',
-          title: document.getElementById('rp-title')?.value || '',
-          text: document.getElementById('rp-text')?.value || '',
-          color: document.getElementById('rp-color')?.value || '#5865f2',
-          image: document.getElementById('rp-image-input')?.dataset.value || '',
+          start: {
+            mode: document.getElementById('rp-start-mode')?.value || 'embed',
+            channelId: document.getElementById('rp-start-channel')?.value || '',
+            title: document.getElementById('rp-start-title')?.value || '',
+            text: document.getElementById('rp-start-text')?.value || '',
+            color: document.getElementById('rp-start-color')?.value || '#5865f2',
+            image: document.getElementById('rp-start-image-input')?.dataset.value || ''
+          },
+          stop: {
+            mode: document.getElementById('rp-stop-mode')?.value || 'embed',
+            channelId: document.getElementById('rp-stop-channel')?.value || '',
+            title: document.getElementById('rp-stop-title')?.value || '',
+            text: document.getElementById('rp-stop-text')?.value || '',
+            color: document.getElementById('rp-stop-color')?.value || '#ed4245',
+            image: document.getElementById('rp-stop-image-input')?.dataset.value || ''
+          },
           allowedRoles: getSelectedRoleIds('rp-allowed-roles')
         };
         break;
