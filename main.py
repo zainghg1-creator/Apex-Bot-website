@@ -37,6 +37,10 @@ from pymongo import MongoClient, ReturnDocument
 import logging
 from logging.handlers import RotatingFileHandler
 import traceback
+try:
+    import psutil
+except ImportError:
+    psutil = None
 
 try:
     from zoneinfo import ZoneInfo
@@ -4306,10 +4310,82 @@ async def leaderboard(
     embed.description = "\n".join(description)
     await interaction.followup.send(embed=embed)
 
-@bot.tree.command(name="ping", description="Zeigt die aktuelle Verbindungsgeschwindigkeit des Bots an.")
+_active_ping_loops = {}
+
+def _rate(ms):
+    if ms < 150:
+        return "🟢"
+    elif ms < 350:
+        return "🟡"
+    else:
+        return "🔴"
+
+async def _build_ping_embed():
+    start = time.monotonic()
+    api_latency = (time.monotonic() - start) * 1000
+    ws_latency = bot.latency * 1000
+
+    db_latency = None
+    if db is not None:
+        try:
+            db_start = time.monotonic()
+            await db_call(db.command, "ping")
+            db_latency = (time.monotonic() - db_start) * 1000
+        except Exception:
+            db_latency = -1
+
+    embed = discord.Embed(title="🏓 Pong!", color=0x5865f2, timestamp=datetime.now(timezone.utc))
+    embed.add_field(name="Websocket", value=f"{_rate(ws_latency)} {ws_latency:.0f} ms", inline=True)
+    embed.add_field(name="API-Antwortzeit", value=f"{_rate(api_latency)} {api_latency:.0f} ms", inline=True)
+    if db_latency is None:
+        embed.add_field(name="Datenbank", value="⚪ nicht verbunden", inline=True)
+    elif db_latency < 0:
+        embed.add_field(name="Datenbank", value="❌ Fehler beim Ping", inline=True)
+    else:
+        embed.add_field(name="Datenbank", value=f"{_rate(db_latency)} {db_latency:.0f} ms", inline=True)
+
+    if psutil:
+        try:
+            cpu_percent = psutil.cpu_percent(interval=None)
+            vmem = psutil.virtual_memory()
+            ram_used_mb = vmem.used / (1024 * 1024)
+            ram_total_mb = vmem.total / (1024 * 1024)
+            disk = psutil.disk_usage("/")
+            embed.add_field(name="CPU-Auslastung", value=f"{cpu_percent:.0f}%", inline=True)
+            embed.add_field(name="RAM-Auslastung", value=f"{vmem.percent:.0f}% ({ram_used_mb:.0f}/{ram_total_mb:.0f} MB)", inline=True)
+            embed.add_field(name="Speicher-Auslastung", value=f"{disk.percent:.0f}%", inline=True)
+        except Exception as e:
+            embed.add_field(name="System", value=f"⚠️ Fehler beim Auslesen: {e}", inline=False)
+    else:
+        embed.add_field(name="System", value="⚠️ psutil nicht installiert", inline=False)
+
+    embed.set_footer(text="Aktualisiert sich automatisch alle 2-10 Sekunden")
+    return embed
+
+async def _ping_live_update_loop(message: discord.Message):
+    try:
+        while True:
+            await asyncio.sleep(random.uniform(2, 10))
+            try:
+                new_embed = await _build_ping_embed()
+                await message.edit(embed=new_embed)
+            except discord.NotFound:
+                break
+            except discord.Forbidden:
+                break
+            except (ConnectionResetError, RuntimeError) as e:
+                if "closing transport" in str(e).lower() or bot.is_closed():
+                    break
+                logger.error(f"Fehler im Ping-Live-Update: {e}")
+            except Exception as e:
+                logger.error(f"Fehler im Ping-Live-Update: {e}")
+    finally:
+        _active_ping_loops.pop(message.id, None)
+
+@bot.tree.command(name="ping", description="Zeigt die aktuelle Verbindungsgeschwindigkeit des Bots an (aktualisiert sich automatisch).")
 async def ping(interaction: discord.Interaction):
     try:
-        await interaction.response.defer(ephemeral=True)
+        await interaction.response.defer()
     except discord.NotFound:
         logger.warning(f"[PING] Interaktion abgelaufen (10062) für {interaction.user}. Render Cold Start?")
         return
@@ -4351,38 +4427,14 @@ async def ping(interaction: discord.Interaction):
         db = None
 
     try:
-        start = time.monotonic()
-        api_latency = (time.monotonic() - start) * 1000
-        ws_latency = bot.latency * 1000
-
-        db_latency = None
-        if db is not None:
-            try:
-                db_start = time.monotonic()
-                await db_call(db.command, "ping")
-                db_latency = (time.monotonic() - db_start) * 1000
-            except Exception:
-                db_latency = -1
-
-        def rate(ms):
-            if ms < 150:
-                return "🟢"
-            elif ms < 350:
-                return "🟡"
-            else:
-                return "🔴"
-
-        embed = discord.Embed(title="🏓 Pong!", color=0x5865f2)
-        embed.add_field(name="Websocket", value=f"{rate(ws_latency)} {ws_latency:.0f} ms", inline=True)
-        embed.add_field(name="API-Antwortzeit", value=f"{rate(api_latency)} {api_latency:.0f} ms", inline=True)
-        if db_latency is None:
-            embed.add_field(name="Datenbank", value="⚪ nicht verbunden", inline=True)
-        elif db_latency < 0:
-            embed.add_field(name="Datenbank", value="❌ Fehler beim Ping", inline=True)
-        else:
-            embed.add_field(name="Datenbank", value=f"{rate(db_latency)} {db_latency:.0f} ms", inline=True)
-
-        await interaction.followup.send(embed=embed, ephemeral=True)
+        embed = await _build_ping_embed()
+        message = await interaction.channel.send(embed=embed)
+        try:
+            await interaction.followup.send("🏓 Ping gesendet!", ephemeral=True)
+        except Exception:
+            pass
+        task = bot.loop.create_task(_ping_live_update_loop(message))
+        _active_ping_loops[message.id] = task
     except Exception as e:
         try:
             await interaction.followup.send(f"❌ Fehler: {e}", ephemeral=True)
