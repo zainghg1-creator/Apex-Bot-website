@@ -4359,7 +4359,8 @@ async def _build_ping_embed():
     else:
         embed.add_field(name="System", value="⚠️ psutil nicht installiert", inline=False)
 
-    embed.set_footer(text="Aktualisiert sich automatisch alle 2-10 Sekunden")
+    # Footer bewusst leer gelassen – nur die Zeitangabe (Embed-Timestamp) wird unten angezeigt
+
     return embed
 
 async def _ping_live_update_loop(message: discord.Message):
@@ -4430,7 +4431,7 @@ async def ping(interaction: discord.Interaction):
         embed = await _build_ping_embed()
         message = await interaction.channel.send(embed=embed)
         try:
-            await interaction.followup.send("🏓 Ping gesendet!", ephemeral=True)
+            await interaction.followup.send("🏓 Pong!", ephemeral=True)
         except Exception:
             pass
         task = bot.loop.create_task(_ping_live_update_loop(message))
