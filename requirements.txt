@@ -10,3 +10,4 @@ python-dotenv
 discord
 PyNaCl>=1.5.0
 davey
+psutil
