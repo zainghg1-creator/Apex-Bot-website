@@ -538,6 +538,25 @@ STATUS_LABELS = {
     discord.Status.invisible: "⚫ Offline",
 }
 
+def split_into_pages(items: list, entries_per_page: int = 10) -> list:
+    """Teilt eine Liste in Seiten auf."""
+    return [items[i:i+entries_per_page] for i in range(0, len(items), entries_per_page)]
+
+def send_paginated_embeds(interaction, embeds):
+    """Sendet mehrere Embeds in einer Nachricht oder als Folge-Nachrichten."""
+    async def _send():
+        if len(embeds) == 1:
+            await interaction.followup.send(embed=embeds[0])
+        else:
+            # Discord erlaubt max. 10 Embeds pro Nachricht
+            for i in range(0, len(embeds), 10):
+                batch = embeds[i:i+10]
+                if i == 0:
+                    await interaction.followup.send(embeds=batch)
+                else:
+                    await interaction.channel.send(embeds=batch)
+    return _send
+
 async def build_teamliste_embed(guild: discord.Guild) -> discord.Embed:
     config = await get_config(guild.id)
     team_cfg = config.get("teamliste", {})
@@ -3310,7 +3329,6 @@ async def xp_give(interaction: discord.Interaction, user: discord.Member, amount
     )
     logger.info(f"[LEVELS] {interaction.user} hat {amount} XP an {user} in {guild.name} angepasst.")
 
-# --- NEUER BEFEHL: level_set ---
 @bot.tree.command(name="level_set", description="Legt das Level eines Mitglieds fest; die XP werden dabei auf 0 zurückgesetzt.")
 @app_commands.describe(user="Mitglied, dessen Level gesetzt werden soll", level="Neues Level (mindestens 0)")
 async def level_set(interaction: discord.Interaction, user: discord.Member, level: int):
@@ -3334,7 +3352,6 @@ async def level_set(interaction: discord.Interaction, user: discord.Member, leve
         await interaction.followup.send("❌ Datenbank nicht verfügbar.")
         return
 
-    # Dokument aktualisieren: Level setzen, XP auf 0
     try:
         doc = await db_call(
             levels_collection.find_one_and_update,
@@ -3348,14 +3365,11 @@ async def level_set(interaction: discord.Interaction, user: discord.Member, leve
         await interaction.followup.send("❌ Fehler beim Speichern in der Datenbank.")
         return
 
-    # Optional: Level‑Up‑Nachricht ausgeben, wenn das neue Level höher ist als das alte (wird aber nicht benötigt)
-    # Wir können trotzdem eine Bestätigung senden.
     await apply_level_role_rewards(guild, user, level, lvl_cfg)
     await interaction.followup.send(
         f"✅ Level von {user.mention} wurde auf **{level}** gesetzt (XP auf 0 zurückgesetzt)."
     )
     logger.info(f"[LEVELS] {interaction.user} hat Level von {user} auf {level} in {guild.name} gesetzt.")
-# --- Ende NEUER BEFEHL ---
 
 @bot.event
 async def on_message(message: discord.Message):
@@ -4152,12 +4166,26 @@ async def show_config(interaction: discord.Interaction):
     if not join:
         await interaction.followup.send("❌ Keine Konfiguration gefunden.")
         return
+    
+    roles = join.get("roles", [])
+    roles_str = ", ".join([f"<@&{r}>" for r in roles]) or "❌ Keine"
+    
+    # Wenn viele Rollen, auf mehrere Felder aufteilen
+    max_roles_per_field = 10
     embed = discord.Embed(title="📋 Willkommens-Konfiguration", color=0xffffff, timestamp=datetime.now(BERLIN_TZ))
     embed.add_field(name="Aktiviert", value="✅ Ja" if join.get("enabled") else "❌ Nein", inline=True)
     embed.add_field(name="Kanal", value=f"<#{join.get('channelId')}>" if join.get("channelId") else "❌ Nicht gesetzt", inline=True)
     embed.add_field(name="Titel", value=join.get("title") or "❌ Nicht gesetzt", inline=False)
     embed.add_field(name="Nachricht", value=join.get("text") or "❌ Nicht gesetzt", inline=False)
-    embed.add_field(name="Rollen", value=", ".join([f"<@&{r}>" for r in join.get("roles", [])]) or "❌ Keine", inline=False)
+    
+    if len(roles) > max_roles_per_field:
+        role_chunks = [roles[i:i+max_roles_per_field] for i in range(0, len(roles), max_roles_per_field)]
+        for idx, chunk in enumerate(role_chunks, start=1):
+            chunk_str = ", ".join([f"<@&{r}>" for r in chunk])
+            embed.add_field(name=f"Rollen ({idx}/{len(role_chunks)})", value=chunk_str, inline=False)
+    else:
+        embed.add_field(name="Rollen", value=roles_str, inline=False)
+    
     await interaction.followup.send(embed=embed)
 
 @bot.tree.command(name="test-welcome", description="Sendet eine Testnachricht der Willkommensnachricht.")
@@ -4280,13 +4308,34 @@ async def invite_tracker(interaction: discord.Interaction):
     if not guild_data:
         await interaction.followup.send("❌ Keine Einladungen getrackt.")
         return
-    sorted_invites = sorted(guild_data.items(), key=lambda x: x[1], reverse=True)[:10]
-    description_lines = []
-    for i, (user_id, count) in enumerate(sorted_invites):
-        medal = "🥇" if i == 0 else "🥈" if i == 1 else "🥉" if i == 2 else f"**#{i+1}**"
-        description_lines.append(f"{medal} <@{user_id}> — **{count}** Einladung(en)")
-    embed = discord.Embed(title="📦 Invite Tracker", description="\n".join(description_lines), color=0xffffff, timestamp=datetime.now(BERLIN_TZ))
-    await interaction.followup.send(embed=embed)
+    
+    sorted_invites = sorted(guild_data.items(), key=lambda x: x[1], reverse=True)
+    
+    # Paginierung: max 20 Einträge pro Embed
+    entries_per_page = 20
+    pages = []
+    for i in range(0, len(sorted_invites), entries_per_page):
+        page_invites = sorted_invites[i:i+entries_per_page]
+        description_lines = []
+        for idx, (user_id, count) in enumerate(page_invites, start=i+1):
+            medal = "🥇" if idx == 1 else "🥈" if idx == 2 else "🥉" if idx == 3 else f"**#{idx}**"
+            description_lines.append(f"{medal} <@{user_id}> — **{count}** Einladung(en)")
+        pages.append("\n".join(description_lines))
+    
+    if len(pages) == 1:
+        embed = discord.Embed(title="📦 Invite Tracker", description=pages[0], color=0xffffff, timestamp=datetime.now(BERLIN_TZ))
+        await interaction.followup.send(embed=embed)
+    else:
+        embeds = []
+        for idx, page_content in enumerate(pages, start=1):
+            embed = discord.Embed(
+                title=f"📦 Invite Tracker ({idx}/{len(pages)})",
+                description=page_content,
+                color=0xffffff,
+                timestamp=datetime.now(BERLIN_TZ)
+            )
+            embeds.append(embed)
+        await interaction.followup.send(embeds=embeds)
 
 @bot.tree.command(name="help", description="Zeigt eine Übersicht aller verfügbaren Befehle.")
 async def help_command(interaction: discord.Interaction):
@@ -4297,7 +4346,7 @@ async def help_command(interaction: discord.Interaction):
     await interaction.followup.send(embed=embed)
 
 @bot.tree.command(name="leaderboard", description="Zeigt die Bestenliste eines Quiz-Spiels an.")
-@app_commands.describe(game="Wähle das Quiz-Spiel aus", limit="Anzahl der Einträge (max. 20)")
+@app_commands.describe(game="Wähle das Quiz-Spiel aus", limit="Anzahl der Einträge (max. 50)")
 async def leaderboard(
     interaction: discord.Interaction,
     game: str = "flags",
@@ -4308,25 +4357,44 @@ async def leaderboard(
     if game not in ["flags", "emoji"]:
         await interaction.followup.send("❌ Ungültiges Spiel. Wähle `flags` oder `emoji`.")
         return
-    limit = min(max(1, limit), 20)
+    limit = min(max(1, limit), 50)
     lb = await get_quiz_leaderboard(guild.id, game, limit)
     if not lb:
         await interaction.followup.send(f"📊 Noch keine Punkte für **{game}**-Quiz vorhanden.")
         return
     game_name = "Flaggen-Quiz" if game == "flags" else "Emoji-Quiz"
-    embed = discord.Embed(
-        title=f"🏆 Leaderboard – {game_name}",
-        color=0x5865f2,
-        timestamp=datetime.now(timezone.utc)
-    )
-    description = []
-    for i, entry in enumerate(lb, start=1):
-        user_id = entry["userId"]
-        correct = entry.get("correct", 0)
-        medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"#{i}"
-        description.append(f"{medal} <@{user_id}> – **{correct}** richtige Antworten")
-    embed.description = "\n".join(description)
-    await interaction.followup.send(embed=embed)
+    
+    entries_per_page = 10
+    pages = []
+    for i in range(0, len(lb), entries_per_page):
+        page_entries = lb[i:i+entries_per_page]
+        description = []
+        for idx, entry in enumerate(page_entries, start=i+1):
+            user_id = entry["userId"]
+            correct = entry.get("correct", 0)
+            medal = "🥇" if idx == 1 else "🥈" if idx == 2 else "🥉" if idx == 3 else f"#{idx}"
+            description.append(f"{medal} <@{user_id}> – **{correct}** richtige Antworten")
+        pages.append("\n".join(description))
+    
+    if len(pages) == 1:
+        embed = discord.Embed(
+            title=f"🏆 Leaderboard – {game_name}",
+            description=pages[0],
+            color=0x5865f2,
+            timestamp=datetime.now(timezone.utc)
+        )
+        await interaction.followup.send(embed=embed)
+    else:
+        embeds = []
+        for idx, page_content in enumerate(pages, start=1):
+            embed = discord.Embed(
+                title=f"🏆 Leaderboard – {game_name} ({idx}/{len(pages)})",
+                description=page_content,
+                color=0x5865f2,
+                timestamp=datetime.now(timezone.utc)
+            )
+            embeds.append(embed)
+        await interaction.followup.send(embeds=embeds)
 
 _active_ping_loops = {}
 
@@ -4376,8 +4444,6 @@ async def _build_ping_embed():
             embed.add_field(name="System", value=f"⚠️ Fehler beim Auslesen: {e}", inline=False)
     else:
         embed.add_field(name="System", value="⚠️ psutil nicht installiert", inline=False)
-
-    # Footer bewusst leer gelassen – nur die Zeitangabe (Embed-Timestamp) wird unten angezeigt
 
     return embed
 
@@ -5307,23 +5373,41 @@ async def shift_leaderboard(interaction: discord.Interaction):
     if not (interaction.user.guild_permissions.administrator or user_role_ids.intersection(set(manager_role_ids))):
         await interaction.followup.send("❌ Du hast keine Berechtigung, die Bestenliste einzusehen.")
         return
-    lb = await get_leaderboard_shifts(guild.id, limit=10)
+    lb = await get_leaderboard_shifts(guild.id, limit=50)
     if not lb:
         await interaction.followup.send("📊 Noch keine Schichtdaten vorhanden.")
         return
-    embed = discord.Embed(title="🏆 Schicht-Bestenliste", color=0x5865f2, timestamp=datetime.now(timezone.utc))
-    description = []
-    for i, entry in enumerate(lb, start=1):
-        user_id = entry["userId"]
-        total_seconds = entry.get("totalSeconds", 0)
-        hours = int(total_seconds // 3600)
-        minutes = int((total_seconds % 3600) // 60)
-        seconds = int(total_seconds % 60)
-        time_str = f"{hours}h {minutes}m {seconds}s" if hours else f"{minutes}m {seconds}s"
-        medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"#{i}"
-        description.append(f"{medal} <@{user_id}> – **{time_str}**")
-    embed.description = "\n".join(description)
-    await interaction.followup.send(embed=embed)
+    
+    entries_per_page = 10
+    pages = []
+    for i in range(0, len(lb), entries_per_page):
+        page_entries = lb[i:i+entries_per_page]
+        description = []
+        for idx, entry in enumerate(page_entries, start=i+1):
+            user_id = entry["userId"]
+            total_seconds = entry.get("totalSeconds", 0)
+            hours = int(total_seconds // 3600)
+            minutes = int((total_seconds % 3600) // 60)
+            seconds = int(total_seconds % 60)
+            time_str = f"{hours}h {minutes}m {seconds}s" if hours else f"{minutes}m {seconds}s"
+            medal = "🥇" if idx == 1 else "🥈" if idx == 2 else "🥉" if idx == 3 else f"#{idx}"
+            description.append(f"{medal} <@{user_id}> – **{time_str}**")
+        pages.append("\n".join(description))
+    
+    if len(pages) == 1:
+        embed = discord.Embed(title="🏆 Schicht-Bestenliste", description=pages[0], color=0x5865f2, timestamp=datetime.now(timezone.utc))
+        await interaction.followup.send(embed=embed)
+    else:
+        embeds = []
+        for idx, page_content in enumerate(pages, start=1):
+            embed = discord.Embed(
+                title=f"🏆 Schicht-Bestenliste ({idx}/{len(pages)})",
+                description=page_content,
+                color=0x5865f2,
+                timestamp=datetime.now(timezone.utc)
+            )
+            embeds.append(embed)
+        await interaction.followup.send(embeds=embeds)
 
 async def get_abmeldesystem_config(guild_id):
     config = await get_config(guild_id)
