@@ -5451,9 +5451,13 @@ async def on_app_command_error(interaction: discord.Interaction, error: app_comm
     elif isinstance(error, asyncio.TimeoutError):
         message = "❌ Die Anfrage hat zu lange gedauert. Bitte versuche es später erneut."
     else:
-        logger.error(f"[SLASH-COMMAND] Unerwarteter Fehler bei /{interaction.command.name if interaction.command else '?'}: {error}")
+        original = getattr(error, "original", error)
+        logger.error(f"[SLASH-COMMAND] Unerwarteter Fehler bei /{interaction.command.name if interaction.command else '?'}: {original}")
         traceback.print_exc()
-        message = "❌ Es ist ein unerwarteter Fehler aufgetreten. Das Team wurde informiert."
+        error_text = f"{type(original).__name__}: {original}"
+        if len(error_text) > 1500:
+            error_text = error_text[:1500] + "…"
+        message = f"❌ Es ist ein Fehler aufgetreten:\n```{error_text}```"
     try:
         if interaction.response.is_done():
             await interaction.followup.send(message, ephemeral=True)
