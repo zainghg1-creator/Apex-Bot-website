@@ -3514,6 +3514,10 @@ async def serverliste(interaction: discord.Interaction):
 
     lines = []
     for idx, guild in enumerate(sorted_guilds, start=1):
+        if guild.unavailable or guild.me is None:
+            lines.append(f"**{idx}.** {guild.name} — ⚠️ Server aktuell nicht verfügbar")
+            continue
+
         joined_at = guild.me.joined_at
         if joined_at:
             joined_ts = int(ensure_aware(joined_at).timestamp())
