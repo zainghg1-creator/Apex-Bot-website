@@ -3568,12 +3568,26 @@ async def serverliste(interaction: discord.Interaction):
         )
         embeds.append(embed)
 
-    for i in range(0, len(embeds), MAX_EMBEDS_PER_MESSAGE):
-        batch = embeds[i:i + MAX_EMBEDS_PER_MESSAGE]
-        if i == 0:
-            await interaction.followup.send(embeds=batch, ephemeral=True)
-        else:
-            await interaction.followup.send(embeds=batch, ephemeral=True)
+    # Discord erlaubt max. 6000 Zeichen INSGESAMT über alle Embeds einer Nachricht
+    # -> Embeds nicht nach fester Anzahl, sondern nach Gesamtgröße gruppieren
+    MAX_TOTAL_EMBED_SIZE = 5800  # etwas Puffer unter dem harten Limit von 6000
+
+    batches = []
+    current_batch = []
+    current_size = 0
+    for embed in embeds:
+        embed_size = len(embed)
+        if current_batch and (current_size + embed_size > MAX_TOTAL_EMBED_SIZE or len(current_batch) >= MAX_EMBEDS_PER_MESSAGE):
+            batches.append(current_batch)
+            current_batch = []
+            current_size = 0
+        current_batch.append(embed)
+        current_size += embed_size
+    if current_batch:
+        batches.append(current_batch)
+
+    for batch in batches:
+        await interaction.followup.send(embeds=batch, ephemeral=True)
 
 @bot.tree.command(name="rp_start", description="Startet das Roleplay und postet die konfigurierte RP-Infonachricht.")
 async def rp_start(interaction: discord.Interaction):
