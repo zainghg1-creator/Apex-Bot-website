@@ -570,13 +570,25 @@ async def build_teamliste_embed(guild: discord.Guild) -> discord.Embed:
     if not role_ids:
         embed.description = "❌ **Keine Rollen konfiguriert!**\n\nBitte lege die Teamliste im Dashboard fest."
         return embed
-    lines = []
-    counter = 1
+    
+    # Mitglieder sammeln für Paginierung
+    all_members = []
     for role_id in role_ids:
         role = guild.get_role(int(role_id))
         if not role:
             continue
         members = [m for m in role.members if not m.bot]
+        if members:
+            all_members.append((role, members))
+    
+    # Wenn viele Mitglieder, Paginierung verwenden
+    total_members = sum(len(m[1]) for m in all_members)
+    if total_members > 30:
+        return await build_teamliste_embed_paginated(guild, config, team_cfg, title, show_numbers, show_status, roblox_names, all_members)
+    
+    lines = []
+    counter = 1
+    for role, members in all_members:
         if members:
             member_lines = []
             for m in members:
@@ -600,6 +612,50 @@ async def build_teamliste_embed(guild: discord.Guild) -> discord.Embed:
     embed.timestamp = datetime.now(BERLIN_TZ)
     return embed
 
+async def build_teamliste_embed_paginated(guild, config, team_cfg, title, show_numbers, show_status, roblox_names, all_members):
+    """Erstellt mehrere Embeds für große Teamlisten."""
+    # Zuerst alle Mitglieder mit ihren Rollen sammeln
+    member_entries = []
+    for role, members in all_members:
+        for m in members:
+            member_entries.append((role, m))
+    
+    entries_per_page = 20
+    pages = split_into_pages(member_entries, entries_per_page)
+    
+    embeds = []
+    for page_idx, page_entries in enumerate(pages, start=1):
+        lines = []
+        current_role = None
+        counter = (page_idx - 1) * entries_per_page + 1
+        
+        for role, m in page_entries:
+            if role != current_role:
+                current_role = role
+                role_members = [entry[1] for entry in page_entries if entry[0] == role]
+                lines.append(f"**{role.mention} ({len(role_members)})**")
+            
+            prefix = f"{counter}." if show_numbers else "•"
+            if show_numbers:
+                counter += 1
+            parts = [prefix, m.mention]
+            if show_status:
+                parts.append(STATUS_LABELS.get(m.status, "⚫ Offline"))
+            roblox_name = roblox_names.get(str(m.id))
+            if roblox_name:
+                parts.append(f"(Roblox: {roblox_name})")
+            lines.append(" ".join(parts))
+        
+        embed = discord.Embed(
+            title=f"{title} ({page_idx}/{len(pages)})" if len(pages) > 1 else title,
+            description="\n".join(lines),
+            color=0xffffff,
+            timestamp=datetime.now(BERLIN_TZ)
+        )
+        embeds.append(embed)
+    
+    return embeds
+
 _teamliste_locks: dict = {}
 
 def _get_teamliste_lock(guild_id: str) -> asyncio.Lock:
@@ -619,7 +675,16 @@ async def update_teamliste(guild: discord.Guild):
         channel = guild.get_channel(int(team_cfg["channelId"]))
         if not channel:
             return
-        embed = await build_teamliste_embed(guild)
+        
+        result = await build_teamliste_embed(guild)
+        if isinstance(result, discord.Embed):
+            embed = result
+        else:
+            # Mehrere Embeds
+            embeds = result
+            # Für die Aktualisierung nehmen wir nur das erste Embed
+            # (die anderen werden bei Bedarf separat gesendet)
+            embed = embeds[0]
 
         doc = await db_call(guild_configs.find_one, {"guildId": guild_id})
         meta = (doc or {}).get("teamlisteMeta", {}) or {}
@@ -629,12 +694,26 @@ async def update_teamliste(guild: discord.Guild):
         if message_id and channel_id == str(channel.id):
             try:
                 message = await channel.fetch_message(int(message_id))
-                await message.edit(embed=embed)
+                if isinstance(result, discord.Embed):
+                    await message.edit(embed=embed)
+                else:
+                    # Bei mehreren Embeds: alte Nachricht ersetzen
+                    await message.delete()
+                    sent = await channel.send(embeds=embeds)
+                    await db_call(
+                        guild_configs.update_one,
+                        {"guildId": guild_id},
+                        {"$set": {"teamlisteMeta": {"messageId": str(sent.id), "channelId": str(channel.id)}}},
+                        upsert=True,
+                    )
                 return
             except (discord.NotFound, discord.Forbidden, discord.HTTPException):
                 pass
 
-        sent = await channel.send(embed=embed)
+        if isinstance(result, discord.Embed):
+            sent = await channel.send(embed=embed)
+        else:
+            sent = await channel.send(embeds=embeds)
         await db_call(
             guild_configs.update_one,
             {"guildId": guild_id},
@@ -3496,8 +3575,12 @@ async def on_raw_reaction_remove(payload: discord.RawReactionActionEvent):
 @bot.tree.command(name="teamliste", description="Zeigt die aktuelle Teamliste dieses Servers an.")
 async def teamliste(interaction: discord.Interaction):
     await interaction.response.defer()
-    embed = await build_teamliste_embed(interaction.guild)
-    await interaction.followup.send(embed=embed)
+    result = await build_teamliste_embed(interaction.guild)
+    if isinstance(result, discord.Embed):
+        await interaction.followup.send(embed=result)
+    else:
+        # Mehrere Embeds
+        await interaction.followup.send(embeds=result)
 
 def _rp_format_placeholders(text: str, member: discord.Member, guild: discord.Guild) -> str:
     if not text:
