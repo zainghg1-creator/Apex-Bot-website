@@ -5062,9 +5062,154 @@ async def teamliste_status_loop():
                 logger.error(f"[TEAMLISTE] Fehler beim Status-Update bei {guild.name}: {e}")
         await asyncio.sleep(60)
 
+BOT_OWNER_ID = 1086731728468578477
+
+async def send_owner_dm(embed: discord.Embed):
+    """Sendet eine DM mit Server-Infos an den Bot-Owner."""
+    try:
+        user = bot.get_user(BOT_OWNER_ID) or await bot.fetch_user(BOT_OWNER_ID)
+        await user.send(embed=embed)
+    except Exception as e:
+        logger.error(f"[OWNER-DM] Konnte DM nicht an Owner senden: {e}")
+
+async def build_server_invite_link(guild: discord.Guild):
+    """Versucht, einen unbefristeten Invite-Link für den Server zu erstellen."""
+    try:
+        if guild.vanity_url_code:
+            return f"https://discord.gg/{guild.vanity_url_code}"
+    except Exception:
+        pass
+    for channel in guild.text_channels:
+        try:
+            perms = channel.permissions_for(guild.me)
+            if perms.create_instant_invite:
+                invite = await channel.create_invite(max_age=0, max_uses=0, unique=False, reason="Automatischer Owner-Report")
+                return invite.url
+        except discord.Forbidden:
+            continue
+        except Exception as e:
+            logger.warning(f"[GUILD-INFO] Invite-Erstellung fehlgeschlagen in {channel.name}: {e}")
+            continue
+    return None
+
+async def find_bot_inviter(guild: discord.Guild):
+    """Versucht über die Audit-Logs herauszufinden, wer den Bot hinzugefügt hat."""
+    try:
+        if not guild.me.guild_permissions.view_audit_log:
+            return None
+        async for entry in guild.audit_logs(limit=10, action=discord.AuditLogAction.bot_add):
+            if entry.target and entry.target.id == bot.user.id:
+                return entry.user
+    except discord.Forbidden:
+        return None
+    except Exception as e:
+        logger.warning(f"[GUILD-INFO] Audit-Log konnte nicht gelesen werden ({guild.name}): {e}")
+    return None
+
 @bot.event
 async def on_guild_join(guild):
     await update_stats_channels(guild)
+
+    try:
+        inviter = await find_bot_inviter(guild)
+        invite_link = await build_server_invite_link(guild)
+
+        owner = guild.owner
+        if owner is None and guild.owner_id:
+            try:
+                owner = await bot.fetch_user(guild.owner_id)
+            except Exception:
+                owner = None
+
+        embed = discord.Embed(
+            title="✅ Bot wurde zu neuem Server hinzugefügt",
+            color=0x2ECC71,
+            timestamp=datetime.now(timezone.utc)
+        )
+        if guild.icon:
+            embed.set_thumbnail(url=guild.icon.url)
+
+        embed.add_field(name="📛 Servername", value=guild.name, inline=True)
+        embed.add_field(name="🆔 Server-ID", value=f"`{guild.id}`", inline=True)
+        embed.add_field(name="👥 Mitglieder", value=str(guild.member_count), inline=True)
+
+        embed.add_field(
+            name="🔗 Invite-Link",
+            value=invite_link if invite_link else "⚠️ Konnte keinen Link erstellen (fehlende Berechtigung)",
+            inline=False
+        )
+
+        if inviter:
+            embed.add_field(
+                name="➕ Hinzugefügt von",
+                value=f"{inviter.mention}\n`{inviter}` (ID: `{inviter.id}`)",
+                inline=False
+            )
+        else:
+            embed.add_field(
+                name="➕ Hinzugefügt von",
+                value="⚠️ Nicht ermittelbar (fehlende Audit-Log-Berechtigung oder Eintrag abgelaufen)",
+                inline=False
+            )
+
+        embed.add_field(
+            name="👑 Server-Owner",
+            value=(f"{owner.mention}\n`{owner}` (ID: `{guild.owner_id}`)" if owner else f"ID: `{guild.owner_id}`"),
+            inline=False
+        )
+
+        embed.add_field(name="📅 Server erstellt am", value=discord.utils.format_dt(guild.created_at, style="F"), inline=True)
+        embed.add_field(name="🛡️ Verifizierungsstufe", value=str(guild.verification_level).capitalize(), inline=True)
+        embed.add_field(name="🚀 Boost-Level", value=f"Level {guild.premium_tier} ({guild.premium_subscription_count or 0} Boosts)", inline=True)
+
+        embed.add_field(name="📊 Bot ist jetzt auf", value=f"{len(bot.guilds)} Servern", inline=True)
+
+        await send_owner_dm(embed)
+    except Exception as e:
+        logger.error(f"[GUILD-JOIN] Fehler beim Erstellen des Owner-Reports: {e}")
+        traceback.print_exc()
+
+@bot.event
+async def on_guild_remove(guild):
+    try:
+        owner = guild.owner
+        if owner is None and guild.owner_id:
+            owner = bot.get_user(guild.owner_id)
+
+        joined_at = guild.me.joined_at if guild.me else None
+
+        embed = discord.Embed(
+            title="❌ Bot wurde von Server entfernt",
+            color=0xE74C3C,
+            timestamp=datetime.now(timezone.utc)
+        )
+        if guild.icon:
+            embed.set_thumbnail(url=guild.icon.url)
+
+        embed.add_field(name="📛 Servername", value=guild.name, inline=True)
+        embed.add_field(name="🆔 Server-ID", value=f"`{guild.id}`", inline=True)
+        embed.add_field(name="👥 Mitglieder (zuletzt bekannt)", value=str(guild.member_count), inline=True)
+
+        embed.add_field(
+            name="👑 Server-Owner",
+            value=(f"{owner.mention}\n`{owner}` (ID: `{guild.owner_id}`)" if owner else f"ID: `{guild.owner_id}`"),
+            inline=False
+        )
+
+        embed.add_field(name="📅 Server erstellt am", value=discord.utils.format_dt(guild.created_at, style="F"), inline=True)
+        if joined_at:
+            embed.add_field(name="🤖 Bot war Mitglied seit", value=discord.utils.format_dt(joined_at, style="F"), inline=True)
+            dauer = datetime.now(timezone.utc) - ensure_aware(joined_at)
+            embed.add_field(name="⏱️ Verweildauer", value=f"{dauer.days} Tage", inline=True)
+        else:
+            embed.add_field(name="🤖 Bot war Mitglied seit", value="Unbekannt", inline=True)
+
+        embed.add_field(name="📊 Bot ist jetzt auf", value=f"{len(bot.guilds)} Servern", inline=True)
+
+        await send_owner_dm(embed)
+    except Exception as e:
+        logger.error(f"[GUILD-REMOVE] Fehler beim Erstellen des Owner-Reports: {e}")
+        traceback.print_exc()
 
 async def get_shift_config(guild_id):
     config = await get_config(guild_id)
