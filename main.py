@@ -9,6 +9,14 @@ class KeepAliveHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b"Bot is alive!")
 
+    def do_HEAD(self):
+        self.send_response(200)
+        self.end_headers()
+
+    def log_message(self, format, *args):
+        # Unterdrückt die vielen Health-Check-Zugriffe in den Logs
+        pass
+
 def run_web_server():
     port = int(os.environ.get("PORT", 8080))
     server = HTTPServer(("0.0.0.0", port), KeepAliveHandler)
@@ -69,6 +77,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 MONGODB_URI = os.getenv("MONGODB_URI")
+mongo_client = None  # immer definiert, damit der Shutdown-Handler nie einen NameError wirft
 if MONGODB_URI:
     try:
         mongo_client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
@@ -92,6 +101,7 @@ if MONGODB_URI:
         logger.info("✅ MongoDB erfolgreich verbunden")
     except Exception as e:
         logger.error(f"❌ MongoDB Verbindungsfehler: {e}")
+        mongo_client = None
         db = None
         guild_configs = None
         giveaways_collection = None
@@ -4558,7 +4568,7 @@ async def ping(interaction: discord.Interaction):
         logger.warning(f"[PING] Interaktion abgelaufen (10062) für {interaction.user}. Render Cold Start?")
         return
 
-    global db, guild_configs, giveaways_collection, team_warns_collection, counting_collection, levels_collection, button_actions, applications_collection, minigame_rounds_collection, transcripts_collection, shifts_collection, shift_stats_collection, quiz_stats_collection, logouts_collection, tickets_collection, roblox_names_collection
+    global mongo_client, db, guild_configs, giveaways_collection, team_warns_collection, counting_collection, levels_collection, button_actions, applications_collection, minigame_rounds_collection, transcripts_collection, shifts_collection, shift_stats_collection, quiz_stats_collection, logouts_collection, tickets_collection, roblox_names_collection
     
     try:
         if db is None and MONGODB_URI:
