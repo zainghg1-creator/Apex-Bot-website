@@ -1,6 +1,5 @@
 'use strict';
 
-console.log('✅ GalaxyBot-Style Dashboard geladen!');
 
 
 
@@ -2666,7 +2665,6 @@ async function sendVerificationPanel() {
   const image = document.getElementById('verification-image-input')?.dataset.value || '';
   const buttonLabel = document.getElementById('verification-button-label').value;
 
-  console.log('📤 Sende Verifizierungs-Panel mit:', { channelId, method, roleId, title, description, color, image, buttonLabel });
 
   try {
     const response = await apiFetch(`/guild/${state.activeGuildId}/verification/send-panel`, {
