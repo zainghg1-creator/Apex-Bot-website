@@ -1,41 +1,41 @@
 const DISCORD_API = 'https://discord.com/api/v10';
 const ADMINISTRATOR = 0x8n;
 
-const cache = new Map();
+const authCache = new Map();
 const rate = new Map();
 
 function extractGuildId(req) {
-  const pathMatch = req.path.match(/^\/api\/(?:guild|guilds)\/(\d{17,20})(?:\/|$)/);
+  const pathMatch = req.path.match(/^\/api\/guilds?\/(\d{17,20})(?:\/|$)/);
   if (pathMatch) return pathMatch[1];
 
-  const bodyGuildId = req.body && (req.body.guildId || req.body.guildID || req.body.serverId);
-  if (typeof bodyGuildId === 'string' && /^\d{17,20}$/.test(bodyGuildId)) return bodyGuildId;
-
-  const queryGuildId = req.query && (req.query.guildId || req.query.guildID || req.query.serverId);
-  if (typeof queryGuildId === 'string' && /^\d{17,20}$/.test(queryGuildId)) return queryGuildId;
-
-  return null;
+  const candidates = [
+    req.body?.guildId,
+    req.body?.guildID,
+    req.body?.serverId,
+    req.query?.guildId,
+    req.query?.guildID,
+    req.query?.serverId
+  ];
+  return candidates.find(v => typeof v === 'string' && /^\d{17,20}$/.test(v)) || null;
 }
 
-function cleanupMaps() {
+function cleanup() {
   const now = Date.now();
-  for (const [key, value] of cache) if (value.expires < now) cache.delete(key);
-  for (const [key, value] of rate) if (value.reset < now) rate.delete(key);
+  for (const [key, value] of authCache) if (value.expires <= now) authCache.delete(key);
+  for (const [key, value] of rate) if (value.reset <= now) rate.delete(key);
 }
-setInterval(cleanupMaps, 60_000).unref();
+setInterval(cleanup, 60_000).unref();
 
-function rateLimit(req, res) {
-  const key = `${req.ip}:${req.session?.user?.id || 'anon'}`;
+function checkRateLimit(req, res) {
+  const key = `${req.ip}:${req.session?.user?.id || 'anonymous'}`;
   const now = Date.now();
-  const current = rate.get(key);
-
-  if (!current || current.reset <= now) {
-    rate.set(key, { count: 1, reset: now + 60_000 });
-    return true;
+  let entry = rate.get(key);
+  if (!entry || entry.reset <= now) {
+    entry = { count: 0, reset: now + 60_000 };
+    rate.set(key, entry);
   }
-
-  current.count += 1;
-  if (current.count > 120) {
+  entry.count++;
+  if (entry.count > 120) {
     res.status(429).json({ error: 'rate_limited' });
     return false;
   }
@@ -48,7 +48,7 @@ async function isGuildAdmin(req, guildId) {
   if (!userId || !accessToken || !guildId) return false;
 
   const cacheKey = `${userId}:${guildId}`;
-  const cached = cache.get(cacheKey);
+  const cached = authCache.get(cacheKey);
   if (cached && cached.expires > Date.now()) return cached.allowed;
 
   try {
@@ -68,10 +68,10 @@ async function isGuildAdmin(req, guildId) {
 
     const permissions = BigInt(guild.permissions ?? 0);
     const allowed = guild.owner === true || (permissions & ADMINISTRATOR) === ADMINISTRATOR;
-    cache.set(cacheKey, { allowed, expires: Date.now() + 30_000 });
+    authCache.set(cacheKey, { allowed, expires: Date.now() + 30_000 });
     return allowed;
   } catch (error) {
-    console.error('[SECURITY] Discord authorization check failed:', error.message);
+    console.error('[SECURITY] Discord authorization failed:', error.message);
     return false;
   }
 }
@@ -95,26 +95,19 @@ function securityMiddleware(req, res, next) {
   res.removeHeader('X-Powered-By');
 
   if (!req.path.startsWith('/api/')) return next();
-  if (!rateLimit(req, res)) return;
+  if (!checkRateLimit(req, res)) return;
 
   const mutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
   if (!mutating) return next();
 
-  // Blocks cross-origin writes and requests crafted outside the real dashboard.
-  if (!sameOrigin(req)) {
-    return res.status(403).json({ error: 'origin_not_allowed' });
-  }
+  if (!sameOrigin(req)) return res.status(403).json({ error: 'origin_not_allowed' });
 
-  // The frontend, URL, DevTools and request body are never trusted.
-  // Every write needs a valid Discord OAuth session AND Discord Administrator permission.
   if (!req.session?.accessToken || !req.session?.user?.id) {
     return res.status(401).json({ error: 'not_authenticated' });
   }
 
   const guildId = extractGuildId(req);
-  if (!guildId) {
-    return res.status(400).json({ error: 'guild_id_required' });
-  }
+  if (!guildId) return res.status(400).json({ error: 'guild_id_required' });
 
   isGuildAdmin(req, guildId).then(allowed => {
     if (!allowed) return res.status(403).json({ error: 'not_guild_admin' });
@@ -128,11 +121,8 @@ function installExpressSecurity(express) {
   let useCount = 0;
 
   express.application.use = function patchedUse(...args) {
-    useCount += 1;
+    useCount++;
     const result = originalUse.apply(this, args);
-
-    // server.js currently registers static, JSON parser and cookie-session in this order.
-    // Install immediately after cookie-session so req.session is available to the security layer.
     if (!installed && useCount === 3) {
       originalUse.call(this, securityMiddleware);
       installed = true;
@@ -150,4 +140,8 @@ function validateEnvironment() {
   }
 }
 
-module.exports = { installExpressSecurity, validateEnvironment, securityMiddleware };
+validateEnvironment();
+const express = require('express');
+installExpressSecurity(express);
+
+module.exports = { securityMiddleware, isGuildAdmin };
