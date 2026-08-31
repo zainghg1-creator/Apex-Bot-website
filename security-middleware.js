@@ -140,8 +140,4 @@ function validateEnvironment() {
   }
 }
 
-validateEnvironment();
-const express = require('express');
-installExpressSecurity(express);
-
-module.exports = { securityMiddleware, isGuildAdmin };
+module.exports = { installExpressSecurity, validateEnvironment, securityMiddleware };
