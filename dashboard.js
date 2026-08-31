@@ -125,6 +125,7 @@ const FRIENDLY_ERRORS = {
 
 async function apiFetch(endpoint, options = {}) {
   const res = await fetch(`${CONFIG.API_BASE}${endpoint}`, {
+    cache: 'no-store',
     ...options,
     headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
   });

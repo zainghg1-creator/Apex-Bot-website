@@ -636,6 +636,19 @@ app.post('/api/guild/:guildId/config/:module', requireAuth, async (req, res) => 
   }
   try {
     let moduleData = req.body;
+    if (module === 'tickets' && moduleData && Array.isArray(moduleData.options)) {
+      moduleData = {
+        ...moduleData,
+        options: moduleData.options.map(panel => ({
+          ...panel,
+          buttons: Array.isArray(panel.buttons)
+            ? panel.buttons.map(button => button?.action === 'close'
+              ? { ...button, label: 'Ticket schließen' }
+              : button)
+            : panel.buttons
+        }))
+      };
+    }
     if (module === 'stats') {
       moduleData = await syncStatsChannelsNow(guildId, moduleData);
     }

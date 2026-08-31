@@ -194,7 +194,7 @@ async def ttl_cache_cleanup_loop():
         except Exception as e:
             logger.error(f"[CACHE] Fehler bei der Cache-Bereinigung: {e}")
 
-_CONFIG_CACHE_TTL = 600
+_CONFIG_CACHE_TTL = 5
 _config_cache = TTLCache(ttl=_CONFIG_CACHE_TTL, name="guild_config")
 
 _db_call_executor = ThreadPoolExecutor(max_workers=20, thread_name_prefix="mongo-db-call")
@@ -1055,7 +1055,7 @@ class TicketCloseView(discord.ui.View):
         transcript_cfg = next((b for b in buttons_cfg if b.get("action") == "transcript"), None)
 
         close_button = _safe_button(
-            label=(close_cfg or {}).get("label") or "Ticket schließen",
+            label="Ticket schließen",
             emoji=(close_cfg or {}).get("emoji") or "🔒",
             style=_button_style_from_hex((close_cfg or {}).get("color")) if close_cfg else discord.ButtonStyle.danger,
             custom_id=f"close_ticket_{channel.id}"
