@@ -3,7 +3,7 @@
   "cleanUrls": true,
   "builds": [
     {
-      "src": "server.js",
+      "src": "server-secure.js",
       "use": "@vercel/node"
     },
     {
@@ -22,11 +22,11 @@
   "routes": [
     {
       "src": "/auth/(.*)",
-      "dest": "/server.js"
+      "dest": "/server-secure.js"
     },
     {
       "src": "/api/(.*)",
-      "dest": "/server.js"
+      "dest": "/server-secure.js"
     },
     {
       "src": "/(.*)",
