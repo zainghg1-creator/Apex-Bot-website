@@ -249,6 +249,7 @@ async function openManagement(guildId, name, iconUrl) {
   invalidateTicketCache();
   invalidateTicketCache();
   invalidateTicketCache();
+  invalidateTicketCache();
   await getCachedTicketConfig(true);
   await loadGuildDetails(guildId);
   await loadAllModuleSettings(guildId);
