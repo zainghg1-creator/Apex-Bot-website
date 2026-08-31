@@ -247,6 +247,7 @@ async function openManagement(guildId, name, iconUrl) {
   DOM.overviewCreated.textContent = formatGuildCreatedDate(guildId);
   await loadRolesAndChannels(guildId);
   invalidateTicketCache();
+  invalidateTicketCache();
   await getCachedTicketConfig(true);
   await loadGuildDetails(guildId);
   await loadAllModuleSettings(guildId);
