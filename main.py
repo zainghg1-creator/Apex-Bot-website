@@ -194,7 +194,7 @@ async def ttl_cache_cleanup_loop():
         except Exception as e:
             logger.error(f"[CACHE] Fehler bei der Cache-Bereinigung: {e}")
 
-_CONFIG_CACHE_TTL = 5
+_CONFIG_CACHE_TTL = 2
 _config_cache = TTLCache(ttl=_CONFIG_CACHE_TTL, name="guild_config")
 
 _db_call_executor = ThreadPoolExecutor(max_workers=20, thread_name_prefix="mongo-db-call")

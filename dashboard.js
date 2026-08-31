@@ -245,11 +245,8 @@ async function openManagement(guildId, name, iconUrl) {
   DOM.overviewOwnerAvatar.classList.add('hidden');
   DOM.overviewOwnerAvatar.src = '';
   DOM.overviewCreated.textContent = formatGuildCreatedDate(guildId);
-  if (state.guildDataGuildId !== guildId || state.guildRoles.length === 0 || state.guildChannels.length === 0) {
-    await loadRolesAndChannels(guildId);
-  } else {
-    renderAllSelects();
-  }
+  await loadRolesAndChannels(guildId);
+  invalidateTicketCache();
   await getCachedTicketConfig(true);
   await loadGuildDetails(guildId);
   await loadAllModuleSettings(guildId);
@@ -358,8 +355,8 @@ function renderGuildOwner(owner) {
 async function loadRolesAndChannels(guildId) {
   try {
     const [roles, channels] = await Promise.all([
-      apiFetch(`/guild/${guildId}/roles`).catch(() => []),
-      apiFetch(`/guild/${guildId}/channels`).catch(() => [])
+      apiFetch(`/guild/${guildId}/roles`),
+      apiFetch(`/guild/${guildId}/channels`)
     ]);
     state.guildRoles = roles || [];
     state.guildChannels = channels || [];
