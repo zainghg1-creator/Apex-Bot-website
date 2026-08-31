@@ -1,5 +1,3 @@
-const crypto = require('crypto');
-
 const DISCORD_API = 'https://discord.com/api/v10';
 const ADMINISTRATOR = 0x8n;
 
@@ -78,21 +76,37 @@ async function isGuildAdmin(req, guildId) {
   }
 }
 
+function sameOrigin(req) {
+  const origin = req.get('origin');
+  if (!origin) return true;
+  try {
+    const expected = `${req.protocol}://${req.get('host')}`;
+    return new URL(origin).origin === expected;
+  } catch {
+    return false;
+  }
+}
+
 function securityMiddleware(req, res, next) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.removeHeader('X-Powered-By');
 
   if (!req.path.startsWith('/api/')) return next();
-
   if (!rateLimit(req, res)) return;
 
   const mutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
   if (!mutating) return next();
 
-  // Never trust the frontend, URL, DevTools or a manually crafted request.
-  // Every API write must have a real Discord session and admin permission.
+  // Blocks cross-origin writes and requests crafted outside the real dashboard.
+  if (!sameOrigin(req)) {
+    return res.status(403).json({ error: 'origin_not_allowed' });
+  }
+
+  // The frontend, URL, DevTools and request body are never trusted.
+  // Every write needs a valid Discord OAuth session AND Discord Administrator permission.
   if (!req.session?.accessToken || !req.session?.user?.id) {
     return res.status(401).json({ error: 'not_authenticated' });
   }
@@ -116,17 +130,13 @@ function installExpressSecurity(express) {
   express.application.use = function patchedUse(...args) {
     useCount += 1;
     const result = originalUse.apply(this, args);
-    const first = args[0];
-    const looksLikeCookieSession = typeof first === 'function' && (
-      first.name === 'cookieSession' ||
-      first.name === 'cookieSessionMiddleware'
-    );
 
-    if (!installed && (looksLikeCookieSession || useCount === 3)) {
+    // server.js currently registers static, JSON parser and cookie-session in this order.
+    // Install immediately after cookie-session so req.session is available to the security layer.
+    if (!installed && useCount === 3) {
       originalUse.call(this, securityMiddleware);
       installed = true;
     }
-
     return result;
   };
 }
@@ -135,7 +145,7 @@ function validateEnvironment() {
   if (process.env.NODE_ENV === 'production') {
     const secret = process.env.SESSION_SECRET;
     if (!secret || secret === 'default-secret' || secret.length < 32) {
-      throw new Error('SECURITY: SESSION_SECRET muss in Production gesetzt sein und mindestens 32 Zeichen/Bytes Entropie haben.');
+      throw new Error('SECURITY: SESSION_SECRET muss in Production gesetzt sein und mindestens 32 Zeichen haben.');
     }
   }
 }
