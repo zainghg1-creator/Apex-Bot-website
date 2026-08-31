@@ -68,7 +68,7 @@ async function isGuildAdmin(req, guildId) {
 
     const permissions = BigInt(guild.permissions ?? 0);
     const allowed = guild.owner === true || (permissions & ADMINISTRATOR) === ADMINISTRATOR;
-    authCache.set(cacheKey, { allowed, expires: Date.now() + 30_000 });
+    authCache.set(cacheKey, { allowed, expires: Date.now() + 5_000 });
     return allowed;
   } catch (error) {
     console.error('[SECURITY] Discord authorization failed:', error.message);
@@ -97,22 +97,39 @@ function securityMiddleware(req, res, next) {
   if (!req.path.startsWith('/api/')) return next();
   if (!checkRateLimit(req, res)) return;
 
-  const mutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
-  if (!mutating) return next();
+  const guildId = extractGuildId(req);
+  const guildScoped = /^\/api\/guilds?\/\d{17,20}(?:\/|$)/.test(req.path);
 
-  if (!sameOrigin(req)) return res.status(403).json({ error: 'origin_not_allowed' });
+  // Every guild-scoped API request, including GET, must belong to a real
+  // authenticated Discord Administrator of that exact guild.
+  if (guildScoped) {
+    if (!req.session?.accessToken || !req.session?.user?.id) {
+      return res.status(401).json({ error: 'not_authenticated' });
+    }
+    if (!guildId) return res.status(400).json({ error: 'guild_id_required' });
 
-  if (!req.session?.accessToken || !req.session?.user?.id) {
-    return res.status(401).json({ error: 'not_authenticated' });
+    return isGuildAdmin(req, guildId).then(allowed => {
+      if (!allowed) return res.status(403).json({ error: 'not_guild_admin' });
+
+      const mutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
+      if (mutating && !sameOrigin(req)) {
+        return res.status(403).json({ error: 'origin_not_allowed' });
+      }
+      next();
+    }).catch(() => res.status(403).json({ error: 'not_guild_admin' }));
   }
 
-  const guildId = extractGuildId(req);
-  if (!guildId) return res.status(400).json({ error: 'guild_id_required' });
+  // Any other state-changing API endpoint still requires a valid session.
+  const mutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
+  if (mutating) {
+    if (!req.session?.accessToken || !req.session?.user?.id) {
+      return res.status(401).json({ error: 'not_authenticated' });
+    }
+    if (!sameOrigin(req)) return res.status(403).json({ error: 'origin_not_allowed' });
+    return res.status(400).json({ error: 'guild_id_required' });
+  }
 
-  isGuildAdmin(req, guildId).then(allowed => {
-    if (!allowed) return res.status(403).json({ error: 'not_guild_admin' });
-    next();
-  }).catch(() => res.status(403).json({ error: 'not_guild_admin' }));
+  next();
 }
 
 function installExpressSecurity(express) {
