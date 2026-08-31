@@ -1,0 +1,70 @@
+name: Fix dashboard ticket data loading
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: "!contains(github.event.head_commit.message, '[dashboard-fix]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Patch dashboard loading
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          p = Path('dashboard.js')
+          s = p.read_text(encoding='utf-8')
+
+          # Do not silently turn failed Discord API requests into an empty role/channel list.
+          old = '''    const [roles, channels] = await Promise.all([\n      apiFetch(`/guild/${guildId}/roles`).catch(() => []),\n      apiFetch(`/guild/${guildId}/channels`).catch(() => [])\n    ]);'''
+          new = '''    const [roles, channels] = await Promise.all([\n      apiFetch(`/guild/${guildId}/roles`),\n      apiFetch(`/guild/${guildId}/channels`)\n    ]);'''
+          if old in s:
+              s = s.replace(old, new, 1)
+
+          # Always reload guild data when opening management, avoiding stale role/channel state.
+          old = "  if (state.guildDataGuildId !== guildId || state.guildRoles.length === 0 || state.guildChannels.length === 0) {\n    await loadRolesAndChannels(guildId);\n  } else {\n    renderAllSelects();\n  }"
+          new = "  await loadRolesAndChannels(guildId);"
+          if old in s:
+              s = s.replace(old, new, 1)
+
+          # Force the ticket config to be fetched after every management open.
+          s = s.replace("await getCachedTicketConfig(true);", "invalidateTicketCache();\n  await getCachedTicketConfig(true);", 1)
+          p.write_text(s, encoding='utf-8')
+
+          # Patch main.py without replacing the file: reduce stale ticket config cache if present.
+          p = Path('main.py')
+          s = p.read_text(encoding='utf-8')
+          s = re.sub(r'(_CONFIG_CACHE_TTL\s*=\s*)\d+', r'\g<1>2', s, count=1)
+          p.write_text(s, encoding='utf-8')
+
+          # Patch dashboard HTML labels only where the exact visible label exists.
+          p = Path('dashboard.html')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace('>Ticket öffnen<', '>Ticket schließen<')
+          s = s.replace('>Ticket Öffnen<', '>Ticket schließen<')
+          p.write_text(s, encoding='utf-8')
+
+      - name: Validate and commit
+        shell: bash
+        run: |
+          node --check dashboard.js
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dashboard.js main.py dashboard.html
+          if git diff --cached --quiet; then
+            echo "No changes needed."
+            exit 0
+          fi
+          git commit -m "fix dashboard roles channels and ticket refresh [dashboard-fix]"
+          git push
