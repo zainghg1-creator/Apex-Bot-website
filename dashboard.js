@@ -124,18 +124,48 @@ const FRIENDLY_ERRORS = {
 };
 
 async function apiFetch(endpoint, options = {}) {
-  const res = await fetch(`${CONFIG.API_BASE}${endpoint}`, {
-    cache: 'no-store',
-    ...options,
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
-  });
-  if (!res.ok) {
-    if (res.status === 401) { window.location.href = '/'; return null; }
-    const error = await res.json().catch(() => ({ error: 'unknown_error' }));
-    const code = error.error || `HTTP ${res.status}`;
-    throw new Error(FRIENDLY_ERRORS[code] || code);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+
+  try {
+    const res = await fetch(`${CONFIG.API_BASE}${endpoint}`, {
+      cache: 'no-store',
+      ...options,
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      }
+    });
+
+    if (!res.ok) {
+      if (res.status === 401) {
+        window.location.href = '/';
+        return null;
+      }
+
+      const error = await res.json().catch(() => ({
+        error: 'unknown_error'
+      }));
+
+      const code = error.error || `HTTP ${res.status}`;
+      throw new Error(FRIENDLY_ERRORS[code] || code);
+    }
+
+    return await res.json();
+
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error(
+        'Zeitüberschreitung – der Server antwortet nicht rechtzeitig.'
+      );
+    }
+
+    throw err;
+
+  } finally {
+    clearTimeout(timeout);
   }
-  return res.json();
 }
 
 
@@ -1703,24 +1733,60 @@ async function saveModuleSettings(moduleName) {
           allowedRoles: getSelectedRoleIds('rp-allowed-roles')
         };
         break;
-      case 'voice_support':
+      case 'voice_support': {
+        const soundInput = document.getElementById(
+          'voice_support-joinsound-input'
+        );
+
         payload = {
-          enabled: document.getElementById('voice_support-enabled').checked,
-          waitingRoomId: document.getElementById('voice_support-waitingroom')?.value || '',
-          notificationChannelId: document.getElementById('voice_support-notification')?.value || '',
-          pingRoleId: getSelectedRoleIds('voice_support-pingrole')[0] || null,
-          dutyOnRoleId: getSelectedRoleIds('voice_support-dutyon')[0] || null,
-          dutyOffRoleId: getSelectedRoleIds('voice_support-dutyoff')[0] || null,
-          dutyEmbedChannelId: document.getElementById('voice_support-dutyembed')?.value || '',
-          embedTitle: document.getElementById('voice_support-embed-title')?.value || '',
-          embedDescription: document.getElementById('voice_support-embed-desc')?.value || '',
-          embedColor: document.getElementById('voice_support-embed-color')?.value || '#5865f2',
-          embedImage: document.getElementById('voice_support-embed-image-input')?.dataset.value || '',
-          joinSoundEnabled: document.getElementById('voice_support-joinsound-enabled')?.checked ?? false,
-          joinSoundData: document.getElementById('voice_support-joinsound-input')?.dataset.value || '',
-          joinSoundName: document.getElementById('voice_support-joinsound-input')?.dataset.filename || ''
+          enabled:
+            document.getElementById('voice_support-enabled')?.checked ?? false,
+
+          waitingRoomId:
+            document.getElementById('voice_support-waitingroom')?.value || '',
+
+          notificationChannelId:
+            document.getElementById('voice_support-notification')?.value || '',
+
+          pingRoleId:
+            getSelectedRoleIds('voice_support-pingrole')[0] || null,
+
+          dutyOnRoleId:
+            getSelectedRoleIds('voice_support-dutyon')[0] || null,
+
+          dutyOffRoleId:
+            getSelectedRoleIds('voice_support-dutyoff')[0] || null,
+
+          dutyEmbedChannelId:
+            document.getElementById('voice_support-dutyembed')?.value || '',
+
+          embedTitle:
+            document.getElementById('voice_support-embed-title')?.value || '',
+
+          embedDescription:
+            document.getElementById('voice_support-embed-desc')?.value || '',
+
+          embedColor:
+            document.getElementById('voice_support-embed-color')?.value || '#5865f2',
+
+          embedImage:
+            document.getElementById('voice_support-embed-image-input')?.dataset.value || '',
+
+          joinSoundEnabled:
+            document.getElementById(
+              'voice_support-joinsound-enabled'
+            )?.checked ?? false
         };
+
+        // Nur wenn der Benutzer tatsächlich eine NEUE Sounddatei
+        // ausgewählt hat, wird der Base64-String übertragen.
+        if (soundInput?.dataset.changed === 'true') {
+          payload.joinSoundData = soundInput.dataset.value || '';
+          payload.joinSoundName = soundInput.dataset.filename || '';
+        }
+
         break;
+      }
       default:
         const enabledEl = document.getElementById(`${moduleName}-enabled`);
         const channelEl = document.getElementById(`${moduleName}-channel`) || document.getElementById(`${moduleName}-log-channel`);
@@ -3161,8 +3227,13 @@ function applyVoiceSupportConfig(cfg) {
   setChecked('voice_support-joinsound-enabled', cfg.joinSoundEnabled ?? false);
   const soundInput = document.getElementById('voice_support-joinsound-input');
   if (soundInput) {
-    soundInput.dataset.value = cfg.joinSoundData || '';
+    // Den eigentlichen Base64-Sound NICHT erneut in den Browser-State laden.
+    // Er bleibt in MongoDB und wird nur bei einer neuen Datei übertragen.
+    soundInput.dataset.value = '';
     soundInput.dataset.filename = cfg.joinSoundName || '';
+    soundInput.dataset.hasExistingSound =
+      cfg.joinSoundData ? 'true' : 'false';
+    soundInput.dataset.changed = 'false';
   }
   const soundInfo = document.getElementById('voice_support-joinsound-info');
   const soundPreview = document.getElementById('voice_support-joinsound-preview');
@@ -3310,13 +3381,15 @@ async function handleVoiceSupportSoundUpload(input) {
       const dataUrl = e.target.result;
       input.dataset.value = dataUrl;
       input.dataset.filename = file.name;
+      input.dataset.changed = 'true';
+      input.dataset.hasExistingSound = 'true';
       const soundInfo = document.getElementById('voice_support-joinsound-info');
       const soundPreview = document.getElementById('voice_support-joinsound-preview');
       const soundFilename = document.getElementById('voice_support-joinsound-filename');
       if (soundInfo) soundInfo.classList.remove('hidden');
       if (soundPreview) soundPreview.src = dataUrl;
       if (soundFilename) soundFilename.textContent = file.name;
-      showToast('Sound hochgeladen ✅', 'success');
+      showToast(`Sound "${file.name}" geladen`, 'success');
     };
     reader.onerror = () => showToast('Fehler beim Lesen der Datei', 'error');
     reader.readAsDataURL(file);
