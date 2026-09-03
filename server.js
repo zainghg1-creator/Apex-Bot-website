@@ -117,34 +117,65 @@ try {
 
 async function getGuildConfig(guildId) {
   if (!GuildConfig) return {};
+
   try {
     await connectToDatabase();
-    const doc = await GuildConfig.findOne({ guildId }).lean();
+
+    const doc = await GuildConfig
+      .findOne({ guildId })
+      .lean();
+
     return doc?.data || {};
+
   } catch (err) {
-    console.error('Fehler beim Laden der Config (Versuch 1):', err.message);
-    
-    try {
-      const doc = await GuildConfig.findOne({ guildId }).lean();
-      return doc?.data || {};
-    } catch (err2) {
-      console.error('Fehler beim Laden der Config (Versuch 2):', err2.message);
-      return {};
-    }
+    console.error(
+      `❌ Fehler beim Laden der Config (${guildId}):`,
+      err.message
+    );
+
+    /*
+     * Verbindung zurücksetzen, damit der nächste
+     * Request eine neue Verbindung aufbauen kann.
+     */
+    cachedConnection.conn = null;
+    cachedConnection.promise = null;
+
+    return {};
   }
 }
 
 async function saveModuleConfig(guildId, moduleName, moduleData) {
-  if (!GuildConfig) return;
+  if (!GuildConfig) {
+    throw new Error('Datenbankmodell nicht verfügbar');
+  }
+
   try {
     await connectToDatabase();
+
+    const existing = await GuildConfig.findOne({ guildId }).lean();
+    const existingModuleData = existing?.data?.[moduleName] || {};
+
+    const mergedModuleData = {
+      ...existingModuleData,
+      ...moduleData
+    };
+
     await GuildConfig.findOneAndUpdate(
       { guildId },
-      { $set: { [`data.${moduleName}`]: moduleData } },
-      { upsert: true, new: true }
+      {
+        $set: {
+          [`data.${moduleName}`]: mergedModuleData
+        }
+      },
+      {
+        upsert: true,
+        new: true
+      }
     );
+
+    return mergedModuleData;
   } catch (err) {
-    console.error('Fehler beim Speichern der Config:', err);
+    console.error(`❌ Fehler beim Speichern der Config (${moduleName}):`, err);
     throw err;
   }
 }
@@ -625,48 +656,117 @@ async function syncStatsChannelsNow(guildId, statsData) {
 
 app.post('/api/guild/:guildId/config/:module', requireAuth, async (req, res) => {
   const { guildId, module } = req.params;
+
   if (!ALLOWED_MODULES.includes(module)) {
-    return res.status(400).json({ error: 'unknown_module' });
+    return res.status(400).json({
+      error: 'unknown_module'
+    });
   }
+
   if (PREMIUM_MODULES.includes(module)) {
-    const premiumStatus = await hasEffectivePremiumAccess(req.session.user?.id, guildId);
+    const premiumStatus = await hasEffectivePremiumAccess(
+      req.session.user?.id,
+      guildId
+    );
+
     if (!premiumStatus.hasAccess) {
-      return res.status(403).json({ error: 'premium_required', message: 'Dieses Modul ist nur mit Premium verfügbar.' });
+      return res.status(403).json({
+        error: 'premium_required',
+        message: 'Dieses Modul ist nur mit Premium verfügbar.'
+      });
     }
   }
+
   try {
     let moduleData = req.body;
-    if (module === 'tickets' && moduleData && Array.isArray(moduleData.options)) {
+
+    if (!moduleData || typeof moduleData !== 'object' || Array.isArray(moduleData)) {
+      return res.status(400).json({
+        error: 'invalid_config'
+      });
+    }
+
+    /*
+     * Ticket-Konfiguration normalisieren
+     */
+    if (module === 'tickets' && Array.isArray(moduleData.options)) {
       moduleData = {
         ...moduleData,
         options: moduleData.options.map(panel => ({
           ...panel,
           buttons: Array.isArray(panel.buttons)
-            ? panel.buttons.map(button => button?.action === 'close'
-              ? { ...button, label: 'Ticket schließen' }
-              : button)
+            ? panel.buttons.map(button =>
+                button?.action === 'close'
+                  ? {
+                      ...button,
+                      label: 'Ticket schließen'
+                    }
+                  : button
+              )
             : panel.buttons
         }))
       };
     }
+
+    /*
+     * Statistik-Kanäle direkt erstellen
+     */
     if (module === 'stats') {
-      moduleData = await syncStatsChannelsNow(guildId, moduleData);
+      moduleData = await syncStatsChannelsNow(
+        guildId,
+        moduleData
+      );
     }
-    if (module === 'voice_support' && moduleData?.joinSoundData) {
+
+    /*
+     * Voice-Support Sound überprüfen
+     */
+    if (module === 'voice_support' && moduleData.joinSoundData) {
       const commaIndex = moduleData.joinSoundData.indexOf(',');
+
       if (commaIndex === -1) {
-        return res.status(400).json({ error: 'invalid_sound_data' });
+        return res.status(400).json({
+          error: 'invalid_sound_data'
+        });
       }
-      const base64Length = moduleData.joinSoundData.length - (commaIndex + 1);
+
+      const base64Length =
+        moduleData.joinSoundData.length - (commaIndex + 1);
+
       if (base64Length > 6000000) {
-        return res.status(413).json({ error: 'sound_too_large' });
+        return res.status(413).json({
+          error: 'sound_too_large'
+        });
       }
     }
-    await saveModuleConfig(guildId, module, moduleData);
-    res.json({ success: true, data: moduleData });
+
+    /*
+     * Konfiguration speichern
+     */
+    const savedData = await saveModuleConfig(
+      guildId,
+      module,
+      moduleData
+    );
+
+    console.log(
+      `✅ Konfiguration gespeichert: ${module} | Guild: ${guildId}`
+    );
+
+    return res.json({
+      success: true,
+      data: savedData
+    });
+
   } catch (err) {
-    console.error('Fehler beim Speichern der Konfiguration:', err);
-    res.status(500).json({ error: 'server_error' });
+    console.error(
+      `❌ Fehler beim Speichern der Konfiguration (${module}):`,
+      err
+    );
+
+    return res.status(500).json({
+      error: 'server_error'
+    });
   }
 });
 
