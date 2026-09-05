@@ -1438,30 +1438,70 @@ class ApplicationDecisionModal(discord.ui.Modal):
         self.add_item(self.reason)
 
     async def on_submit(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
+        _t0 = time.monotonic()
+        _age_on_submit = (datetime.now(timezone.utc) - interaction.created_at).total_seconds()
+        logger.info(
+            f"[DEBUG-APP-MODAL] on_submit AUFGERUFEN | app_id={self.app_id} | action={self.action} | "
+            f"user={interaction.user} ({interaction.user.id}) | "
+            f"Alter der Modal-Interaction beim Empfang: {_age_on_submit:.3f}s"
+        )
+        try:
+            await interaction.response.defer(ephemeral=True)
+            _t1 = time.monotonic()
+            logger.info(f"[DEBUG-APP-MODAL] defer() erfolgreich | Dauer: {(_t1 - _t0)*1000:.1f}ms")
+        except discord.NotFound as e:
+            logger.error(
+                f"[DEBUG-APP-MODAL] ❌ defer() FEHLGESCHLAGEN (10062 Unknown interaction) | "
+                f"app_id={self.app_id} | Fehler: {e}"
+            )
+            return
+        except Exception as e:
+            logger.error(f"[DEBUG-APP-MODAL] ❌ defer() FEHLGESCHLAGEN (unerwartet): {e}")
+            traceback.print_exc()
+            return
+
         app_id = self.app_id
         action = self.action
         grund = str(self.reason.value).strip() or "-"
         guild = interaction.guild
         try:
+            _t_before_db = time.monotonic()
             doc = await db_call(applications_collection.find_one, {"_id": app_id})
+            _t_after_db = time.monotonic()
+            logger.info(
+                f"[DEBUG-APP-MODAL] DB find_one abgeschlossen | Dauer: {(_t_after_db - _t_before_db)*1000:.1f}ms | "
+                f"Bewerbung gefunden: {doc is not None}"
+            )
             if not doc:
+                logger.warning(f"[DEBUG-APP-MODAL] Bewerbung {app_id} existiert nicht mehr.")
                 await interaction.followup.send("❌ Diese Bewerbung existiert nicht mehr.", ephemeral=True)
                 return
             if doc.get("status") != "pending":
+                logger.warning(f"[DEBUG-APP-MODAL] Bewerbung {app_id} bereits bearbeitet (status={doc.get('status')}).")
                 await interaction.followup.send("❌ Diese Bewerbung wurde bereits bearbeitet.", ephemeral=True)
                 return
             member = guild.get_member(interaction.user.id) if guild else None
             if not member:
+                logger.warning(f"[DEBUG-APP-MODAL] Member {interaction.user.id} nicht im Guild-Cache gefunden.")
                 await interaction.followup.send("❌ Du bist nicht auf diesem Server.", ephemeral=True)
                 return
             is_admin = member.guild_permissions.administrator
             review_roles = doc.get("reviewRoles", [])
             member_role_ids = {str(role.id) for role in member.roles}
             has_role = any(str(rid) in member_role_ids for rid in review_roles)
+            logger.info(
+                f"[DEBUG-APP-MODAL] Berechtigungsprüfung | is_admin={is_admin} | has_role={has_role} | "
+                f"review_roles={review_roles} | member_role_ids={member_role_ids}"
+            )
             if not is_admin and not has_role:
+                logger.warning(f"[DEBUG-APP-MODAL] {interaction.user} hat KEINE Berechtigung für Bewerbung {app_id}.")
                 await interaction.followup.send("❌ Du hast keine Berechtigung, über diese Bewerbung zu entscheiden.", ephemeral=True)
                 return
+            _t_checks_done = time.monotonic()
+            logger.info(
+                f"[DEBUG-APP-MODAL] Alle Checks bestanden, verarbeite Entscheidung jetzt | "
+                f"Gesamtdauer bis hier: {(_t_checks_done - _t0)*1000:.1f}ms"
+            )
             user_id = doc.get("userId")
             applicant = guild.get_member(int(user_id)) if user_id else None
             if action == 'accepted':
@@ -1535,9 +1575,18 @@ class ApplicationDecisionModal(discord.ui.Modal):
                 except Exception as e:
                     logger.error(f"[BEWERBUNG] Fehler beim Senden der DM: {e}")
             await interaction.followup.send(f"✅ Bewerbung wurde {action}.", ephemeral=True)
+            _t_end = time.monotonic()
+            logger.info(
+                f"[DEBUG-APP-MODAL] ✅ FERTIG | app_id={app_id} | action={action} | "
+                f"Gesamtdauer on_submit: {(_t_end - _t0)*1000:.1f}ms"
+            )
         except Exception as e:
-            logger.error(f"[BEWERBUNG] Fehler bei der Bearbeitung der Bewerbung {app_id}: {e}")
-            await interaction.followup.send(f"❌ Fehler: {e}", ephemeral=True)
+            logger.error(f"[DEBUG-APP-MODAL] ❌ Fehler bei der Bearbeitung der Bewerbung {app_id}: {e}")
+            traceback.print_exc()
+            try:
+                await interaction.followup.send(f"❌ Fehler: {e}", ephemeral=True)
+            except Exception as e2:
+                logger.error(f"[DEBUG-APP-MODAL] ❌ Konnte Fehlermeldung nicht senden: {e2}")
 
 async def submit_application(guild: discord.Guild, form: dict, user: discord.User, questions: list, answers: list):
     result_channel_id = form.get("resultChannelId")
@@ -4744,8 +4793,22 @@ class VerifyMathModal(discord.ui.Modal, title="Mathe-Aufgabe"):
 
 @bot.event
 async def on_interaction(interaction: discord.Interaction):
+    _debug_t_received = time.monotonic()
     if interaction.type == discord.InteractionType.component:
         custom_id = interaction.data.get('custom_id', '')
+
+        # === DEBUG-LOGGING (Bewerbungs-Buttons) ===
+        # Zeigt exakt, wie alt die Interaction schon ist, wenn sie bei uns ankommt
+        # (created_at ist der Zeitpunkt, den Discord selbst vergeben hat).
+        if custom_id.startswith('app_accept_') or custom_id.startswith('app_reject_'):
+            _age_on_arrival = (datetime.now(timezone.utc) - interaction.created_at).total_seconds()
+            logger.info(
+                f"[DEBUG-APP-BUTTON] on_interaction EMPFANGEN | custom_id={custom_id} | "
+                f"user={interaction.user} ({interaction.user.id}) | "
+                f"Alter der Interaction beim Empfang: {_age_on_arrival:.3f}s | "
+                f"bot.latency={bot.latency*1000:.0f}ms | "
+                f"is_closed={bot.is_closed()}"
+            )
 
         if custom_id.startswith('verify_button_'):
             parts = custom_id.split('_')
@@ -4913,16 +4976,59 @@ async def on_interaction(interaction: discord.Interaction):
             action = 'accepted' if custom_id.startswith('app_accept_') else 'rejected'
             parts = custom_id.split('_')
             app_id = '_'.join(parts[2:]) if len(parts) > 2 else ''
+
+            _t_before_validate = time.monotonic()
+            logger.info(
+                f"[DEBUG-APP-BUTTON] Start Verarbeitung | app_id={app_id} | action={action} | "
+                f"Zeit seit on_interaction-Empfang: {(_t_before_validate - _debug_t_received)*1000:.1f}ms"
+            )
+
             if not app_id:
+                logger.warning(f"[DEBUG-APP-BUTTON] Ungültige Button-ID, custom_id={custom_id}")
                 await interaction.response.send_message("❌ Ungültige Button-ID.", ephemeral=True)
                 return
+
             # WICHTIG: Das Modal muss die allererste Antwort auf die Interaction sein
             # (max. ~3s Zeitfenster). Keine DB-Abfrage oder defer() vorher, sonst
             # "Apex Bot hat nicht rechtzeitig reagiert". Alle Prüfungen (existiert
             # die Bewerbung noch, ist sie noch pending, hat der Klickende die
             # Berechtigung) passieren stattdessen in ApplicationDecisionModal.on_submit,
             # wo bereits korrekt defer() + await verwendet wird.
-            await interaction.response.send_modal(ApplicationDecisionModal(app_id, action))
+            _t_before_modal = time.monotonic()
+            _age_before_modal = (datetime.now(timezone.utc) - interaction.created_at).total_seconds()
+            logger.info(
+                f"[DEBUG-APP-BUTTON] Rufe jetzt interaction.response.send_modal() auf | "
+                f"Alter der Interaction: {_age_before_modal:.3f}s | "
+                f"Zeit seit Handler-Start: {(_t_before_modal - _t_before_validate)*1000:.1f}ms"
+            )
+            try:
+                await interaction.response.send_modal(ApplicationDecisionModal(app_id, action))
+                _t_after_modal = time.monotonic()
+                logger.info(
+                    f"[DEBUG-APP-BUTTON] send_modal() ERFOLGREICH zurückgekehrt | "
+                    f"Dauer send_modal(): {(_t_after_modal - _t_before_modal)*1000:.1f}ms | "
+                    f"Gesamtdauer seit Empfang: {(_t_after_modal - _debug_t_received)*1000:.1f}ms"
+                )
+            except discord.NotFound as e:
+                # Fehlercode 10062 = Unknown interaction -> Discord hat die Interaction
+                # schon als abgelaufen verworfen, BEVOR wir überhaupt antworten konnten.
+                _t_fail = time.monotonic()
+                logger.error(
+                    f"[DEBUG-APP-BUTTON] ❌ send_modal() FEHLGESCHLAGEN (discord.NotFound / 10062 "
+                    f"'Unknown interaction') | app_id={app_id} | "
+                    f"Alter der Interaction beim Fehlschlag: "
+                    f"{(datetime.now(timezone.utc) - interaction.created_at).total_seconds():.3f}s | "
+                    f"Dauer bis Fehler: {(_t_fail - _t_before_modal)*1000:.1f}ms | "
+                    f"Fehler: {e}"
+                )
+            except discord.HTTPException as e:
+                logger.error(
+                    f"[DEBUG-APP-BUTTON] ❌ send_modal() FEHLGESCHLAGEN (HTTPException) | "
+                    f"app_id={app_id} | status={e.status} | code={e.code} | text={e.text}"
+                )
+            except Exception as e:
+                logger.error(f"[DEBUG-APP-BUTTON] ❌ send_modal() FEHLGESCHLAGEN (unerwarteter Fehler): {e}")
+                traceback.print_exc()
             return
 
 async def update_stats_channel_id(guild_id, entry_id, channel_id):
