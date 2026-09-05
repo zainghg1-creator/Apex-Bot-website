@@ -1451,6 +1451,17 @@ class ApplicationDecisionModal(discord.ui.Modal):
             if doc.get("status") != "pending":
                 await interaction.followup.send("❌ Diese Bewerbung wurde bereits bearbeitet.", ephemeral=True)
                 return
+            member = guild.get_member(interaction.user.id) if guild else None
+            if not member:
+                await interaction.followup.send("❌ Du bist nicht auf diesem Server.", ephemeral=True)
+                return
+            is_admin = member.guild_permissions.administrator
+            review_roles = doc.get("reviewRoles", [])
+            member_role_ids = {str(role.id) for role in member.roles}
+            has_role = any(str(rid) in member_role_ids for rid in review_roles)
+            if not is_admin and not has_role:
+                await interaction.followup.send("❌ Du hast keine Berechtigung, über diese Bewerbung zu entscheiden.", ephemeral=True)
+                return
             user_id = doc.get("userId")
             applicant = guild.get_member(int(user_id)) if user_id else None
             if action == 'accepted':
@@ -4905,31 +4916,13 @@ async def on_interaction(interaction: discord.Interaction):
             if not app_id:
                 await interaction.response.send_message("❌ Ungültige Button-ID.", ephemeral=True)
                 return
-            if applications_collection is None:
-                await interaction.response.send_message("❌ Datenbank nicht verfügbar.", ephemeral=True)
-                return
-            try:
-                doc = await db_call(applications_collection.find_one, {"_id": app_id})
-                if not doc:
-                    await interaction.response.send_message("❌ Diese Bewerbung existiert nicht mehr.", ephemeral=True)
-                    return
-                if doc.get("status") != "pending":
-                    await interaction.response.send_message("❌ Diese Bewerbung wurde bereits bearbeitet.", ephemeral=True)
-                    return
-                member = interaction.guild.get_member(interaction.user.id)
-                if not member:
-                    await interaction.response.send_message("❌ Du bist nicht auf diesem Server.", ephemeral=True)
-                    return
-                is_admin = member.guild_permissions.administrator
-                review_roles = doc.get("reviewRoles", [])
-                has_role = any(r in review_roles for r in [str(role.id) for role in member.roles])
-                if not is_admin and not has_role:
-                    await interaction.response.send_message("❌ Du hast keine Berechtigung, über diese Bewerbung zu entscheiden.", ephemeral=True)
-                    return
-                await interaction.response.send_modal(ApplicationDecisionModal(app_id, action))
-            except Exception as e:
-                logger.error(f"[BEWERBUNG] Fehler bei der Bearbeitung der Bewerbung {app_id}: {e}")
-                await interaction.response.send_message(f"❌ Fehler: {e}", ephemeral=True)
+            # WICHTIG: Das Modal muss die allererste Antwort auf die Interaction sein
+            # (max. ~3s Zeitfenster). Keine DB-Abfrage oder defer() vorher, sonst
+            # "Apex Bot hat nicht rechtzeitig reagiert". Alle Prüfungen (existiert
+            # die Bewerbung noch, ist sie noch pending, hat der Klickende die
+            # Berechtigung) passieren stattdessen in ApplicationDecisionModal.on_submit,
+            # wo bereits korrekt defer() + await verwendet wird.
+            await interaction.response.send_modal(ApplicationDecisionModal(app_id, action))
             return
 
 async def update_stats_channel_id(guild_id, entry_id, channel_id):
