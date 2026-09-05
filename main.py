@@ -1,15 +1,28 @@
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import os
 import threading
+import time as _time_module
+from datetime import datetime as _dt_module
 
+# Wird von KeepAliveHandler beschrieben und später (nach dem Setup des echten
+# Loggers) ausgewertet, um zu prüfen, ob überhaupt ein externer Pinger
+# (UptimeRobot, cron-job.org, o.ä.) auf diesen Service zugreift.
+_keepalive_ping_count = 0
+_keepalive_last_ping_at = None
 
 class KeepAliveHandler(BaseHTTPRequestHandler):
     def do_GET(self):
+        global _keepalive_ping_count, _keepalive_last_ping_at
+        _keepalive_ping_count += 1
+        _keepalive_last_ping_at = _dt_module.utcnow()
         self.send_response(200)
         self.end_headers()
         self.wfile.write(b"Bot is alive!")
 
     def do_HEAD(self):
+        global _keepalive_ping_count, _keepalive_last_ping_at
+        _keepalive_ping_count += 1
+        _keepalive_last_ping_at = _dt_module.utcnow()
         self.send_response(200)
         self.end_headers()
 
@@ -2304,6 +2317,36 @@ async def send_duty_embed(interaction: discord.Interaction):
 _bot_ready_once = False
 
 @bot.event
+async def on_disconnect():
+    logger.warning(
+        f"[GATEWAY] ⚠️ Verbindung zu Discord GETRENNT um {datetime.now(BERLIN_TZ).strftime('%H:%M:%S')}. "
+        f"Solange keine Verbindung besteht, können Interactions (Buttons/Commands) NICHT beantwortet "
+        f"werden -> 'hat nicht rechtzeitig reagiert'."
+    )
+
+@bot.event
+async def on_resumed():
+    logger.info(f"[GATEWAY] ✅ Verbindung zu Discord WIEDERHERGESTELLT (resumed) um {datetime.now(BERLIN_TZ).strftime('%H:%M:%S')}.")
+
+async def heartbeat_logger_loop():
+    """Loggt regelmäßig einen Zeitstempel + Latenz. Wenn zwischen zwei dieser
+    Log-Zeilen ein großer zeitlicher Sprung liegt (z.B. 60s-Takt aber es fehlen
+    mehrere Minuten), dann war der Prozess in dieser Zeit eingefroren/geschlafen
+    (Render Cold Start) - unabhängig vom restlichen Bot-Code."""
+    await bot.wait_until_ready()
+    last = time.monotonic()
+    while not bot.is_closed():
+        await asyncio.sleep(60)
+        now = time.monotonic()
+        gap = now - last
+        last = now
+        marker = " ⚠️ GROSSE LÜCKE (Prozess war vermutlich eingeschlafen/eingefroren!)" if gap > 90 else ""
+        logger.info(
+            f"[HEARTBEAT] {datetime.now(BERLIN_TZ).strftime('%Y-%m-%d %H:%M:%S')} | "
+            f"Latenz: {bot.latency*1000:.0f}ms | seit letztem Heartbeat: {gap:.1f}s{marker}"
+        )
+
+@bot.event
 async def on_ready():
     global _bot_ready_once
     logger.info(f"✅ Bot ist online als {bot.user} (ID: {bot.user.id})")
@@ -2446,6 +2489,7 @@ async def on_ready():
     bot.loop.create_task(status_embed_loop())
     bot.loop.create_task(application_registration_loop())
     bot.loop.create_task(ttl_cache_cleanup_loop())
+    bot.loop.create_task(heartbeat_logger_loop())
     bot.loop.create_task(guild_config_watch_loop())
 
 @bot.event
@@ -4729,7 +4773,17 @@ async def hostinfo(interaction: discord.Interaction):
         embed.add_field(name="MONGODB_URI (maskiert)", value=masked, inline=False)
     else:
         embed.add_field(name="MONGODB_URI", value="❌ Nicht gesetzt", inline=False)
-    
+
+    if _keepalive_last_ping_at is None:
+        ping_info = "❌ NOCH NIE gepingt seit Prozessstart! Es läuft vermutlich kein externer Pinger (z.B. UptimeRobot) -> Render Free-Tier schläft nach ~15 Min Inaktivität ein."
+    else:
+        seconds_ago = (datetime.utcnow() - _keepalive_last_ping_at).total_seconds()
+        warn = " ⚠️ Das ist recht lange her! Prüfe deinen Pinger." if seconds_ago > 600 else ""
+        ping_info = f"Zuletzt gepingt vor {seconds_ago:.0f}s | Anzahl Pings gesamt: {_keepalive_ping_count}{warn}"
+    embed.add_field(name="🌐 Keep-Alive-Endpoint", value=ping_info, inline=False)
+    embed.add_field(name="📡 Gateway-Latenz", value=f"{bot.latency*1000:.0f}ms", inline=True)
+    embed.add_field(name="⏱️ Bot-Uptime", value=format_uptime(time.time() - BOT_START_TIME), inline=True)
+
     await interaction.followup.send(embed=embed)
 
 async def apply_verification_role_cleanup(member: discord.Member, guild_id):
