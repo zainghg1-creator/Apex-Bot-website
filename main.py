@@ -234,8 +234,59 @@ def invalidate_config_cache(guild_id):
     _config_cache.invalidate(str(guild_id))
 
 async def _reload_config_after_dashboard_change(guild_id: str, data: dict):
+    # Vor dem Überschreiben den alten Stand merken, um generisch erkennen zu
+    # können, WELCHE Top-Level-Bereiche der Konfiguration sich geändert haben
+    # (z.B. "welcome", "tickets", "applications", "levels", "automod", ...),
+    # egal um welches Dashboard-Feature es geht.
+    old_data = _config_cache.peek(guild_id, {}) or {}
+
+    all_keys = set(old_data.keys()) | set(data.keys())
+    added_sections = [k for k in all_keys if k not in old_data and k in data]
+    removed_sections = [k for k in all_keys if k in old_data and k not in data]
+    changed_sections = [
+        k for k in all_keys
+        if k in old_data and k in data and old_data.get(k) != data.get(k)
+    ]
+
     _config_cache.set(guild_id, data)
-    logger.info(f"[CACHE] Konfiguration für Guild {guild_id} wurde im Dashboard geändert – Cache neu geladen.")
+
+    if added_sections or removed_sections or changed_sections:
+        parts = []
+        if changed_sections:
+            parts.append(f"geändert: {', '.join(sorted(changed_sections))}")
+        if added_sections:
+            parts.append(f"neu hinzugekommen: {', '.join(sorted(added_sections))}")
+        if removed_sections:
+            parts.append(f"entfernt: {', '.join(sorted(removed_sections))}")
+        logger.info(
+            f"[DASHBOARD] 💾 Neue Einstellung(en) im Dashboard gespeichert | Guild={guild_id} | "
+            + " | ".join(parts)
+        )
+    else:
+        # Kam z.B. vor, wenn dasselbe Dokument nochmal geschrieben wurde ohne
+        # inhaltliche Änderung (identischer Inhalt) - trotzdem loggen, damit
+        # man sieht, dass überhaupt ein Speichervorgang stattgefunden hat.
+        logger.info(f"[DASHBOARD] 💾 Speichervorgang im Dashboard erkannt (keine inhaltliche Änderung) | Guild={guild_id}")
+
+    # Zusätzlich, speziell für Bewerbungsformulare, weil dort neue Einträge in
+    # einer Liste stecken (reines "Feld geändert" reicht da nicht als Info):
+    old_forms = (old_data.get("applications", {}) or {}).get("forms", []) or []
+    new_forms = (data.get("applications", {}) or {}).get("forms", []) or []
+    old_ids = {f.get("id") for f in old_forms if f.get("id")}
+    new_ids = {f.get("id") for f in new_forms if f.get("id")}
+    added_ids = new_ids - old_ids
+    removed_ids = old_ids - new_ids
+    if added_ids or removed_ids:
+        by_id = {f.get("id"): f for f in new_forms}
+        for form_id in added_ids:
+            form = by_id.get(form_id, {})
+            logger.info(
+                f"[DASHBOARD] 🆕 Neue Bewerbung angelegt | Guild={guild_id} | form_id={form_id} | "
+                f"Name='{form.get('name') or form.get('title') or '-'}' | "
+                f"Ergebnis-Kanal={form.get('resultChannelId')} | reviewRoles={form.get('reviewRoles', [])}"
+            )
+        for form_id in removed_ids:
+            logger.info(f"[DASHBOARD] 🗑️ Bewerbung entfernt | Guild={guild_id} | form_id={form_id}")
 
 def _watch_guild_configs_sync(loop: asyncio.AbstractEventLoop):
     with guild_configs.watch([], full_document="updateLookup") as stream:
@@ -1633,7 +1684,12 @@ async def submit_application(guild: discord.Guild, form: dict, user: discord.Use
     if applications_collection is not None:
         try:
             await db_call(applications_collection.insert_one, doc)
-            logger.info(f"[BEWERBUNG] Bewerbung {app_id} gespeichert")
+            logger.info(
+                f"[BEWERBUNG] 🆕 Neue Bewerbung eingereicht & in DB gespeichert | app_id={app_id} | "
+                f"Guild={guild.id} | Bewerber={user} ({user.id}) | Formular='{form.get('name') or form.get('title') or '-'}' | "
+                f"Ergebnis-Kanal={result_channel_id} | reviewRoles={form.get('reviewRoles', [])} | "
+                f"acceptRoleIds={form.get('acceptRoleIds', [])} | rejectRoleId={form.get('rejectRoleId')}"
+            )
         except Exception as e:
             logger.error(f"[BEWERBUNG] Fehler beim Speichern: {e}")
     else:
